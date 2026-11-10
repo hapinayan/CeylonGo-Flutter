@@ -1,122 +1,251 @@
 import 'package:flutter/material.dart';
 
+import 'core/services/secure_storage_service.dart';
+import 'core/theme/app_theme.dart';
+import 'features/auth/models/api_error.dart';
+import 'features/auth/models/user_model.dart';
+import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/register_screen.dart';
+import 'features/auth/services/auth_service.dart';
+import 'features/home/screens/home_screen.dart';
+
 void main() {
-  runApp(const MyApp());
+  runApp(const CeylonGoApp());
 }
 
-class MyApp extends StatelessWidget {
-  const MyApp({super.key});
+/// CeylonGo Root Application
+/// Supports dependency injection for testing authentication and storage
+class CeylonGoApp extends StatelessWidget {
+  final AuthService? authService;
+  final SecureStorageService? storageService;
+  final String? initialRoute;
 
-  // This widget is the root of your application.
+  const CeylonGoApp({
+    super.key,
+    this.authService,
+    this.storageService,
+    this.initialRoute,
+  });
+
   @override
   Widget build(BuildContext context) {
     return MaterialApp(
-      title: 'Flutter Demo',
-      theme: ThemeData(
-        // This is the theme of your application.
-        //
-        // TRY THIS: Try running your application with "flutter run". You'll see
-        // the application has a purple toolbar. Then, without quitting the app,
-        // try changing the seedColor in the colorScheme below to Colors.green
-        // and then invoke "hot reload" (save your changes or press the "hot
-        // reload" button in a Flutter-supported IDE, or press "r" if you used
-        // the command line to start the app).
-        //
-        // Notice that the counter didn't reset back to zero; the application
-        // state is not lost during the reload. To reset the state, use hot
-        // restart instead.
-        //
-        // This works for code too, not just values: Most code changes can be
-        // tested with just a hot reload.
-        colorScheme: .fromSeed(seedColor: Colors.deepPurple),
-      ),
-      home: const MyHomePage(title: 'Flutter Demo Home Page'),
+      title: 'CeylonGo',
+      debugShowCheckedModeBanner: false,
+      theme: AppTheme.lightTheme,
+      home: initialRoute != null
+          ? null
+          : AuthGate(authService: authService, storageService: storageService),
+      initialRoute: initialRoute,
+      routes: {
+        '/login': (context) => LoginScreen(
+          authService: authService,
+          storageService: storageService,
+        ),
+        '/register': (context) => RegisterScreen(authService: authService),
+        '/home': (context) => HomeScreen(
+          authService: authService,
+          storageService: storageService,
+        ),
+      },
     );
   }
 }
 
-class MyHomePage extends StatefulWidget {
-  const MyHomePage({super.key, required this.title});
+/// Authentication Gate Widget
+/// Handles app startup session restoration and JWT validation per Section 7
+class AuthGate extends StatefulWidget {
+  final AuthService? authService;
+  final SecureStorageService? storageService;
 
-  // This widget is the home page of your application. It is stateful, meaning
-  // that it has a State object (defined below) that contains fields that affect
-  // how it looks.
-
-  // This class is the configuration for the state. It holds the values (in this
-  // case the title) provided by the parent (in this case the App widget) and
-  // used by the build method of the State. Fields in a Widget subclass are
-  // always marked "final".
-
-  final String title;
+  const AuthGate({super.key, this.authService, this.storageService});
 
   @override
-  State<MyHomePage> createState() => _MyHomePageState();
+  State<AuthGate> createState() => _AuthGateState();
 }
 
-class _MyHomePageState extends State<MyHomePage> {
-  int _counter = 0;
+enum AuthStatus { checking, authenticated, unauthenticated, networkError }
 
-  void _incrementCounter() {
+class _AuthGateState extends State<AuthGate> {
+  late final AuthService _authService;
+  late final SecureStorageService _storageService;
+
+  AuthStatus _status = AuthStatus.checking;
+  UserModel? _authenticatedUser;
+  String? _networkErrorMessage;
+
+  @override
+  void initState() {
+    super.initState();
+    _authService = widget.authService ?? AuthService();
+    _storageService = widget.storageService ?? SecureStorageService();
+    _checkSession();
+  }
+
+  Future<void> _checkSession() async {
     setState(() {
-      // This call to setState tells the Flutter framework that something has
-      // changed in this State, which causes it to rerun the build method below
-      // so that the display can reflect the updated values. If we changed
-      // _counter without calling setState(), then the build method would not be
-      // called again, and so nothing would appear to happen.
-      _counter++;
+      _status = AuthStatus.checking;
+      _networkErrorMessage = null;
     });
+
+    try {
+      final token = await _storageService.getToken();
+
+      // If no token exists, immediately show LoginScreen
+      if (token == null || token.trim().isEmpty) {
+        if (mounted) {
+          setState(() {
+            _status = AuthStatus.unauthenticated;
+          });
+        }
+        return;
+      }
+
+      // If token exists, validate it using GET /api/v1/auth/me
+      final user = await _authService.getMe(token);
+
+      // Save verified user profile
+      await _storageService.saveUser(user);
+
+      if (mounted) {
+        setState(() {
+          _authenticatedUser = user;
+          _status = AuthStatus.authenticated;
+        });
+      }
+    } on ApiError catch (e) {
+      if (e.statusCode == 401) {
+        // HTTP 401: Token invalid or expired. Clear storage and show LoginScreen
+        await _storageService.clear();
+        if (mounted) {
+          setState(() {
+            _status = AuthStatus.unauthenticated;
+          });
+        }
+      } else if (e.code == 'NETWORK_ERROR' ||
+          e.code == 'TIMEOUT' ||
+          e.statusCode == 0) {
+        // Network failure / timeout: Do NOT delete token. Show safe retry state
+        if (mounted) {
+          setState(() {
+            _status = AuthStatus.networkError;
+            _networkErrorMessage = e.message;
+          });
+        }
+      } else {
+        if (mounted) {
+          setState(() {
+            _status = AuthStatus.networkError;
+            _networkErrorMessage = e.message;
+          });
+        }
+      }
+    } catch (_) {
+      await _storageService.clear();
+      if (mounted) {
+        setState(() {
+          _status = AuthStatus.unauthenticated;
+        });
+      }
+    }
   }
 
   @override
   Widget build(BuildContext context) {
-    // This method is rerun every time setState is called, for instance as done
-    // by the _incrementCounter method above.
-    //
-    // The Flutter framework has been optimized to make rerunning build methods
-    // fast, so that you can just rebuild anything that needs updating rather
-    // than having to individually change instances of widgets.
-    return Scaffold(
-      appBar: AppBar(
-        // TRY THIS: Try changing the color here to a specific color (to
-        // Colors.amber, perhaps?) and trigger a hot reload to see the AppBar
-        // change color while the other colors stay the same.
-        backgroundColor: Theme.of(context).colorScheme.inversePrimary,
-        // Here we take the value from the MyHomePage object that was created by
-        // the App.build method, and use it to set our appbar title.
-        title: Text(widget.title),
-      ),
-      body: Center(
-        // Center is a layout widget. It takes a single child and positions it
-        // in the middle of the parent.
-        child: Column(
-          // Column is also a layout widget. It takes a list of children and
-          // arranges them vertically. By default, it sizes itself to fit its
-          // children horizontally, and tries to be as tall as its parent.
-          //
-          // Column has various properties to control how it sizes itself and
-          // how it positions its children. Here we use mainAxisAlignment to
-          // center the children vertically; the main axis here is the vertical
-          // axis because Columns are vertical (the cross axis would be
-          // horizontal).
-          //
-          // TRY THIS: Invoke "debug painting" (choose the "Toggle Debug Paint"
-          // action in the IDE, or press "p" in the console), to see the
-          // wireframe for each widget.
-          mainAxisAlignment: .center,
-          children: [
-            const Text('You have pushed the button this many times:'),
-            Text(
-              '$_counter',
-              style: Theme.of(context).textTheme.headlineMedium,
+    switch (_status) {
+      case AuthStatus.checking:
+        return const Scaffold(
+          backgroundColor: AppTheme.backgroundLight,
+          body: Center(
+            child: CircularProgressIndicator(color: AppTheme.accentOrange),
+          ),
+        );
+
+      case AuthStatus.authenticated:
+        return HomeScreen(
+          initialUser: _authenticatedUser,
+          authService: _authService,
+          storageService: _storageService,
+        );
+
+      case AuthStatus.unauthenticated:
+        return LoginScreen(
+          authService: _authService,
+          storageService: _storageService,
+        );
+
+      case AuthStatus.networkError:
+        return Scaffold(
+          backgroundColor: AppTheme.backgroundLight,
+          body: SafeArea(
+            child: Center(
+              child: Padding(
+                padding: const EdgeInsets.all(24.0),
+                child: ConstrainedBox(
+                  constraints: const BoxConstraints(maxWidth: 400),
+                  child: Card(
+                    elevation: 0,
+                    color: AppTheme.backgroundWhite,
+                    shape: RoundedRectangleBorder(
+                      borderRadius: BorderRadius.circular(12),
+                      side: const BorderSide(color: AppTheme.borderSlate),
+                    ),
+                    child: Padding(
+                      padding: const EdgeInsets.all(28.0),
+                      child: Column(
+                        mainAxisSize: MainAxisSize.min,
+                        children: [
+                          const Icon(
+                            Icons.wifi_off_rounded,
+                            size: 48,
+                            color: AppTheme.primaryNavy,
+                          ),
+                          const SizedBox(height: 16),
+                          const Text(
+                            'Connection Issue',
+                            style: TextStyle(
+                              fontSize: 20,
+                              fontWeight: FontWeight.bold,
+                              color: AppTheme.primaryNavy,
+                            ),
+                          ),
+                          const SizedBox(height: 8),
+                          Text(
+                            _networkErrorMessage ?? 'Unable to connect to CeylonGo server to verify your session.',
+                            textAlign: TextAlign.center,
+                            style: const TextStyle(
+                              fontSize: 14,
+                              color: AppTheme.textSecondary,
+                            ),
+                          ),
+                          const SizedBox(height: 24),
+                          ElevatedButton.icon(
+                            onPressed: _checkSession,
+                            icon: const Icon(Icons.refresh),
+                            label: const Text('Retry Connection'),
+                            style: ElevatedButton.styleFrom(
+                              backgroundColor: AppTheme.accentOrange,
+                              foregroundColor: AppTheme.backgroundWhite,
+                            ),
+                          ),
+                          const SizedBox(height: 12),
+                          TextButton(
+                            onPressed: () {
+                              setState(() {
+                                _status = AuthStatus.unauthenticated;
+                              });
+                            },
+                            child: const Text('Go to Sign In'),
+                          ),
+                        ],
+                      ),
+                    ),
+                  ),
+                ),
+              ),
             ),
-          ],
-        ),
-      ),
-      floatingActionButton: FloatingActionButton(
-        onPressed: _incrementCounter,
-        tooltip: 'Increment',
-        child: const Icon(Icons.add),
-      ),
-    );
+          ),
+        );
+    }
   }
 }

@@ -1,0 +1,11 @@
+<?xml version="1.0" encoding="utf-8"?>
+<network-security-config>
+    <!-- Section 7: Local development cleartext HTTP permitted strictly for Android Emulator and localhost -->
+    <domain-config cleartextTrafficPermitted="true">
+        <!-- Android Emulator host loopback for local FastAPI backend -->
+        <domain includeSubdomains="true">10.0.2.2</domain>
+        <!-- Local loopback interfaces -->
+        <domain includeSubdomains="true">localhost</domain>
+        <domain includeSubdomains="true">127.0.0.1</domain>
+    </domain-config>
+</network-security-config>
