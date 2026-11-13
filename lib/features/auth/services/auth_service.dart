@@ -142,6 +142,91 @@ class AuthService {
     }
   }
 
+  /// Request Password Reset
+  /// Checks whether backend supports POST /api/v1/auth/forgot-password.
+  /// If unsupported (404/501), throws ApiError clearly indicating backend status.
+  Future<Map<String, dynamic>> requestPasswordReset({required String email}) async {
+    final url = Uri.parse(ApiConstants.forgotPasswordEndpoint);
+    final payload = {'email': email.trim().toLowerCase()};
+
+    try {
+      final response = await _client
+          .post(
+            url,
+            headers: ApiConstants.defaultHeaders,
+            body: jsonEncode(payload),
+          )
+          .timeout(timeoutDuration);
+
+      final Map<String, dynamic> data = _decodeResponseBody(response);
+
+      if (response.statusCode == 200 || response.statusCode == 202) {
+        return data;
+      } else if (response.statusCode == 404 || response.statusCode == 405) {
+        throw const ApiError(
+          statusCode: 501,
+          code: 'BACKEND_NOT_CONFIGURED',
+          message: 'Password reset is not yet supported by the CeylonGo backend server.',
+        );
+      } else {
+        throw ApiError.fromJson(response.statusCode, data);
+      }
+    } on SocketException {
+      throw ApiError.network();
+    } on TimeoutException {
+      throw ApiError.timeout();
+    } on http.ClientException {
+      throw ApiError.network();
+    } on FormatException catch (e) {
+      throw ApiError.generic(500, e.message);
+    }
+  }
+
+  /// Confirm Password Reset
+  /// Checks whether backend supports POST /api/v1/auth/reset-password.
+  Future<Map<String, dynamic>> confirmPasswordReset({
+    required String token,
+    required String newPassword,
+  }) async {
+    final url = Uri.parse(ApiConstants.resetPasswordEndpoint);
+    final payload = {
+      'token': token.trim(),
+      'password': newPassword,
+    };
+
+    try {
+      final response = await _client
+          .post(
+            url,
+            headers: ApiConstants.defaultHeaders,
+            body: jsonEncode(payload),
+          )
+          .timeout(timeoutDuration);
+
+      final Map<String, dynamic> data = _decodeResponseBody(response);
+
+      if (response.statusCode == 200) {
+        return data;
+      } else if (response.statusCode == 404 || response.statusCode == 405) {
+        throw const ApiError(
+          statusCode: 501,
+          code: 'BACKEND_NOT_CONFIGURED',
+          message: 'Password reset update is not yet supported by the CeylonGo backend server.',
+        );
+      } else {
+        throw ApiError.fromJson(response.statusCode, data);
+      }
+    } on SocketException {
+      throw ApiError.network();
+    } on TimeoutException {
+      throw ApiError.timeout();
+    } on http.ClientException {
+      throw ApiError.network();
+    } on FormatException catch (e) {
+      throw ApiError.generic(500, e.message);
+    }
+  }
+
   Map<String, dynamic> _decodeResponseBody(http.Response response) {
     if (response.body.trim().isEmpty) {
       return {};

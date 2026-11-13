@@ -1,4 +1,4 @@
-/// CeylonGo User Model
+﻿/// CeylonGo User Model
 /// Strictly conforms to Section 4 of Specification v1.0
 class UserModel {
   final String id;
@@ -15,7 +15,7 @@ class UserModel {
 
   factory UserModel.fromJson(Map<String, dynamic> json) {
     return UserModel(
-      id: json['id'] as String? ?? '',
+      id: json['id']?.toString() ?? '',
       fullName: json['full_name'] as String? ?? '',
       email: json['email'] as String? ?? '',
       role: json['role'] as String? ?? 'traveler',
@@ -37,3 +37,4 @@ class UserModel {
   @override
   int get hashCode => id.hashCode ^ email.hashCode;
 }
+

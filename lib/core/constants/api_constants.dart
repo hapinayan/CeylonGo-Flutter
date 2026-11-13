@@ -24,6 +24,8 @@ class ApiConstants {
   static String get registerEndpoint => '$apiV1/auth/register';
   static String get loginEndpoint => '$apiV1/auth/login';
   static String get meEndpoint => '$apiV1/auth/me';
+  static String get forgotPasswordEndpoint => '$apiV1/auth/forgot-password';
+  static String get resetPasswordEndpoint => '$apiV1/auth/reset-password';
 
   // Standard JSON Headers
   static const Map<String, String> defaultHeaders = {

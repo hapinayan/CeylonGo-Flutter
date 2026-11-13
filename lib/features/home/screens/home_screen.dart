@@ -117,14 +117,33 @@ class _HomeScreenState extends State<HomeScreen> {
 
   @override
   Widget build(BuildContext context) {
+    final screenWidth = MediaQuery.of(context).size.width;
+    final isDesktop = screenWidth >= 600;
+    // Increased logo size by ~28-30% and shifted ~10-12px downward with proportional toolbar
+    final toolbarHeight = isDesktop ? 106.0 : (screenWidth < 360 ? 84.0 : 94.0);
+    final logoHeight = isDesktop ? 78.0 : (screenWidth < 360 ? 59.0 : 70.0);
+    final logoTopShift = isDesktop ? 12.0 : (screenWidth < 360 ? 10.0 : 11.0);
+
     return Scaffold(
       backgroundColor: AppTheme.backgroundLight,
       appBar: AppBar(
-        title: const Text(
-          'CeylonGo',
-          style: TextStyle(
-            color: AppTheme.primaryNavy,
-            fontWeight: FontWeight.bold,
+        backgroundColor: AppTheme.backgroundWhite,
+        elevation: 0,
+        scrolledUnderElevation: 0,
+        centerTitle: true,
+        toolbarHeight: toolbarHeight,
+        automaticallyImplyLeading: false,
+        leading: const SizedBox(width: 48),
+        leadingWidth: 48,
+        title: Padding(
+          padding: EdgeInsets.only(top: logoTopShift),
+          child: Center(
+            child: Image.asset(
+              'assets/images/ceylongo_original_logo.jpg',
+              height: logoHeight,
+              fit: BoxFit.contain,
+              semanticLabel: 'CeylonGo Logo',
+            ),
           ),
         ),
         actions: [

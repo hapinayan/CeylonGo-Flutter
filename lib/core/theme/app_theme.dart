@@ -25,6 +25,7 @@ class AppTheme {
   static ThemeData get lightTheme {
     return ThemeData(
       useMaterial3: true,
+      fontFamily: 'Inter',
       colorScheme: ColorScheme.fromSeed(
         seedColor: primaryNavy,
         primary: primaryNavy,
@@ -32,13 +33,14 @@ class AppTheme {
         surface: backgroundWhite,
         error: errorRed,
       ),
-      scaffoldBackgroundColor: backgroundLight,
+      scaffoldBackgroundColor: backgroundWhite,
       appBarTheme: const AppBarTheme(
         backgroundColor: backgroundWhite,
         foregroundColor: primaryNavy,
         elevation: 0,
         centerTitle: true,
         titleTextStyle: TextStyle(
+          fontFamily: 'Inter',
           color: primaryNavy,
           fontSize: 20,
           fontWeight: FontWeight.bold,
@@ -50,35 +52,38 @@ class AppTheme {
         fillColor: backgroundWhite,
         contentPadding: const EdgeInsets.symmetric(horizontal: 16, vertical: 14),
         border: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: borderSlate),
         ),
         enabledBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: borderSlate),
         ),
         focusedBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: primaryNavy, width: 2),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: primaryNavy, width: 1.5),
         ),
         errorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
+          borderRadius: BorderRadius.circular(10),
           borderSide: const BorderSide(color: errorRed),
         ),
         focusedErrorBorder: OutlineInputBorder(
-          borderRadius: BorderRadius.circular(8),
-          borderSide: const BorderSide(color: errorRed, width: 2),
+          borderRadius: BorderRadius.circular(10),
+          borderSide: const BorderSide(color: errorRed, width: 1.5),
         ),
         labelStyle: const TextStyle(
+          fontFamily: 'Inter',
           color: textSecondary,
           fontSize: 14,
           fontWeight: FontWeight.w500,
         ),
         hintStyle: const TextStyle(
+          fontFamily: 'Inter',
           color: textMuted,
           fontSize: 14,
         ),
         errorStyle: const TextStyle(
+          fontFamily: 'Inter',
           color: errorRed,
           fontSize: 12,
         ),
@@ -90,9 +95,10 @@ class AppTheme {
           elevation: 0,
           minimumSize: const Size.fromHeight(48),
           shape: RoundedRectangleBorder(
-            borderRadius: BorderRadius.circular(8),
+            borderRadius: BorderRadius.circular(10),
           ),
           textStyle: const TextStyle(
+            fontFamily: 'Inter',
             fontSize: 16,
             fontWeight: FontWeight.w600,
           ),

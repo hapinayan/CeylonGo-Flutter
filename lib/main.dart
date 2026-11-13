@@ -4,8 +4,15 @@ import 'core/services/secure_storage_service.dart';
 import 'core/theme/app_theme.dart';
 import 'features/auth/models/api_error.dart';
 import 'features/auth/models/user_model.dart';
+import 'features/auth/screens/auth_landing_screen.dart';
+import 'features/auth/screens/check_email_screen.dart';
+import 'features/auth/screens/create_new_password_screen.dart';
+import 'features/auth/screens/forgot_password_screen.dart';
 import 'features/auth/screens/login_screen.dart';
+import 'features/auth/screens/login_success_screen.dart';
+import 'features/auth/screens/password_reset_success_screen.dart';
 import 'features/auth/screens/register_screen.dart';
+import 'features/auth/screens/registration_success_screen.dart';
 import 'features/auth/services/auth_service.dart';
 import 'features/home/screens/home_screen.dart';
 
@@ -38,11 +45,21 @@ class CeylonGoApp extends StatelessWidget {
           : AuthGate(authService: authService, storageService: storageService),
       initialRoute: initialRoute,
       routes: {
+        '/auth': (context) => const AuthLandingScreen(),
         '/login': (context) => LoginScreen(
           authService: authService,
           storageService: storageService,
         ),
         '/register': (context) => RegisterScreen(authService: authService),
+        '/registration-success': (context) => const RegistrationSuccessScreen(),
+        '/login-success': (context) => const LoginSuccessScreen(),
+        '/forgot-password': (context) =>
+            ForgotPasswordScreen(authService: authService),
+        '/check-email': (context) => const CheckEmailScreen(),
+        '/create-new-password': (context) =>
+            CreateNewPasswordScreen(authService: authService),
+        '/password-reset-success': (context) =>
+            const PasswordResetSuccessScreen(),
         '/home': (context) => HomeScreen(
           authService: authService,
           storageService: storageService,
@@ -169,10 +186,7 @@ class _AuthGateState extends State<AuthGate> {
         );
 
       case AuthStatus.unauthenticated:
-        return LoginScreen(
-          authService: _authService,
-          storageService: _storageService,
-        );
+        return const AuthLandingScreen();
 
       case AuthStatus.networkError:
         return Scaffold(
