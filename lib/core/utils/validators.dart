@@ -31,6 +31,29 @@ class FormValidators {
     return null;
   }
 
+  /// Validates country code: Required
+  static String? validateCountryCode(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Country code is required';
+    }
+    return null;
+  }
+
+  /// Validates phone number: Required; 7–15 digits
+  static String? validatePhoneNumber(String? value) {
+    if (value == null || value.trim().isEmpty) {
+      return 'Phone number is required';
+    }
+    final clean = value.replaceAll(RegExp(r'[\s\-]'), '');
+    if (!RegExp(r'^[0-9]+$').hasMatch(clean)) {
+      return 'Phone number must contain only digits';
+    }
+    if (clean.length < 7 || clean.length > 15) {
+      return 'Phone number must be between 7 and 15 digits';
+    }
+    return null;
+  }
+
   /// Validates password: Required; 8–128 characters; at least one uppercase letter,
   /// one lowercase letter, one digit; NO whitespace trimming of passwords
   static String? validatePassword(String? value) {
