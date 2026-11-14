@@ -40,26 +40,45 @@ class _CreateNewPasswordScreenState extends State<CreateNewPasswordScreen> {
   bool _obscureConfirmPassword = true;
   bool _isLoading = false;
   String? _errorMessage;
+  String? _lastLoadedToken;
 
   @override
   void initState() {
     super.initState();
     _authService = widget.authService ?? AuthService();
-    if (widget.resetToken != null) {
+    if (widget.resetToken != null && widget.resetToken!.isNotEmpty) {
       _tokenController.text = widget.resetToken!;
+      _lastLoadedToken = widget.resetToken;
+    }
+  }
+
+  @override
+  void didUpdateWidget(covariant CreateNewPasswordScreen oldWidget) {
+    super.didUpdateWidget(oldWidget);
+    if (widget.resetToken != null &&
+        widget.resetToken!.isNotEmpty &&
+        widget.resetToken != oldWidget.resetToken) {
+      _tokenController.text = widget.resetToken!;
+      _lastLoadedToken = widget.resetToken;
     }
   }
 
   @override
   void didChangeDependencies() {
     super.didChangeDependencies();
-    if (_tokenController.text.isEmpty) {
-      final args =
-          ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-      final argToken = args?['token'] as String?;
-      if (argToken != null && argToken.isNotEmpty) {
-        _tokenController.text = argToken;
-      }
+    final args =
+        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+    final argToken = args?['token'] as String?;
+    if (argToken != null &&
+        argToken.isNotEmpty &&
+        argToken != _lastLoadedToken) {
+      _tokenController.text = argToken;
+      _lastLoadedToken = argToken;
+    } else if (_lastLoadedToken == null &&
+        widget.resetToken != null &&
+        widget.resetToken!.isNotEmpty) {
+      _tokenController.text = widget.resetToken!;
+      _lastLoadedToken = widget.resetToken;
     }
   }
 
@@ -138,16 +157,21 @@ class _CreateNewPasswordScreenState extends State<CreateNewPasswordScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundWhite,
       body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: 12,
-                ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 12,
+                      ),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 480),
@@ -474,12 +498,14 @@ class _CreateNewPasswordScreenState extends State<CreateNewPasswordScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
               const AuthWaveDecoration(),
             ],
           ),
         ),
-      ),
+      );
+    },
+  ),
+),
     );
   }
 }

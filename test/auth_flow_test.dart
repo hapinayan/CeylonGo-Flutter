@@ -15,6 +15,8 @@ import 'package:ceylongo/features/auth/screens/login_success_screen.dart';
 import 'package:ceylongo/features/auth/screens/password_reset_success_screen.dart';
 import 'package:ceylongo/features/auth/screens/registration_success_screen.dart';
 import 'package:ceylongo/features/auth/services/auth_service.dart';
+import 'package:ceylongo/features/auth/widgets/auth_trust_footer.dart';
+import 'package:ceylongo/features/auth/widgets/auth_wave_decoration.dart';
 
 class FakeSecureStorageService extends SecureStorageService {
   String? token;
@@ -136,14 +138,20 @@ void main() {
         (WidgetTester tester) async {
       await tester.pumpWidget(wrapWithTheme(const AuthLandingScreen()));
 
-      expect(find.text('Discover Local. Feel at Home.'), findsOneWidget);
+      // Header and Trust Footer both render the signature tagline
+      expect(find.text('Discover Local. Feel at Home.'), findsNWidgets(2));
+      expect(find.byType(AuthTrustFooter), findsOneWidget);
+      expect(find.byKey(const Key('auth_trust_shield_icon')), findsOneWidget);
       expect(find.text('Welcome to CeylonGo'), findsOneWidget);
       expect(find.text('Continue with Email'), findsOneWidget);
 
-      // Social buttons
+      // Social buttons: Full-width Google & WhatsApp buttons (Apple removed)
       expect(find.byKey(const Key('social_btn_google')), findsOneWidget);
-      expect(find.byKey(const Key('social_btn_apple')), findsOneWidget);
+      expect(find.byKey(const Key('social_btn_apple')), findsNothing);
       expect(find.byKey(const Key('social_btn_whatsapp')), findsOneWidget);
+      expect(find.text('Continue with Google'), findsOneWidget);
+      expect(find.text('Continue with WhatsApp'), findsOneWidget);
+      expect(find.text('Continue with Apple'), findsNothing);
     });
 
     testWidgets('Shows honest message when tapping social login buttons',
@@ -159,6 +167,48 @@ void main() {
         ),
         findsOneWidget,
       );
+
+      // Tap WhatsApp button
+      await tester.tap(find.byKey(const Key('social_btn_whatsapp')));
+      await tester.pump();
+      expect(
+        find.text(
+          'WhatsApp sign-in is not yet configured on this server. Please use email.',
+        ),
+        findsOneWidget,
+      );
+    });
+
+    testWidgets('AuthLandingScreen fits on Samsung Galaxy A22 (360x800) without scrolling',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(360, 800);
+      tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
+
+      await tester.pumpWidget(wrapWithTheme(const AuthLandingScreen()));
+      await tester.pumpAndSettle();
+
+      // Verify Google and WhatsApp buttons are visible
+      expect(find.byKey(const Key('social_btn_google')), findsOneWidget);
+      expect(find.byKey(const Key('social_btn_whatsapp')), findsOneWidget);
+      expect(find.byType(AuthTrustFooter), findsOneWidget);
+
+      // Wave anchored to bottom
+      final waveFinder = find.byType(AuthWaveDecoration);
+      expect(waveFinder, findsOneWidget);
+      final waveRect = tester.getRect(waveFinder);
+      expect(waveRect.bottom, equals(800.0));
+
+      // No vertical scrolling in normal view
+      final scrollableFinder = find.descendant(
+        of: find.byType(SingleChildScrollView),
+        matching: find.byType(Scrollable),
+      );
+      final scrollableState = tester.state<ScrollableState>(scrollableFinder.first);
+      expect(scrollableState.position.maxScrollExtent, equals(0.0));
     });
 
     testWidgets('Validates email field before continuing',
@@ -169,6 +219,25 @@ void main() {
       await tester.pumpAndSettle();
 
       expect(find.text('Email is required'), findsOneWidget);
+    });
+
+    testWidgets('Positions AuthWaveDecoration at bottom of viewport on tall screen without empty space',
+        (WidgetTester tester) async {
+      // Simulate tall phone screen (400x900)
+      tester.view.physicalSize = const Size(400, 900);
+      tester.view.devicePixelRatio = 1.0;
+
+      await tester.pumpWidget(wrapWithTheme(const AuthLandingScreen()));
+      await tester.pumpAndSettle();
+
+      final waveFinder = find.byType(AuthWaveDecoration);
+      expect(waveFinder, findsOneWidget);
+
+      final waveRect = tester.getRect(waveFinder);
+      expect(waveRect.bottom, equals(900.0));
+
+      tester.view.resetPhysicalSize();
+      tester.view.resetDevicePixelRatio();
     });
 
     testWidgets('Responsive at 320px, 375px, and 430px widths',
@@ -252,6 +321,8 @@ void main() {
       expect(find.text('Welcome Back'), findsOneWidget);
       expect(find.text('traveler@ceylongo.com'), findsOneWidget);
       expect(find.text('Forgot password?'), findsOneWidget);
+      expect(find.byType(AuthTrustFooter), findsOneWidget);
+      expect(find.byKey(const Key('auth_trust_shield_icon')), findsOneWidget);
 
       // Enter password
       final passwordField = find.byKey(const Key('login_password_field'));
@@ -314,6 +385,8 @@ void main() {
       expect(find.text('Login Successful'), findsOneWidget);
       expect(find.text('Nimal Silva'), findsOneWidget);
       expect(find.text('nimal@ceylongo.com'), findsOneWidget);
+      expect(find.byType(AuthTrustFooter), findsOneWidget);
+      expect(find.byKey(const Key('auth_trust_shield_icon')), findsOneWidget);
 
       await tester.tap(find.byKey(const Key('continue_to_home_button')));
       await tester.pumpAndSettle();
@@ -346,6 +419,8 @@ void main() {
       ));
 
       expect(find.text('Forgot Password'), findsOneWidget);
+      expect(find.byType(AuthTrustFooter), findsOneWidget);
+      expect(find.byKey(const Key('auth_trust_shield_icon')), findsOneWidget);
 
       await tester.enterText(
         find.byKey(const Key('forgot_email_field')),
@@ -374,6 +449,8 @@ void main() {
         await tester.pumpAndSettle();
 
         expect(find.text('Forgot Password'), findsOneWidget);
+      expect(find.byType(AuthTrustFooter), findsOneWidget);
+      expect(find.byKey(const Key('auth_trust_shield_icon')), findsOneWidget);
       }
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();

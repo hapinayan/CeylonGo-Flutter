@@ -6,6 +6,7 @@ import '../models/api_error.dart';
 import '../services/auth_service.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_heading.dart';
+import '../widgets/auth_trust_footer.dart';
 import '../widgets/auth_wave_decoration.dart';
 
 /// Screen 6: Forgot Password Screen
@@ -132,16 +133,24 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundWhite,
       body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: 12,
-                ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxHeight <= 800;
+            final showTrustFooter = constraints.maxHeight >= 500;
+
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 12,
+                      ),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 480),
@@ -349,50 +358,22 @@ class _ForgotPasswordScreenState extends State<ForgotPasswordScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
-
-                          // Preview flow link for testing UI flow
-                          Center(
-                            child: TextButton.icon(
-                              key: const Key('preview_check_email_link'),
-                              onPressed: () {
-                                Navigator.pushNamed(
-                                  context,
-                                  '/check-email',
-                                  arguments: {
-                                    'email': _emailController.text.isNotEmpty
-                                        ? _emailController.text
-                                        : 'traveler@ceylongo.com'
-                                  },
-                                );
-                              },
-                              icon: const Icon(
-                                Icons.remove_red_eye_outlined,
-                                size: 16,
-                                color: AppTheme.primaryNavy,
-                              ),
-                              label: const Text(
-                                'Preview Email Screen (Demo Flow)',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 12.5,
-                                  color: AppTheme.primaryNavy,
-                                ),
-                              ),
-                            ),
-                          ),
                         ],
                       ),
                     ),
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              if (showTrustFooter)
+                AuthTrustFooter(isCompact: isCompact),
               const AuthWaveDecoration(),
             ],
           ),
         ),
-      ),
+      );
+    },
+  ),
+),
     );
   }
 }
