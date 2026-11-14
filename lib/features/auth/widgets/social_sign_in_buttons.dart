@@ -1,8 +1,12 @@
 import 'package:flutter/material.dart';
+
 import '../../../core/theme/app_theme.dart';
 
-/// Social Sign-In Buttons: Google, Apple, WhatsApp
-/// Conforms to reference screenshots while honestly presenting integration status
+/// Social Sign-In Buttons: Google & WhatsApp
+///
+/// Full-width outlined buttons conforming to CeylonGo branding with centered labels,
+/// recognizable left-aligned logos, and honest integration reporting.
+/// Apple sign-in is completely omitted.
 class SocialSignInButtons extends StatelessWidget {
   final ValueChanged<String>? onProviderSelected;
 
@@ -29,84 +33,84 @@ class SocialSignInButtons extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    return Row(
-      mainAxisAlignment: MainAxisAlignment.center,
+    return Column(
+      mainAxisSize: MainAxisSize.min,
+      crossAxisAlignment: CrossAxisAlignment.stretch,
       children: [
-        // Google Button
-        _SocialButton(
+        // Continue with Google
+        _SocialOutlineButton(
           key: const Key('social_btn_google'),
-          tooltip: 'Continue with Google',
-          onTap: () => _handleTap(context, 'Google'),
-          child: const _GoogleIcon(),
+          label: 'Continue with Google',
+          icon: const _GoogleIcon(),
+          onPressed: () => _handleTap(context, 'Google'),
         ),
-        const SizedBox(width: 16),
+        const SizedBox(height: 12),
 
-        // Apple Button
-        _SocialButton(
-          key: const Key('social_btn_apple'),
-          tooltip: 'Continue with Apple',
-          onTap: () => _handleTap(context, 'Apple'),
-          child: const Icon(
-            Icons.apple,
-            color: AppTheme.primaryNavy,
-            size: 24,
-          ),
-        ),
-        const SizedBox(width: 16),
-
-        // WhatsApp Button
-        _SocialButton(
+        // Continue with WhatsApp
+        _SocialOutlineButton(
           key: const Key('social_btn_whatsapp'),
-          tooltip: 'Continue with WhatsApp',
-          onTap: () => _handleTap(context, 'WhatsApp'),
-          child: const Icon(
-            Icons.chat_bubble_rounded,
-            color: Color(0xFF25D366), // WhatsApp Brand Green
-            size: 22,
-          ),
+          label: 'Continue with WhatsApp',
+          icon: const _WhatsAppIcon(),
+          onPressed: () => _handleTap(context, 'WhatsApp'),
         ),
       ],
     );
   }
 }
 
-class _SocialButton extends StatelessWidget {
-  final Widget child;
-  final VoidCallback onTap;
-  final String tooltip;
+/// Full-width outlined social button with logo on the left and centered text
+class _SocialOutlineButton extends StatelessWidget {
+  final String label;
+  final Widget icon;
+  final VoidCallback onPressed;
 
-  const _SocialButton({
+  const _SocialOutlineButton({
     super.key,
-    required this.child,
-    required this.onTap,
-    required this.tooltip,
+    required this.label,
+    required this.icon,
+    required this.onPressed,
   });
 
   @override
   Widget build(BuildContext context) {
-    return Tooltip(
-      message: tooltip,
-      child: InkWell(
-        onTap: onTap,
-        borderRadius: BorderRadius.circular(12),
-        child: Container(
-          width: 54,
-          height: 48,
-          decoration: BoxDecoration(
-            color: AppTheme.backgroundWhite,
-            borderRadius: BorderRadius.circular(12),
-            border: Border.all(color: AppTheme.borderSlate, width: 1),
-            boxShadow: [
-              BoxShadow(
-                color: Colors.black.withAlpha(8),
-                blurRadius: 4,
-                offset: const Offset(0, 2),
-              ),
-            ],
-          ),
-          alignment: Alignment.center,
-          child: child,
+    return OutlinedButton(
+      onPressed: onPressed,
+      style: OutlinedButton.styleFrom(
+        backgroundColor: AppTheme.backgroundWhite,
+        foregroundColor: AppTheme.textPrimary,
+        elevation: 0,
+        minimumSize: const Size.fromHeight(48),
+        side: const BorderSide(
+          color: AppTheme.borderSlate,
+          width: 1,
         ),
+        shape: RoundedRectangleBorder(
+          borderRadius: BorderRadius.circular(10),
+        ),
+        padding: const EdgeInsets.symmetric(horizontal: 16),
+      ),
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          Align(
+            alignment: Alignment.centerLeft,
+            child: icon,
+          ),
+          Align(
+            alignment: Alignment.center,
+            child: Text(
+              label,
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 14.5,
+                fontWeight: FontWeight.w600,
+                color: AppTheme.textPrimary,
+                letterSpacing: 0.1,
+              ),
+            ),
+          ),
+        ],
       ),
     );
   }
@@ -119,8 +123,8 @@ class _GoogleIcon extends StatelessWidget {
   @override
   Widget build(BuildContext context) {
     return SizedBox(
-      width: 22,
-      height: 22,
+      width: 20,
+      height: 20,
       child: CustomPaint(
         painter: _GoogleLogoPainter(),
       ),
@@ -169,3 +173,57 @@ class _GoogleLogoPainter extends CustomPainter {
   bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }
 
+/// Recognizable WhatsApp icon: green speech bubble with white phone receiver
+class _WhatsAppIcon extends StatelessWidget {
+  const _WhatsAppIcon();
+
+  @override
+  Widget build(BuildContext context) {
+    return SizedBox(
+      width: 22,
+      height: 22,
+      child: Stack(
+        alignment: Alignment.center,
+        children: [
+          CustomPaint(
+            size: const Size(22, 22),
+            painter: _WhatsAppBubblePainter(),
+          ),
+          const Icon(
+            Icons.phone,
+            color: Colors.white,
+            size: 12,
+          ),
+        ],
+      ),
+    );
+  }
+}
+
+class _WhatsAppBubblePainter extends CustomPainter {
+  @override
+  void paint(Canvas canvas, Size size) {
+    final greenPaint = Paint()
+      ..color = const Color(0xFF25D366) // WhatsApp brand green
+      ..style = PaintingStyle.fill;
+
+    final path = Path();
+    final center = Offset(size.width * 0.5, size.height * 0.48);
+    final radius = size.width * 0.45;
+
+    path.addOval(Rect.fromCircle(center: center, radius: radius));
+
+    // Subtle speech bubble tail at bottom-left
+    final tailPath = Path()
+      ..moveTo(size.width * 0.22, size.height * 0.72)
+      ..lineTo(size.width * 0.08, size.height * 0.92)
+      ..lineTo(size.width * 0.36, size.height * 0.86)
+      ..close();
+
+    path.addPath(tailPath, Offset.zero);
+    canvas.drawPath(path, greenPaint);
+  }
+
+  @override
+  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+}

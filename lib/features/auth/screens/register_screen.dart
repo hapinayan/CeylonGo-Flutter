@@ -4,6 +4,8 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
 import '../models/api_error.dart';
 import '../services/auth_service.dart';
+import '../widgets/auth_trust_footer.dart';
+import '../widgets/auth_wave_decoration.dart';
 
 /// CeylonGo Redesigned Tourist Registration (Sign Up) Screen
 /// Clean, minimal, mobile-responsive UI optimized for 320px–430px screens
@@ -166,21 +168,35 @@ class _RegisterScreenState extends State<RegisterScreen> {
     required Widget prefixIcon,
     Widget? suffixIcon,
     BoxConstraints? prefixIconConstraints,
+    bool isCompact = false,
   }) {
     return InputDecoration(
       hintText: hintText,
-      hintStyle: const TextStyle(
+      hintStyle: TextStyle(
         fontFamily: 'Inter',
         color: AppTheme.textMuted,
-        fontSize: 13.5,
+        fontSize: isCompact ? 12.5 : 13.5,
       ),
       prefixIcon: prefixIcon,
-      prefixIconConstraints: prefixIconConstraints,
+      prefixIconConstraints: prefixIconConstraints ??
+          BoxConstraints(
+            minWidth: isCompact ? 36 : 44,
+            minHeight: isCompact ? 32 : 40,
+          ),
       suffixIcon: suffixIcon,
+      suffixIconConstraints: suffixIcon != null
+          ? BoxConstraints(
+              minWidth: isCompact ? 36 : 44,
+              minHeight: isCompact ? 32 : 40,
+            )
+          : null,
       filled: true,
       isDense: true,
       fillColor: AppTheme.backgroundWhite,
-      contentPadding: const EdgeInsets.symmetric(horizontal: 14, vertical: 12),
+      contentPadding: EdgeInsets.symmetric(
+        horizontal: isCompact ? 12 : 14,
+        vertical: isCompact ? 8 : 12,
+      ),
       border: OutlineInputBorder(
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: AppTheme.borderSlate, width: 1),
@@ -201,533 +217,649 @@ class _RegisterScreenState extends State<RegisterScreen> {
         borderRadius: BorderRadius.circular(10),
         borderSide: const BorderSide(color: AppTheme.errorRed, width: 1.5),
       ),
+      errorStyle: TextStyle(
+        fontFamily: 'Inter',
+        color: AppTheme.errorRed,
+        fontSize: isCompact ? 11.5 : 12.0,
+      ),
     );
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding = screenWidth < 360 ? 16.0 : (screenWidth < 430 ? 20.0 : 24.0);
-    final waveHeight = screenWidth < 360 ? 45.0 : 55.0;
-
-    const labelStyle = TextStyle(
-      fontFamily: 'Inter',
-      fontSize: 13.5,
-      fontWeight: FontWeight.w600,
-      color: AppTheme.textPrimary,
-    );
-
     return Scaffold(
       backgroundColor: AppTheme.backgroundWhite,
       body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: 12,
-                ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 480),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Top Navigation: Back Arrow
-                          Align(
-                            alignment: Alignment.centerLeft,
-                            child: IconButton(
-                              icon: const Icon(
-                                Icons.arrow_back,
-                                color: AppTheme.primaryNavy,
-                                size: 24,
-                              ),
-                              onPressed: () {
-                                if (Navigator.canPop(context)) {
-                                  Navigator.pop(context);
-                                }
-                              },
-                              tooltip: 'Back',
-                              padding: EdgeInsets.zero,
-                              constraints: const BoxConstraints(),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final screenWidth = MediaQuery.of(context).size.width;
+            final isCompact = constraints.maxHeight <= 820;
+            final isShort = constraints.maxHeight < 680;
+            final showTrustFooter = constraints.maxHeight >= 680;
 
-                          // Centered CeylonGo Brand Logo
-                          Center(
-                            child: Image.asset(
-                              'assets/images/ceylongo_logo.png',
-                              height: screenWidth < 360 ? 56 : 64,
-                              fit: BoxFit.contain,
-                              semanticLabel: 'CeylonGo Logo',
-                            ),
-                          ),
-                          const SizedBox(height: 6),
+            final horizontalPadding = screenWidth < 360
+                ? 16.0
+                : (screenWidth < 430 ? 20.0 : 24.0);
+            final waveHeight = isShort ? 26.0 : (isCompact ? 32.0 : 50.0);
+            final logoHeight = isShort ? 30.0 : (isCompact ? 36.0 : 56.0);
+            final fieldGap = isShort ? 4.0 : (isCompact ? 6.0 : 12.0);
+            final labelGap = isShort ? 1.5 : (isCompact ? 2.0 : 3.0);
 
-                          // Exact Tagline: "Discover Local. Feel at Home."
-                          const Center(
-                            child: Text(
-                              'Discover Local. Feel at Home.',
-                              textAlign: TextAlign.center,
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 12.5,
-                                fontWeight: FontWeight.w500,
-                                color: AppTheme.textSecondary,
-                                letterSpacing: 0.2,
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 18),
+            final labelStyle = TextStyle(
+              fontFamily: 'Inter',
+              fontSize: isCompact ? 12.5 : 13.5,
+              fontWeight: FontWeight.w600,
+              color: AppTheme.textPrimary,
+            );
 
-                          // Heading: "Create Your CeylonGo Account" with orange underline
-                          Text(
-                            'Create Your CeylonGo Account',
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: screenWidth < 360 ? 20 : 21,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryNavy,
-                              letterSpacing: -0.3,
-                            ),
-                          ),
-                          const SizedBox(height: 6),
-                          Center(
-                            child: Container(
-                              width: 42,
-                              height: 3.5,
-                              decoration: BoxDecoration(
-                                color: AppTheme.accentOrange,
-                                borderRadius: BorderRadius.circular(2),
-                              ),
-                            ),
-                          ),
-                          const SizedBox(height: 8),
-
-                          // Subtitle
-                          const Text(
-                            "Join CeylonGo and start exploring Sri Lanka's local stays, experiences, and more.",
-                            textAlign: TextAlign.center,
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13,
-                              color: AppTheme.textSecondary,
-                              height: 1.4,
-                            ),
-                          ),
-                          const SizedBox(height: 18),
-
-                          // Server Error Banner
-                          if (_errorMessage != null) ...[
-                            Container(
-                              padding: const EdgeInsets.all(12),
-                              decoration: BoxDecoration(
-                                color: AppTheme.errorRed.withAlpha(25),
-                                borderRadius: BorderRadius.circular(8),
-                                border: Border.all(
-                                  color: AppTheme.errorRed.withAlpha(75),
-                                ),
-                              ),
-                              child: Row(
-                                children: [
-                                  const Icon(
-                                    Icons.error_outline,
-                                    color: AppTheme.errorRed,
-                                    size: 20,
-                                  ),
-                                  const SizedBox(width: 8),
-                                  Expanded(
-                                    child: Text(
-                                      _errorMessage!,
-                                      style: const TextStyle(
-                                        fontFamily: 'Inter',
-                                        color: AppTheme.errorRed,
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w500,
-                                      ),
+            return SingleChildScrollView(
+              physics: const ClampingScrollPhysics(),
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.fromLTRB(
+                        horizontalPadding,
+                        isShort ? 2.0 : (isCompact ? 4.0 : 10.0),
+                        horizontalPadding,
+                        0,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 480),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Top Navigation: Back Arrow
+                                Align(
+                                  alignment: Alignment.centerLeft,
+                                  child: IconButton(
+                                    style: IconButton.styleFrom(
+                                      tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                      minimumSize: Size.zero,
+                                      padding: EdgeInsets.zero,
                                     ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                            const SizedBox(height: 12),
-                          ],
-
-                          // 1. Full Name Field
-                          const Text('Full Name', style: labelStyle),
-                          const SizedBox(height: 5),
-                          TextFormField(
-                            key: const Key('register_full_name_field'),
-                            controller: _fullNameController,
-                            keyboardType: TextInputType.name,
-                            textInputAction: TextInputAction.next,
-                            enabled: !_isLoading,
-                            onChanged: (_) {
-                              if (_fullNameServerError != null ||
-                                  _errorMessage != null) {
-                                setState(() {
-                                  _fullNameServerError = null;
-                                  _errorMessage = null;
-                                });
-                              }
-                            },
-                            decoration: _inputDecoration(
-                              hintText: 'e.g. Test Traveler',
-                              prefixIcon: const Icon(
-                                Icons.person_outline_rounded,
-                                color: AppTheme.primaryNavy,
-                                size: 20,
-                              ),
-                            ),
-                            validator: (value) {
-                              if (_fullNameServerError != null) {
-                                return _fullNameServerError;
-                              }
-                              return FormValidators.validateFullName(value);
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          // 2. Email Address Field
-                          const Text('Email Address', style: labelStyle),
-                          const SizedBox(height: 5),
-                          TextFormField(
-                            key: const Key('register_email_field'),
-                            controller: _emailController,
-                            keyboardType: TextInputType.emailAddress,
-                            textInputAction: TextInputAction.next,
-                            enabled: !_isLoading,
-                            onChanged: (_) {
-                              if (_emailServerError != null ||
-                                  _errorMessage != null) {
-                                setState(() {
-                                  _emailServerError = null;
-                                  _errorMessage = null;
-                                });
-                              }
-                            },
-                            decoration: _inputDecoration(
-                              hintText: 'name@example.com',
-                              prefixIcon: const Icon(
-                                Icons.email_outlined,
-                                color: AppTheme.primaryNavy,
-                                size: 20,
-                              ),
-                            ),
-                            validator: (value) {
-                              if (_emailServerError != null) {
-                                return _emailServerError;
-                              }
-                              return FormValidators.validateEmail(value);
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          // 3. Contact Phone Number Field (Unified with Country Code)
-                          const Text('Contact Phone Number', style: labelStyle),
-                          const SizedBox(height: 5),
-                          _buildUnifiedPhoneField(),
-                          const SizedBox(height: 12),
-
-                          // 5. Password Field
-                          const Text('Password', style: labelStyle),
-                          const SizedBox(height: 5),
-                          TextFormField(
-                            key: const Key('register_password_field'),
-                            controller: _passwordController,
-                            obscureText: _obscurePassword,
-                            textInputAction: TextInputAction.next,
-                            enabled: !_isLoading,
-                            onChanged: (_) {
-                              if (_passwordServerError != null ||
-                                  _errorMessage != null) {
-                                setState(() {
-                                  _passwordServerError = null;
-                                  _errorMessage = null;
-                                });
-                              }
-                            },
-                            decoration: _inputDecoration(
-                              hintText: 'Enter your password',
-                              prefixIcon: const Icon(
-                                Icons.lock_outline_rounded,
-                                color: AppTheme.primaryNavy,
-                                size: 20,
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscurePassword
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: AppTheme.textMuted,
-                                  size: 20,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscurePassword = !_obscurePassword;
-                                  });
-                                },
-                                tooltip: _obscurePassword
-                                    ? 'Show password'
-                                    : 'Hide password',
-                              ),
-                            ),
-                            validator: (value) {
-                              if (_passwordServerError != null) {
-                                return _passwordServerError;
-                              }
-                              return FormValidators.validatePassword(value);
-                            },
-                          ),
-                          const SizedBox(height: 12),
-
-                          // 6. Confirm Password Field
-                          const Text('Confirm Password', style: labelStyle),
-                          const SizedBox(height: 5),
-                          TextFormField(
-                            key: const Key('register_confirm_password_field'),
-                            controller: _confirmPasswordController,
-                            obscureText: _obscureConfirmPassword,
-                            textInputAction: TextInputAction.done,
-                            enabled: !_isLoading,
-                            onFieldSubmitted: (_) => _onSubmit(),
-                            decoration: _inputDecoration(
-                              hintText: 'Re-enter your password',
-                              prefixIcon: const Icon(
-                                Icons.lock_outline_rounded,
-                                color: AppTheme.primaryNavy,
-                                size: 20,
-                              ),
-                              suffixIcon: IconButton(
-                                icon: Icon(
-                                  _obscureConfirmPassword
-                                      ? Icons.visibility_off_outlined
-                                      : Icons.visibility_outlined,
-                                  color: AppTheme.textMuted,
-                                  size: 20,
-                                ),
-                                onPressed: () {
-                                  setState(() {
-                                    _obscureConfirmPassword =
-                                        !_obscureConfirmPassword;
-                                  });
-                                },
-                                tooltip: _obscureConfirmPassword
-                                    ? 'Show password'
-                                    : 'Hide password',
-                              ),
-                            ),
-                            validator: (value) =>
-                                FormValidators.validateConfirmPassword(
-                                  value,
-                                  _passwordController.text,
-                                ),
-                          ),
-                          const SizedBox(height: 12),
-
-                          // Checkbox: "I agree to CeylonGo's Terms and Privacy Notice."
-                          InkWell(
-                            key: const Key('register_terms_checkbox'),
-                            onTap: _isLoading
-                                ? null
-                                : () {
-                                    setState(() {
-                                      _acceptTerms = !_acceptTerms;
-                                      if (_acceptTerms) {
-                                        _termsError = false;
-                                      }
-                                    });
-                                  },
-                            borderRadius: BorderRadius.circular(6),
-                            child: Padding(
-                              padding: const EdgeInsets.symmetric(vertical: 4),
-                              child: Row(
-                                crossAxisAlignment: CrossAxisAlignment.center,
-                                children: [
-                                  SizedBox(
-                                    width: 24,
-                                    height: 24,
-                                    child: Checkbox(
-                                      value: _acceptTerms,
-                                      activeColor: AppTheme.accentOrange,
-                                      checkColor: AppTheme.backgroundWhite,
-                                      side: const BorderSide(
-                                        color: AppTheme.borderSlate,
-                                        width: 1.5,
-                                      ),
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(4),
-                                      ),
-                                      onChanged: _isLoading
-                                          ? null
-                                          : (val) {
-                                              setState(() {
-                                                _acceptTerms = val ?? false;
-                                                if (_acceptTerms) {
-                                                  _termsError = false;
-                                                }
-                                              });
-                                            },
+                                    icon: const Icon(
+                                      Icons.arrow_back,
+                                      color: AppTheme.primaryNavy,
+                                      size: 22,
                                     ),
-                                  ),
-                                  const SizedBox(width: 10),
-                                  Expanded(
-                                    child: RichText(
-                                      text: const TextSpan(
-                                        style: TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 12.5,
-                                          color: AppTheme.textSecondary,
-                                          height: 1.35,
-                                        ),
-                                        children: [
-                                          TextSpan(text: "I agree to CeylonGo's "),
-                                          TextSpan(
-                                            text: 'Terms',
-                                            style: TextStyle(
-                                              color: AppTheme.accentOrange,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          TextSpan(text: ' and '),
-                                          TextSpan(
-                                            text: 'Privacy Notice',
-                                            style: TextStyle(
-                                              color: AppTheme.accentOrange,
-                                              fontWeight: FontWeight.w600,
-                                            ),
-                                          ),
-                                          TextSpan(text: '.'),
-                                        ],
-                                      ),
-                                    ),
-                                  ),
-                                ],
-                              ),
-                            ),
-                          ),
-                          if (_termsError) ...[
-                            const SizedBox(height: 5),
-                            const Padding(
-                              padding: EdgeInsets.only(left: 34),
-                              child: Text(
-                                "You must agree to CeylonGo's Terms and Privacy Notice to continue",
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  color: AppTheme.errorRed,
-                                  fontSize: 12,
-                                ),
-                              ),
-                            ),
-                          ],
-                          const SizedBox(height: 18),
-
-                          // Primary Button: "Create Account"
-                          SizedBox(
-                            height: 48,
-                            child: ElevatedButton(
-                              key: const Key('register_submit_button'),
-                              onPressed: _isLoading ? null : _onSubmit,
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.accentOrange,
-                                foregroundColor: AppTheme.backgroundWhite,
-                                disabledBackgroundColor: AppTheme.accentOrange
-                                    .withAlpha(150),
-                                elevation: 0,
-                                shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
-                                ),
-                              ),
-                              child: _isLoading
-                                  ? const SizedBox(
-                                      height: 22,
-                                      width: 22,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2.5,
-                                        color: AppTheme.backgroundWhite,
-                                      ),
-                                    )
-                                  : const Text(
-                                      'Create Account',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 16,
-                                        fontWeight: FontWeight.bold,
-                                        color: AppTheme.backgroundWhite,
-                                      ),
-                                    ),
-                            ),
-                          ),
-                          const SizedBox(height: 16),
-
-                          // Bottom Navigation: "Already have an account? Sign In"
-                          Wrap(
-                            alignment: WrapAlignment.center,
-                            crossAxisAlignment: WrapCrossAlignment.center,
-                            children: [
-                              const Text(
-                                'Already have an account? ',
-                                style: TextStyle(
-                                  fontFamily: 'Inter',
-                                  fontSize: 13.5,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                              GestureDetector(
-                                onTap: _isLoading
-                                    ? null
-                                    : () {
+                                    onPressed: () {
+                                      if (Navigator.canPop(context)) {
                                         Navigator.pop(context);
-                                      },
-                                child: const Text(
-                                  'Sign In',
+                                      }
+                                    },
+                                    tooltip: 'Back',
+                                    padding: EdgeInsets.zero,
+                                    constraints: const BoxConstraints(),
+                                  ),
+                                ),
+                                SizedBox(height: isShort ? 2 : (isCompact ? 3 : 8)),
+
+                                // Centered CeylonGo Brand Logo
+                                Center(
+                                  child: Image.asset(
+                                    'assets/images/ceylongo_logo.png',
+                                    height: logoHeight,
+                                    fit: BoxFit.contain,
+                                    semanticLabel: 'CeylonGo Logo',
+                                  ),
+                                ),
+                                SizedBox(height: isShort ? 1 : (isCompact ? 2 : 6)),
+
+                                // Exact Tagline: "Discover Local. Feel at Home."
+                                Center(
+                                  child: Text(
+                                    'Discover Local. Feel at Home.',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: isCompact ? 11.5 : 12.5,
+                                      fontWeight: FontWeight.w500,
+                                      color: AppTheme.textSecondary,
+                                      letterSpacing: 0.2,
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: isShort ? 5 : (isCompact ? 8 : 18),
+                                ),
+
+                                // Heading: "Create Your CeylonGo Account" with orange underline
+                                Text(
+                                  'Create Your CeylonGo Account',
+                                  textAlign: TextAlign.center,
+                                  maxLines: 1,
+                                  overflow: TextOverflow.ellipsis,
                                   style: TextStyle(
                                     fontFamily: 'Inter',
-                                    fontSize: 13.5,
+                                    fontSize: isShort
+                                        ? 16.5
+                                        : (isCompact ? 17.5 : 21),
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.accentOrange,
+                                    color: AppTheme.primaryNavy,
+                                    letterSpacing: -0.3,
                                   ),
                                 ),
-                              ),
-                            ],
+                                SizedBox(height: isShort ? 2 : 3),
+                                Center(
+                                  child: Container(
+                                    width: isCompact ? 36 : 42,
+                                    height: 2.5,
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.accentOrange,
+                                      borderRadius: BorderRadius.circular(2),
+                                    ),
+                                  ),
+                                ),
+                                SizedBox(height: isShort ? 3 : 5),
+
+                                // Subtitle
+                                Text(
+                                  "Join CeylonGo and start exploring Sri Lanka's local stays, experiences, and more.",
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: isCompact ? 11.5 : 13,
+                                    color: AppTheme.textSecondary,
+                                    height: 1.25,
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: isShort ? 6 : (isCompact ? 8 : 18),
+                                ),
+
+                                // Server Error Banner
+                                if (_errorMessage != null) ...[
+                                  Container(
+                                    padding: EdgeInsets.all(isCompact ? 8 : 12),
+                                    decoration: BoxDecoration(
+                                      color: AppTheme.errorRed.withAlpha(25),
+                                      borderRadius: BorderRadius.circular(8),
+                                      border: Border.all(
+                                        color: AppTheme.errorRed.withAlpha(75),
+                                      ),
+                                    ),
+                                    child: Row(
+                                      children: [
+                                        Icon(
+                                          Icons.error_outline,
+                                          color: AppTheme.errorRed,
+                                          size: isCompact ? 18 : 20,
+                                        ),
+                                        const SizedBox(width: 8),
+                                        Expanded(
+                                          child: Text(
+                                            _errorMessage!,
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              color: AppTheme.errorRed,
+                                              fontSize: isCompact ? 12 : 13,
+                                              fontWeight: FontWeight.w500,
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                  SizedBox(height: isCompact ? 6 : 12),
+                                ],
+
+                                // 1. Full Name Field
+                                Text('Full Name', style: labelStyle),
+                                SizedBox(height: labelGap),
+                                TextFormField(
+                                  key: const Key('register_full_name_field'),
+                                  controller: _fullNameController,
+                                  keyboardType: TextInputType.name,
+                                  textInputAction: TextInputAction.next,
+                                  enabled: !_isLoading,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: isCompact ? 13.0 : 13.5,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                  onChanged: (_) {
+                                    if (_fullNameServerError != null ||
+                                        _errorMessage != null) {
+                                      setState(() {
+                                        _fullNameServerError = null;
+                                        _errorMessage = null;
+                                      });
+                                    }
+                                  },
+                                  decoration: _inputDecoration(
+                                    hintText: 'e.g. Test Traveler',
+                                    isCompact: isCompact,
+                                    prefixIcon: Icon(
+                                      Icons.person_outline_rounded,
+                                      color: AppTheme.primaryNavy,
+                                      size: isCompact ? 18 : 20,
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (_fullNameServerError != null) {
+                                      return _fullNameServerError;
+                                    }
+                                    return FormValidators.validateFullName(value);
+                                  },
+                                ),
+                                SizedBox(height: fieldGap),
+
+                                // 2. Email Address Field
+                                Text('Email Address', style: labelStyle),
+                                SizedBox(height: labelGap),
+                                TextFormField(
+                                  key: const Key('register_email_field'),
+                                  controller: _emailController,
+                                  keyboardType: TextInputType.emailAddress,
+                                  textInputAction: TextInputAction.next,
+                                  enabled: !_isLoading,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: isCompact ? 13.0 : 13.5,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                  onChanged: (_) {
+                                    if (_emailServerError != null ||
+                                        _errorMessage != null) {
+                                      setState(() {
+                                        _emailServerError = null;
+                                        _errorMessage = null;
+                                      });
+                                    }
+                                  },
+                                  decoration: _inputDecoration(
+                                    hintText: 'name@example.com',
+                                    isCompact: isCompact,
+                                    prefixIcon: Icon(
+                                      Icons.email_outlined,
+                                      color: AppTheme.primaryNavy,
+                                      size: isCompact ? 18 : 20,
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (_emailServerError != null) {
+                                      return _emailServerError;
+                                    }
+                                    return FormValidators.validateEmail(value);
+                                  },
+                                ),
+                                SizedBox(height: fieldGap),
+
+                                // 3. Contact Phone Number Field (Unified with Country Code)
+                                Text('Contact Phone Number', style: labelStyle),
+                                SizedBox(height: labelGap),
+                                _buildUnifiedPhoneField(isCompact: isCompact),
+                                SizedBox(height: fieldGap),
+
+                                // 4. Password Field
+                                Text('Password', style: labelStyle),
+                                SizedBox(height: labelGap),
+                                TextFormField(
+                                  key: const Key('register_password_field'),
+                                  controller: _passwordController,
+                                  obscureText: _obscurePassword,
+                                  textInputAction: TextInputAction.next,
+                                  enabled: !_isLoading,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: isCompact ? 13.0 : 13.5,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                  onChanged: (_) {
+                                    if (_passwordServerError != null ||
+                                        _errorMessage != null) {
+                                      setState(() {
+                                        _passwordServerError = null;
+                                        _errorMessage = null;
+                                      });
+                                    }
+                                  },
+                                  decoration: _inputDecoration(
+                                    hintText: 'Enter your password',
+                                    isCompact: isCompact,
+                                    prefixIcon: Icon(
+                                      Icons.lock_outline_rounded,
+                                      color: AppTheme.primaryNavy,
+                                      size: isCompact ? 18 : 20,
+                                    ),
+                                    suffixIcon: IconButton(
+                                      style: IconButton.styleFrom(
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        minimumSize: Size.zero,
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                      icon: Icon(
+                                        _obscurePassword
+                                            ? Icons.visibility_off_outlined
+                                            : Icons.visibility_outlined,
+                                        color: AppTheme.textMuted,
+                                        size: isCompact ? 18 : 20,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: BoxConstraints(
+                                        minWidth: isCompact ? 36 : 42,
+                                        minHeight: isCompact ? 32 : 40,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _obscurePassword = !_obscurePassword;
+                                        });
+                                      },
+                                      tooltip: _obscurePassword
+                                          ? 'Show password'
+                                          : 'Hide password',
+                                    ),
+                                  ),
+                                  validator: (value) {
+                                    if (_passwordServerError != null) {
+                                      return _passwordServerError;
+                                    }
+                                    return FormValidators.validatePassword(value);
+                                  },
+                                ),
+                                SizedBox(height: fieldGap),
+
+                                // 5. Confirm Password Field
+                                Text('Confirm Password', style: labelStyle),
+                                SizedBox(height: labelGap),
+                                TextFormField(
+                                  key: const Key(
+                                    'register_confirm_password_field',
+                                  ),
+                                  controller: _confirmPasswordController,
+                                  obscureText: _obscureConfirmPassword,
+                                  textInputAction: TextInputAction.done,
+                                  enabled: !_isLoading,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: isCompact ? 13.0 : 13.5,
+                                    color: AppTheme.textPrimary,
+                                  ),
+                                  onFieldSubmitted: (_) => _onSubmit(),
+                                  decoration: _inputDecoration(
+                                    hintText: 'Re-enter your password',
+                                    isCompact: isCompact,
+                                    prefixIcon: Icon(
+                                      Icons.lock_outline_rounded,
+                                      color: AppTheme.primaryNavy,
+                                      size: isCompact ? 18 : 20,
+                                    ),
+                                    suffixIcon: IconButton(
+                                      style: IconButton.styleFrom(
+                                        tapTargetSize: MaterialTapTargetSize.shrinkWrap,
+                                        minimumSize: Size.zero,
+                                        padding: EdgeInsets.zero,
+                                      ),
+                                      icon: Icon(
+                                        _obscureConfirmPassword
+                                            ? Icons.visibility_off_outlined
+                                            : Icons.visibility_outlined,
+                                        color: AppTheme.textMuted,
+                                        size: isCompact ? 18 : 20,
+                                      ),
+                                      padding: EdgeInsets.zero,
+                                      constraints: BoxConstraints(
+                                        minWidth: isCompact ? 36 : 42,
+                                        minHeight: isCompact ? 32 : 40,
+                                      ),
+                                      onPressed: () {
+                                        setState(() {
+                                          _obscureConfirmPassword =
+                                              !_obscureConfirmPassword;
+                                        });
+                                      },
+                                      tooltip: _obscureConfirmPassword
+                                          ? 'Show password'
+                                          : 'Hide password',
+                                    ),
+                                  ),
+                                  validator: (value) =>
+                                      FormValidators.validateConfirmPassword(
+                                        value,
+                                        _passwordController.text,
+                                      ),
+                                ),
+                                SizedBox(height: fieldGap),
+
+                                // Checkbox: "I agree to CeylonGo's Terms and Privacy Notice."
+                                InkWell(
+                                  key: const Key('register_terms_checkbox'),
+                                  onTap: _isLoading
+                                      ? null
+                                      : () {
+                                          setState(() {
+                                            _acceptTerms = !_acceptTerms;
+                                            if (_acceptTerms) {
+                                              _termsError = false;
+                                            }
+                                          });
+                                        },
+                                  borderRadius: BorderRadius.circular(6),
+                                  child: Padding(
+                                    padding: EdgeInsets.symmetric(
+                                      vertical: isCompact ? 2 : 4,
+                                    ),
+                                    child: Row(
+                                      crossAxisAlignment:
+                                          CrossAxisAlignment.center,
+                                      children: [
+                                        SizedBox(
+                                          width: isCompact ? 20 : 24,
+                                          height: isCompact ? 20 : 24,
+                                          child: Checkbox(
+                                            value: _acceptTerms,
+                                            activeColor: AppTheme.accentOrange,
+                                            checkColor:
+                                                AppTheme.backgroundWhite,
+                                            materialTapTargetSize:
+                                                MaterialTapTargetSize.shrinkWrap,
+                                            visualDensity:
+                                                VisualDensity.compact,
+                                            side: const BorderSide(
+                                              color: AppTheme.borderSlate,
+                                              width: 1.5,
+                                            ),
+                                            shape: RoundedRectangleBorder(
+                                              borderRadius:
+                                                  BorderRadius.circular(4),
+                                            ),
+                                            onChanged: _isLoading
+                                                ? null
+                                                : (val) {
+                                                    setState(() {
+                                                      _acceptTerms =
+                                                          val ?? false;
+                                                      if (_acceptTerms) {
+                                                        _termsError = false;
+                                                      }
+                                                    });
+                                                  },
+                                          ),
+                                        ),
+                                        SizedBox(width: isCompact ? 8 : 10),
+                                        Expanded(
+                                          child: RichText(
+                                            text: TextSpan(
+                                              style: TextStyle(
+                                                fontFamily: 'Inter',
+                                                fontSize: isCompact
+                                                    ? 11.0
+                                                    : 12.5,
+                                                color: AppTheme.textSecondary,
+                                                height: 1.25,
+                                              ),
+                                              children: const [
+                                                TextSpan(
+                                                  text:
+                                                      "I agree to CeylonGo's ",
+                                                ),
+                                                TextSpan(
+                                                  text: 'Terms',
+                                                  style: TextStyle(
+                                                    color: AppTheme.accentOrange,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                TextSpan(text: ' and '),
+                                                TextSpan(
+                                                  text: 'Privacy Notice',
+                                                  style: TextStyle(
+                                                    color: AppTheme.accentOrange,
+                                                    fontWeight: FontWeight.w600,
+                                                  ),
+                                                ),
+                                                TextSpan(text: '.'),
+                                              ],
+                                            ),
+                                          ),
+                                        ),
+                                      ],
+                                    ),
+                                  ),
+                                ),
+                                if (_termsError) ...[
+                                  const SizedBox(height: 4),
+                                  Padding(
+                                    padding: EdgeInsets.only(
+                                      left: isCompact ? 28 : 34,
+                                    ),
+                                    child: const Text(
+                                      "You must agree to CeylonGo's Terms and Privacy Notice to continue",
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        color: AppTheme.errorRed,
+                                        fontSize: 12,
+                                      ),
+                                    ),
+                                  ),
+                                ],
+                                SizedBox(
+                                  height: isShort ? 6 : (isCompact ? 8 : 18),
+                                ),
+
+                                // Primary Button: "Create Account"
+                                SizedBox(
+                                  height: isCompact ? 42 : 48,
+                                  child: ElevatedButton(
+                                    key: const Key('register_submit_button'),
+                                    onPressed: _isLoading ? null : _onSubmit,
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.accentOrange,
+                                      foregroundColor:
+                                          AppTheme.backgroundWhite,
+                                      disabledBackgroundColor: AppTheme
+                                          .accentOrange
+                                          .withAlpha(150),
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius:
+                                            BorderRadius.circular(10),
+                                      ),
+                                    ),
+                                    child: _isLoading
+                                        ? const SizedBox(
+                                            height: 20,
+                                            width: 20,
+                                            child: CircularProgressIndicator(
+                                              strokeWidth: 2.5,
+                                              color: AppTheme.backgroundWhite,
+                                            ),
+                                          )
+                                        : Text(
+                                            'Create Account',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: isCompact ? 15 : 16,
+                                              fontWeight: FontWeight.bold,
+                                              color: AppTheme.backgroundWhite,
+                                            ),
+                                          ),
+                                  ),
+                                ),
+                                SizedBox(
+                                  height: isShort ? 4 : (isCompact ? 6 : 16),
+                                ),
+
+                                // Bottom Navigation: "Already have an account? Sign In"
+                                Wrap(
+                                  alignment: WrapAlignment.center,
+                                  crossAxisAlignment: WrapCrossAlignment.center,
+                                  children: [
+                                    Text(
+                                      'Already have an account? ',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: isCompact ? 12.5 : 13.5,
+                                        color: AppTheme.textSecondary,
+                                      ),
+                                    ),
+                                    GestureDetector(
+                                      onTap: _isLoading
+                                          ? null
+                                          : () {
+                                              Navigator.pop(context);
+                                            },
+                                      child: Text(
+                                        'Sign In',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: isCompact ? 12.5 : 13.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.accentOrange,
+                                        ),
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                              ],
+                            ),
                           ),
-                        ],
+                        ),
                       ),
                     ),
-                  ),
+
+                    if (showTrustFooter)
+                      AuthTrustFooter(isCompact: isCompact),
+
+                    // Subtle Navy and Orange Wave Decoration at the Bottom
+                    CeylonGoWaveDecoration(height: waveHeight),
+                  ],
                 ),
               ),
-              const SizedBox(height: 12),
-
-              // Subtle Navy and Orange Wave Decoration at the Bottom
-              CeylonGoWaveDecoration(height: waveHeight),
-            ],
-          ),
+            );
+          },
         ),
       ),
     );
   }
 
-  Widget _buildUnifiedPhoneField() {
+  Widget _buildUnifiedPhoneField({required bool isCompact}) {
     return TextFormField(
       key: const Key('register_phone_field'),
       controller: _phoneController,
       keyboardType: TextInputType.phone,
       textInputAction: TextInputAction.next,
       enabled: !_isLoading,
+      style: TextStyle(
+        fontFamily: 'Inter',
+        fontSize: isCompact ? 13.0 : 13.5,
+        color: AppTheme.textPrimary,
+      ),
       decoration: _inputDecoration(
         hintText: '77 123 4567',
+        isCompact: isCompact,
         prefixIconConstraints: const BoxConstraints(minWidth: 0, minHeight: 0),
         prefixIcon: Padding(
-          padding: const EdgeInsets.only(left: 10),
+          padding: EdgeInsets.only(left: isCompact ? 8 : 10),
           child: Row(
             mainAxisSize: MainAxisSize.min,
             children: [
@@ -736,14 +868,14 @@ class _RegisterScreenState extends State<RegisterScreen> {
                   key: const Key('register_country_code_dropdown'),
                   value: _selectedCountryCode,
                   isDense: true,
-                  icon: const Icon(
+                  icon: Icon(
                     Icons.keyboard_arrow_down_rounded,
                     color: AppTheme.primaryNavy,
-                    size: 18,
+                    size: isCompact ? 16 : 18,
                   ),
-                  style: const TextStyle(
+                  style: TextStyle(
                     fontFamily: 'Inter',
-                    fontSize: 13,
+                    fontSize: isCompact ? 12.5 : 13,
                     fontWeight: FontWeight.w600,
                     color: AppTheme.textPrimary,
                   ),
@@ -752,9 +884,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
                       value: code,
                       child: Text(
                         code,
-                        style: const TextStyle(
+                        style: TextStyle(
                           fontFamily: 'Inter',
-                          fontSize: 13,
+                          fontSize: isCompact ? 12.5 : 13,
                           fontWeight: FontWeight.w500,
                           color: AppTheme.textPrimary,
                         ),
@@ -773,17 +905,17 @@ class _RegisterScreenState extends State<RegisterScreen> {
                 ),
               ),
               Container(
-                height: 22,
+                height: isCompact ? 18 : 22,
                 width: 1,
-                margin: const EdgeInsets.symmetric(horizontal: 8),
+                margin: EdgeInsets.symmetric(horizontal: isCompact ? 6 : 8),
                 color: AppTheme.borderSlate,
               ),
-              const Icon(
+              Icon(
                 Icons.phone_outlined,
                 color: AppTheme.primaryNavy,
-                size: 19,
+                size: isCompact ? 17 : 19,
               ),
-              const SizedBox(width: 8),
+              SizedBox(width: isCompact ? 6 : 8),
             ],
           ),
         ),
@@ -797,76 +929,15 @@ class _RegisterScreenState extends State<RegisterScreen> {
   }
 }
 
-/// Subtle navy and orange wave decoration matching CeylonGo reference design
+/// Subtle navy and orange wave decoration matching CeylonGo reference design.
+/// Wraps [AuthWaveDecoration] for consistency across authentication screens.
 class CeylonGoWaveDecoration extends StatelessWidget {
-  final double height;
+  final double? height;
 
-  const CeylonGoWaveDecoration({super.key, this.height = 55});
+  const CeylonGoWaveDecoration({super.key, this.height});
 
   @override
   Widget build(BuildContext context) {
-    return SizedBox(
-      height: height,
-      width: double.infinity,
-      child: CustomPaint(
-        painter: _CeylonGoWavePainter(),
-      ),
-    );
+    return AuthWaveDecoration(height: height);
   }
-}
-
-class _CeylonGoWavePainter extends CustomPainter {
-  @override
-  void paint(Canvas canvas, Size size) {
-    // Orange accent wave (background wave)
-    final orangePaint = Paint()
-      ..color = AppTheme.accentOrange
-      ..style = PaintingStyle.fill;
-
-    final orangePath = Path();
-    orangePath.moveTo(0, size.height * 0.45);
-    orangePath.quadraticBezierTo(
-      size.width * 0.28,
-      size.height * 0.1,
-      size.width * 0.58,
-      size.height * 0.5,
-    );
-    orangePath.quadraticBezierTo(
-      size.width * 0.82,
-      size.height * 0.85,
-      size.width,
-      size.height * 0.4,
-    );
-    orangePath.lineTo(size.width, size.height);
-    orangePath.lineTo(0, size.height);
-    orangePath.close();
-    canvas.drawPath(orangePath, orangePaint);
-
-    // Navy primary wave (foreground wave)
-    final navyPaint = Paint()
-      ..color = AppTheme.primaryNavy
-      ..style = PaintingStyle.fill;
-
-    final navyPath = Path();
-    navyPath.moveTo(0, size.height * 0.65);
-    navyPath.quadraticBezierTo(
-      size.width * 0.24,
-      size.height * 0.35,
-      size.width * 0.52,
-      size.height * 0.7,
-    );
-    navyPath.quadraticBezierTo(
-      size.width * 0.78,
-      size.height * 0.98,
-      size.width,
-      size.height * 0.6,
-    );
-    navyPath.lineTo(size.width, size.height);
-    navyPath.lineTo(0, size.height);
-    navyPath.close();
-    canvas.drawPath(navyPath, navyPaint);
-  }
-
-  @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
 }

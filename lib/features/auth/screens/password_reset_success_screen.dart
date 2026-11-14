@@ -19,15 +19,20 @@ class PasswordResetSuccessScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.backgroundWhite,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: 12,
-                ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 12,
+                      ),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 480),
@@ -103,12 +108,14 @@ class PasswordResetSuccessScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
               const AuthWaveDecoration(),
             ],
           ),
         ),
-      ),
+      );
+    },
+  ),
+),
     );
   }
 }

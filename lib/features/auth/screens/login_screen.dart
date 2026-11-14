@@ -7,6 +7,7 @@ import '../models/api_error.dart';
 import '../services/auth_service.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_heading.dart';
+import '../widgets/auth_trust_footer.dart';
 import '../widgets/auth_wave_decoration.dart';
 
 /// Screen 4: Welcome Back (Login) Screen
@@ -168,16 +169,24 @@ class _LoginScreenState extends State<LoginScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundWhite,
       body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: 12,
-                ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxHeight <= 800;
+            final showTrustFooter = constraints.maxHeight >= 500;
+
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 12,
+                      ),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 480),
@@ -525,12 +534,16 @@ class _LoginScreenState extends State<LoginScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              if (showTrustFooter)
+                AuthTrustFooter(isCompact: isCompact),
               const AuthWaveDecoration(),
             ],
           ),
         ),
-      ),
+      );
+    },
+  ),
+),
     );
   }
 }

@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_heading.dart';
+import '../widgets/auth_trust_footer.dart';
 import '../widgets/auth_wave_decoration.dart';
 import '../widgets/social_sign_in_buttons.dart';
 
@@ -51,27 +52,35 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
     return Scaffold(
       backgroundColor: AppTheme.backgroundWhite,
       body: SafeArea(
-        child: SingleChildScrollView(
-          keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: 12,
-                ),
-                child: Center(
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 480),
-                    child: Form(
-                      key: _formKey,
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        mainAxisSize: MainAxisSize.min,
-                        children: [
-                          // Top Brand Header (without back button on entry root)
-                          const AuthHeader(showBack: false),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxHeight <= 800;
+            final showTrustFooter = constraints.maxHeight >= 500;
+
+            return SingleChildScrollView(
+              keyboardDismissBehavior: ScrollViewKeyboardDismissBehavior.onDrag,
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 12,
+                      ),
+                      child: Center(
+                        child: ConstrainedBox(
+                          constraints: const BoxConstraints(maxWidth: 480),
+                          child: Form(
+                            key: _formKey,
+                            child: Column(
+                              crossAxisAlignment: CrossAxisAlignment.stretch,
+                              mainAxisSize: MainAxisSize.min,
+                              children: [
+                                // Top Brand Header (without back button on entry root)
+                                const AuthHeader(showBack: false),
                           const SizedBox(height: 20),
 
                           // Heading with signature orange underline
@@ -185,7 +194,7 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                               ),
                             ),
                           ),
-                          const SizedBox(height: 24),
+                          SizedBox(height: isCompact ? 18 : 24),
 
                           // Divider: "Or continue with"
                           Row(
@@ -217,11 +226,11 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 20),
+                          SizedBox(height: isCompact ? 16 : 20),
 
-                          // Social Logins: Google, Apple, WhatsApp
+                          // Social Logins: Google & WhatsApp
                           const SocialSignInButtons(),
-                          const SizedBox(height: 24),
+                          SizedBox(height: isCompact ? 18 : 24),
 
                           // New to CeylonGo? Create an Account
                           Wrap(
@@ -264,12 +273,16 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              if (showTrustFooter)
+                AuthTrustFooter(isCompact: isCompact),
               const AuthWaveDecoration(),
             ],
           ),
         ),
-      ),
+      );
+    },
+  ),
+),
     );
   }
 }

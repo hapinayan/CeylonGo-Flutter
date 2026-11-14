@@ -7,6 +7,8 @@ import 'package:ceylongo/features/auth/models/auth_response.dart';
 import 'package:ceylongo/features/auth/models/user_model.dart';
 import 'package:ceylongo/features/auth/screens/register_screen.dart';
 import 'package:ceylongo/features/auth/services/auth_service.dart';
+import 'package:ceylongo/features/auth/widgets/auth_trust_footer.dart';
+import 'package:ceylongo/features/auth/widgets/auth_wave_decoration.dart';
 
 class MockAuthService extends AuthService {
   String? registeredFullName;
@@ -285,6 +287,127 @@ void main() {
 
         tester.view.resetPhysicalSize();
         tester.view.resetDevicePixelRatio();
+      },
+    );
+
+    testWidgets(
+      'Fits within Samsung Galaxy A22 screen (360x800) without scrolling when keyboard is closed',
+      (WidgetTester tester) async {
+        // Samsung Galaxy A22 logical dimensions: 360 x 800
+        tester.view.physicalSize = const Size(360, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pumpAndSettle();
+
+        // 1. CeylonGoWaveDecoration and AuthWaveDecoration are rendered
+        final waveFinder = find.byType(CeylonGoWaveDecoration);
+        final authWaveFinder = find.byType(AuthWaveDecoration);
+        expect(waveFinder, findsOneWidget);
+        expect(authWaveFinder, findsOneWidget);
+
+        // 1b. Trust footer is rendered
+        expect(find.byType(AuthTrustFooter), findsOneWidget);
+        expect(find.byKey(const Key('auth_trust_shield_icon')), findsOneWidget);
+
+        // 2. Wave decoration is anchored directly at the bottom (y = 800.0) without empty space
+        final waveRect = tester.getRect(waveFinder);
+        expect(waveRect.bottom, equals(800.0));
+
+        // 3. Submit button is directly visible in viewport without scrolling
+        final submitBtn = find.byKey(const Key('register_submit_button'));
+        expect(submitBtn, findsOneWidget);
+        final btnRect = tester.getRect(submitBtn);
+        expect(btnRect.top, greaterThan(0.0));
+        expect(btnRect.bottom, lessThan(800.0));
+
+        // 4. Sign In link is directly visible in viewport without scrolling
+        final signInFinder = find.text('Sign In');
+        expect(signInFinder, findsOneWidget);
+        final signInRect = tester.getRect(signInFinder);
+        expect(signInRect.top, greaterThan(0.0));
+        expect(signInRect.bottom, lessThan(800.0));
+
+        // 5. Scroll position has zero extent (no scrolling required)
+        final scrollableFinder = find.descendant(
+          of: find.byType(SingleChildScrollView),
+          matching: find.byType(Scrollable),
+        );
+        final scrollableState = tester.state<ScrollableState>(scrollableFinder.first);
+        expect(scrollableState.position.pixels, equals(0.0));
+        expect(scrollableState.position.maxScrollExtent, equals(0.0));
+      },
+    );
+
+    testWidgets(
+      'Fits within Samsung Galaxy A22 with SafeArea insets (360x728 usable height) without scrolling',
+      (WidgetTester tester) async {
+        // Usable height inside SafeArea on Galaxy A22 (800 - 24 status bar - 48 nav bar = 728)
+        tester.view.physicalSize = const Size(360, 728);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pumpAndSettle();
+
+        // Check wave anchored to bottom
+        final waveFinder = find.byType(CeylonGoWaveDecoration);
+        expect(waveFinder, findsOneWidget);
+        final waveRect = tester.getRect(waveFinder);
+        expect(waveRect.bottom, equals(728.0));
+
+        // Check trust footer is visible
+        expect(find.byType(AuthTrustFooter), findsOneWidget);
+
+        // Submit button is fully visible
+        final submitBtn = find.byKey(const Key('register_submit_button'));
+        expect(submitBtn, findsOneWidget);
+        final btnRect = tester.getRect(submitBtn);
+        expect(btnRect.bottom, lessThan(728.0));
+
+        // Max scroll extent is 0 (no vertical scrolling in normal view)
+        final scrollableFinder = find.descendant(
+          of: find.byType(SingleChildScrollView),
+          matching: find.byType(Scrollable),
+        );
+        final scrollableState = tester.state<ScrollableState>(scrollableFinder.first);
+        expect(scrollableState.position.maxScrollExtent, equals(0.0));
+      },
+    );
+
+    testWidgets(
+      'Preserves vertical scrolling when screen is constrained or keyboard opens',
+      (WidgetTester tester) async {
+        // Constrained height (e.g. keyboard open: 360 x 420)
+        tester.view.physicalSize = const Size(360, 420);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
+
+        await tester.pumpWidget(createWidgetUnderTest());
+        await tester.pumpAndSettle();
+
+        // When constrained, scroll extent expands smoothly
+        final scrollableFinder = find.descendant(
+          of: find.byType(SingleChildScrollView),
+          matching: find.byType(Scrollable),
+        );
+        final scrollableState = tester.state<ScrollableState>(scrollableFinder.first);
+        expect(scrollableState.position.maxScrollExtent, greaterThan(0.0));
+
+        // Elements remain accessible via scrolling
+        final submitBtn = find.byKey(const Key('register_submit_button'));
+        await tester.ensureVisible(submitBtn);
+        expect(submitBtn, findsOneWidget);
       },
     );
   });

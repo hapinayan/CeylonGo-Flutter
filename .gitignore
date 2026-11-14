@@ -32,3 +32,5 @@ doc/api/
 .env
 .env.*
 !.env.example
+
+/android/.kotlin/

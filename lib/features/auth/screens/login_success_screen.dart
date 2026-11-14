@@ -4,6 +4,7 @@ import '../../../core/theme/app_theme.dart';
 import '../models/user_model.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_heading.dart';
+import '../widgets/auth_trust_footer.dart';
 import '../widgets/auth_wave_decoration.dart';
 
 /// Screen 5: Login Successful
@@ -26,15 +27,23 @@ class LoginSuccessScreen extends StatelessWidget {
     return Scaffold(
       backgroundColor: AppTheme.backgroundWhite,
       body: SafeArea(
-        child: SingleChildScrollView(
-          child: Column(
-            crossAxisAlignment: CrossAxisAlignment.stretch,
-            children: [
-              Padding(
-                padding: EdgeInsets.symmetric(
-                  horizontal: horizontalPadding,
-                  vertical: 12,
-                ),
+        child: LayoutBuilder(
+          builder: (context, constraints) {
+            final isCompact = constraints.maxHeight <= 800;
+            final showTrustFooter = constraints.maxHeight >= 500;
+
+            return SingleChildScrollView(
+              child: ConstrainedBox(
+                constraints: BoxConstraints(minHeight: constraints.maxHeight),
+                child: Column(
+                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                  crossAxisAlignment: CrossAxisAlignment.stretch,
+                  children: [
+                    Padding(
+                      padding: EdgeInsets.symmetric(
+                        horizontal: horizontalPadding,
+                        vertical: 12,
+                      ),
                 child: Center(
                   child: ConstrainedBox(
                     constraints: const BoxConstraints(maxWidth: 480),
@@ -203,12 +212,16 @@ class LoginSuccessScreen extends StatelessWidget {
                   ),
                 ),
               ),
-              const SizedBox(height: 16),
+              if (showTrustFooter)
+                AuthTrustFooter(isCompact: isCompact),
               const AuthWaveDecoration(),
             ],
           ),
         ),
-      ),
+      );
+    },
+  ),
+),
     );
   }
 }
