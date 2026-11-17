@@ -1,12 +1,11 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
-import '../widgets/auth_header.dart';
-import '../widgets/auth_heading.dart';
-import '../widgets/auth_wave_decoration.dart';
+import '../widgets/light_blue_wave_decoration.dart';
 
-/// Screen 7: Check Your Email Screen
-/// Displays confirmation and next steps after a password reset request
+/// Screen 7 / Reset Email Sent Screen
+/// Confirmation screen displayed after password reset link has been dispatched.
+/// Clean, minimal full-screen layout matching CeylonGo reference design.
 class CheckEmailScreen extends StatelessWidget {
   final String? email;
 
@@ -14,231 +13,149 @@ class CheckEmailScreen extends StatelessWidget {
 
   @override
   Widget build(BuildContext context) {
-    final args =
-        ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
-    final resolvedEmail = email ??
-        args?['email'] as String? ??
-        'your-email@example.com';
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding =
-        screenWidth < 360 ? 16.0 : (screenWidth < 430 ? 20.0 : 24.0);
-
     return Scaffold(
-      backgroundColor: AppTheme.backgroundWhite,
+      backgroundColor: Colors.white,
       body: SafeArea(
+        bottom: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            return SingleChildScrollView(
+            final screenWidth = MediaQuery.of(context).size.width;
+            final availableHeight = constraints.maxHeight;
+            final isShort = availableHeight < 680;
+
+            final horizontalPadding = screenWidth < 360
+                ? 20.0
+                : (screenWidth < 430 ? 24.0 : 28.0);
+            final topPadding = isShort ? 32.0 : 48.0;
+
+            return Align(
+              alignment: Alignment.topCenter,
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: horizontalPadding,
-                        vertical: 12,
-                      ),
-                child: Center(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 480),
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Header with Back Arrow
-                        const AuthHeader(showBack: true),
-                        const SizedBox(height: 24),
-
-                        // Mail Icon Badge
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: AppTheme.primaryNavy.withAlpha(20),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppTheme.primaryNavy.withAlpha(60),
-                              width: 1.5,
-                            ),
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
+                            topPadding,
+                            horizontalPadding,
+                            20,
                           ),
-                          child: const Icon(
-                            Icons.mark_email_read_outlined,
-                            color: AppTheme.primaryNavy,
-                            size: 42,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-
-                        // Heading with signature orange underline
-                        const AuthHeading(
-                          title: 'Check Your Email',
-                          subtitle: 'We have sent password reset instructions to:',
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Email Badge Container
-                        Container(
-                          padding: const EdgeInsets.symmetric(
-                            horizontal: 16,
-                            vertical: 10,
-                          ),
-                          decoration: BoxDecoration(
-                            color: AppTheme.borderSlate.withAlpha(80),
-                            borderRadius: BorderRadius.circular(8),
-                            border: Border.all(
-                              color: AppTheme.borderSlate,
-                              width: 1,
-                            ),
-                          ),
-                          child: Row(
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
                             mainAxisSize: MainAxisSize.min,
                             children: [
-                              const Icon(
-                                Icons.email_outlined,
-                                size: 18,
-                                color: AppTheme.primaryNavy,
+                              // 1. Bold Dark Navy Heading: "Reset Email Sent!"
+                              Text(
+                                'Reset Email Sent!',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: isShort ? 24.0 : 28.0,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.primaryNavy,
+                                  letterSpacing: -0.6,
+                                  height: 1.2,
+                                ),
                               ),
-                              const SizedBox(width: 8),
-                              Flexible(
-                                child: Text(
-                                  resolvedEmail,
-                                  style: const TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 14,
-                                    fontWeight: FontWeight.bold,
-                                    color: AppTheme.primaryNavy,
+                              const SizedBox(height: 12),
+
+                              // 2. Subtitle: "We've sent a password reset link to your email address. Please check your inbox."
+                              Text(
+                                "We've sent a password reset link to your email address. Please check your inbox.",
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: isShort ? 13.0 : 14.0,
+                                  color: const Color(0xFF64748B),
+                                  height: 1.45,
+                                ),
+                              ),
+                              SizedBox(height: isShort ? 32 : 44),
+
+                              // 3. Full-width blue gradient "Back to Sign In →" Button
+                              SizedBox(
+                                height: isShort ? 46 : 48,
+                                child: ElevatedButton(
+                                  key: const Key('back_to_signin_button'),
+                                  onPressed: () {
+                                    Navigator.pushNamedAndRemoveUntil(
+                                      context,
+                                      '/login',
+                                      (route) => false,
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2563EB),
+                                    foregroundColor: Colors.white,
+                                    elevation: 2,
+                                    shadowColor: const Color(0x3D2563EB),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(28),
+                                    ),
+                                    padding: EdgeInsets.zero,
                                   ),
-                                  overflow: TextOverflow.ellipsis,
+                                  child: Ink(
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFF1D4ED8),
+                                          Color(0xFF2563EB),
+                                        ],
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                      ),
+                                      borderRadius: BorderRadius.circular(28),
+                                    ),
+                                    child: Center(
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
+                                        children: [
+                                          Text(
+                                            'Back to Sign In',
+                                            style: TextStyle(
+                                              fontFamily: 'Inter',
+                                              fontSize: isShort ? 15.0 : 15.5,
+                                              fontWeight: FontWeight.bold,
+                                              color: Colors.white,
+                                              letterSpacing: 0.2,
+                                            ),
+                                          ),
+                                          const SizedBox(width: 8),
+                                          const Icon(
+                                            Icons.arrow_forward_rounded,
+                                            size: 18,
+                                            color: Colors.white,
+                                          ),
+                                        ],
+                                      ),
+                                    ),
+                                  ),
                                 ),
                               ),
                             ],
                           ),
                         ),
-                        const SizedBox(height: 20),
 
-                        // Advisory notice
-                        Text(
-                          'Did not receive the email? Check your spam folder or verify your address.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 12.5,
-                            color: AppTheme.textSecondary.withAlpha(220),
-                            height: 1.4,
-                          ),
-                        ),
-                        const SizedBox(height: 28),
-
-                        // Primary Button: "Open Email App"
-                        SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton.icon(
-                            key: const Key('open_email_app_button'),
-                            onPressed: () {
-                              ScaffoldMessenger.of(context).hideCurrentSnackBar();
-                              ScaffoldMessenger.of(context).showSnackBar(
-                                const SnackBar(
-                                  content: Text(
-                                    'Please check your email client inbox for the reset link.',
-                                  ),
-                                  backgroundColor: AppTheme.primaryNavy,
-                                  duration: Duration(seconds: 3),
-                                ),
-                              );
-                            },
-                            icon: const Icon(
-                              Icons.outgoing_mail,
-                              color: AppTheme.backgroundWhite,
-                            ),
-                            label: const Text(
-                              'Open Email App',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.backgroundWhite,
-                              ),
-                            ),
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.accentOrange,
-                              foregroundColor: AppTheme.backgroundWhite,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 14),
-
-                        // Secondary Button: "Back to Sign In"
-                        SizedBox(
-                          width: double.infinity,
-                          height: 46,
-                          child: OutlinedButton(
-                            key: const Key('back_to_signin_button'),
-                            onPressed: () {
-                              Navigator.pushReplacementNamed(context, '/login');
-                            },
-                            style: OutlinedButton.styleFrom(
-                              side: const BorderSide(
-                                color: AppTheme.borderSlate,
-                                width: 1.2,
-                              ),
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
-                              ),
-                            ),
-                            child: const Text(
-                              'Back to Sign In',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 14,
-                                fontWeight: FontWeight.w600,
-                                color: AppTheme.primaryNavy,
-                              ),
-                            ),
-                          ),
-                        ),
-                        const SizedBox(height: 16),
-
-                        // Link to Screen 8 (Enter New Password)
-                        TextButton(
-                          key: const Key('enter_new_password_link'),
-                          onPressed: () {
-                            Navigator.pushNamed(
-                              context,
-                              '/create-new-password',
-                              arguments: {'email': resolvedEmail},
-                            );
-                          },
-                          child: const Text(
-                            'Received your reset link? Set New Password',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 13,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.accentOrange,
-                            ),
-                          ),
-                        ),
+                        // 4. Light-blue bottom wave decoration anchored to the bottom
+                        const LightBlueWaveDecoration(height: 70),
                       ],
                     ),
                   ),
                 ),
               ),
-              const AuthWaveDecoration(),
-            ],
-          ),
+            );
+          },
         ),
-      );
-    },
-  ),
-),
+      ),
     );
   }
 }
-

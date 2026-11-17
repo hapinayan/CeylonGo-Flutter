@@ -2,12 +2,11 @@ import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../models/user_model.dart';
-import '../widgets/auth_header.dart';
-import '../widgets/auth_heading.dart';
-import '../widgets/auth_wave_decoration.dart';
+import '../widgets/light_blue_wave_decoration.dart';
 
-/// Screen 3: Registration Successful
-/// Displays confirmed registration details with actual user name and email
+/// Screen 3 / Account Created Screen
+/// Displayed after successful traveler registration.
+/// Clean, minimal full-screen layout matching CeylonGo reference design.
 class RegistrationSuccessScreen extends StatelessWidget {
   final UserModel? user;
   final String? message;
@@ -20,246 +19,157 @@ class RegistrationSuccessScreen extends StatelessWidget {
     final args =
         ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
     final resolvedUser = user ?? args?['user'] as UserModel?;
-    final successMessage = message ??
-        args?['message'] as String? ??
-        'Your CeylonGo account has been created successfully.';
-
-    final screenWidth = MediaQuery.of(context).size.width;
-    final horizontalPadding =
-        screenWidth < 360 ? 16.0 : (screenWidth < 430 ? 20.0 : 24.0);
 
     return Scaffold(
-      backgroundColor: AppTheme.backgroundWhite,
+      backgroundColor: Colors.white,
       body: SafeArea(
+        bottom: false,
         child: LayoutBuilder(
           builder: (context, constraints) {
-            return SingleChildScrollView(
+            final screenWidth = MediaQuery.of(context).size.width;
+            final availableHeight = constraints.maxHeight;
+            final isShort = availableHeight < 680;
+
+            final horizontalPadding = screenWidth < 360
+                ? 20.0
+                : (screenWidth < 430 ? 24.0 : 28.0);
+            final topPadding = isShort ? 32.0 : 48.0;
+
+            return Align(
+              alignment: Alignment.topCenter,
               child: ConstrainedBox(
-                constraints: BoxConstraints(minHeight: constraints.maxHeight),
-                child: Column(
-                  mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    Padding(
-                      padding: EdgeInsets.symmetric(
-                        horizontal: horizontalPadding,
-                        vertical: 12,
-                      ),
-                child: Center(
+                constraints: const BoxConstraints(maxWidth: 480),
+                child: SingleChildScrollView(
+                  physics: const ClampingScrollPhysics(),
                   child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 480),
+                    constraints: BoxConstraints(
+                      minHeight: constraints.maxHeight,
+                    ),
                     child: Column(
-                      mainAxisSize: MainAxisSize.min,
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      crossAxisAlignment: CrossAxisAlignment.stretch,
                       children: [
-                        // Header (no back button, registration is finalized)
-                        const AuthHeader(showBack: false),
-                        const SizedBox(height: 24),
-
-                        // Success Animated / Styled Icon Badge
-                        Container(
-                          width: 80,
-                          height: 80,
-                          decoration: BoxDecoration(
-                            color: AppTheme.successGreen.withAlpha(25),
-                            shape: BoxShape.circle,
-                            border: Border.all(
-                              color: AppTheme.successGreen.withAlpha(80),
-                              width: 2,
-                            ),
+                        Padding(
+                          padding: EdgeInsets.fromLTRB(
+                            horizontalPadding,
+                            topPadding,
+                            horizontalPadding,
+                            20,
                           ),
-                          child: const Icon(
-                            Icons.check_circle_rounded,
-                            color: AppTheme.successGreen,
-                            size: 46,
-                          ),
-                        ),
-                        const SizedBox(height: 18),
-
-                        // Heading with signature orange underline
-                        const AuthHeading(
-                          title: 'Registration Successful',
-                          subtitle:
-                              'Your CeylonGo traveler account is ready to use.',
-                        ),
-                        const SizedBox(height: 24),
-
-                        // Actual Registered User Details Card
-                        if (resolvedUser != null)
-                          Container(
-                            width: double.infinity,
-                            padding: const EdgeInsets.all(16),
-                            decoration: BoxDecoration(
-                              color: AppTheme.backgroundWhite,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: AppTheme.borderSlate,
-                                width: 1,
-                              ),
-                              boxShadow: [
-                                BoxShadow(
-                                  color: Colors.black.withAlpha(6),
-                                  blurRadius: 6,
-                                  offset: const Offset(0, 2),
+                          child: Column(
+                            crossAxisAlignment: CrossAxisAlignment.stretch,
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              // 1. Bold Dark Navy Heading: "Account Created!"
+                              Text(
+                                'Account Created!',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: isShort ? 24.0 : 28.0,
+                                  fontWeight: FontWeight.w800,
+                                  color: AppTheme.primaryNavy,
+                                  letterSpacing: -0.6,
+                                  height: 1.2,
                                 ),
-                              ],
-                            ),
-                            child: Column(
-                              crossAxisAlignment: CrossAxisAlignment.start,
-                              children: [
-                                Row(
-                                  children: [
-                                    const CircleAvatar(
-                                      radius: 18,
-                                      backgroundColor: AppTheme.primaryNavy,
-                                      child: Icon(
-                                        Icons.person,
-                                        color: AppTheme.backgroundWhite,
-                                        size: 20,
-                                      ),
+                              ),
+                              const SizedBox(height: 12),
+
+                              // 2. Subtitle: "Your CeylonGo account has been created successfully."
+                              Text(
+                                'Your CeylonGo account has been created successfully.',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: isShort ? 13.0 : 14.0,
+                                  color: const Color(0xFF64748B),
+                                  height: 1.45,
+                                ),
+                              ),
+                              SizedBox(height: isShort ? 32 : 44),
+
+                              // 3. Full-width blue gradient "Continue to Home →" Button
+                              SizedBox(
+                                height: isShort ? 46 : 48,
+                                child: ElevatedButton(
+                                  key: const Key('continue_to_home_button'),
+                                  onPressed: () {
+                                    // Existing authentication contract: newly registered traveler
+                                    // signs in with credentials to establish authenticated session / JWT
+                                    Navigator.pushReplacementNamed(
+                                      context,
+                                      '/login',
+                                      arguments: {
+                                        'email': resolvedUser?.email ?? '',
+                                      },
+                                    );
+                                  },
+                                  style: ElevatedButton.styleFrom(
+                                    backgroundColor: const Color(0xFF2563EB),
+                                    foregroundColor: Colors.white,
+                                    elevation: 2,
+                                    shadowColor: const Color(0x3D2563EB),
+                                    shape: RoundedRectangleBorder(
+                                      borderRadius: BorderRadius.circular(28),
                                     ),
-                                    const SizedBox(width: 12),
-                                    Expanded(
-                                      child: Column(
-                                        crossAxisAlignment:
-                                            CrossAxisAlignment.start,
+                                    padding: EdgeInsets.zero,
+                                  ),
+                                  child: Ink(
+                                    decoration: BoxDecoration(
+                                      gradient: const LinearGradient(
+                                        colors: [
+                                          Color(0xFF1D4ED8),
+                                          Color(0xFF2563EB),
+                                        ],
+                                        begin: Alignment.centerLeft,
+                                        end: Alignment.centerRight,
+                                      ),
+                                      borderRadius: BorderRadius.circular(28),
+                                    ),
+                                    child: Center(
+                                      child: Row(
+                                        mainAxisSize: MainAxisSize.min,
+                                        mainAxisAlignment:
+                                            MainAxisAlignment.center,
                                         children: [
                                           Text(
-                                            resolvedUser.fullName.isNotEmpty
-                                                ? resolvedUser.fullName
-                                                : 'Traveler',
-                                            style: const TextStyle(
+                                            'Continue to Home',
+                                            key: const Key(
+                                              'explore_ceylongo_button',
+                                            ),
+                                            style: TextStyle(
                                               fontFamily: 'Inter',
-                                              fontSize: 15,
+                                              fontSize: isShort ? 15.0 : 15.5,
                                               fontWeight: FontWeight.bold,
-                                              color: AppTheme.textPrimary,
+                                              color: Colors.white,
+                                              letterSpacing: 0.2,
                                             ),
                                           ),
-                                          const SizedBox(height: 2),
-                                          Text(
-                                            resolvedUser.email,
-                                            style: const TextStyle(
-                                              fontFamily: 'Inter',
-                                              fontSize: 13,
-                                              color: AppTheme.textSecondary,
-                                            ),
+                                          const SizedBox(width: 8),
+                                          const Icon(
+                                            Icons.arrow_forward_rounded,
+                                            size: 18,
+                                            color: Colors.white,
                                           ),
                                         ],
                                       ),
                                     ),
-                                    Container(
-                                      padding: const EdgeInsets.symmetric(
-                                        horizontal: 8,
-                                        vertical: 4,
-                                      ),
-                                      decoration: BoxDecoration(
-                                        color: AppTheme.primaryNavy.withAlpha(20),
-                                        borderRadius: BorderRadius.circular(6),
-                                      ),
-                                      child: Text(
-                                        resolvedUser.role.toUpperCase(),
-                                        style: const TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 11,
-                                          fontWeight: FontWeight.bold,
-                                          color: AppTheme.primaryNavy,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
+                                  ),
                                 ),
-                                const Divider(
-                                  height: 24,
-                                  color: AppTheme.borderSlate,
-                                ),
-                                Row(
-                                  children: [
-                                    const Icon(
-                                      Icons.info_outline_rounded,
-                                      color: AppTheme.accentOrange,
-                                      size: 18,
-                                    ),
-                                    const SizedBox(width: 8),
-                                    Expanded(
-                                      child: Text(
-                                        successMessage,
-                                        style: const TextStyle(
-                                          fontFamily: 'Inter',
-                                          fontSize: 12.5,
-                                          color: AppTheme.textSecondary,
-                                        ),
-                                      ),
-                                    ),
-                                  ],
-                                ),
-                              ],
-                            ),
-                          ),
-                        const SizedBox(height: 24),
-
-                        // Primary Button: "Explore CeylonGo"
-                        SizedBox(
-                          width: double.infinity,
-                          height: 48,
-                          child: ElevatedButton(
-                            key: const Key('explore_ceylongo_button'),
-                            onPressed: () {
-                              // Navigates to Welcome Back (Sign In) with registered email prefilled
-                              Navigator.pushReplacementNamed(
-                                context,
-                                '/login',
-                                arguments: {'email': resolvedUser?.email ?? ''},
-                              );
-                            },
-                            style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.accentOrange,
-                              foregroundColor: AppTheme.backgroundWhite,
-                              elevation: 0,
-                              shape: RoundedRectangleBorder(
-                                borderRadius: BorderRadius.circular(10),
                               ),
-                            ),
-                            child: const Text(
-                              'Explore CeylonGo',
-                              style: TextStyle(
-                                fontFamily: 'Inter',
-                                fontSize: 16,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.backgroundWhite,
-                              ),
-                            ),
+                            ],
                           ),
                         ),
-                        const SizedBox(height: 16),
 
-                        // Secondary Link: "Back to Sign In"
-                        TextButton(
-                          onPressed: () {
-                            Navigator.pushReplacementNamed(context, '/login');
-                          },
-                          child: const Text(
-                            'Back to Sign In',
-                            style: TextStyle(
-                              fontFamily: 'Inter',
-                              fontSize: 14,
-                              fontWeight: FontWeight.w600,
-                              color: AppTheme.primaryNavy,
-                            ),
-                          ),
-                        ),
+                        // 4. Light-blue bottom wave decoration anchored to the bottom
+                        const LightBlueWaveDecoration(height: 70),
                       ],
                     ),
                   ),
                 ),
               ),
-              const AuthWaveDecoration(),
-            ],
-          ),
+            );
+          },
         ),
-      );
-    },
-  ),
-),
+      ),
     );
   }
 }
-
