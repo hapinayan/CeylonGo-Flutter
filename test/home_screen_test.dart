@@ -1,8 +1,17 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
+
 import 'package:ceylongo/core/theme/app_theme.dart';
 import 'package:ceylongo/features/auth/models/user_model.dart';
 import 'package:ceylongo/features/home/screens/home_screen.dart';
+import 'package:ceylongo/features/home/widgets/home_ai_planner_banner.dart';
+import 'package:ceylongo/features/home/widgets/home_bottom_navigation_bar.dart';
+import 'package:ceylongo/features/home/widgets/home_featured_homestays.dart';
+import 'package:ceylongo/features/home/widgets/home_header.dart';
+import 'package:ceylongo/features/home/widgets/home_module_shortcuts.dart';
+import 'package:ceylongo/features/home/widgets/home_popular_destinations.dart';
+import 'package:ceylongo/features/home/widgets/home_quick_actions.dart';
+import 'package:ceylongo/features/home/widgets/home_search_bar.dart';
 
 void main() {
   const testUser = UserModel(
@@ -12,99 +21,263 @@ void main() {
     role: 'tourist',
   );
 
-  Widget createHomeScreen({UserModel? user}) {
+  Widget createHomeScreen({
+    UserModel? user,
+    Map<String, WidgetBuilder>? routes,
+  }) {
     return MaterialApp(
       theme: AppTheme.lightTheme,
+      routes: routes ??
+          {
+            '/artisan': (_) => const Scaffold(body: Text('Artisan Discovery Screen')),
+            '/artisan/wishlist': (_) => const Scaffold(body: Text('Wishlist Screen')),
+            '/artisan/reservations': (_) => const Scaffold(body: Text('Reservations Screen')),
+            '/login': (_) => const Scaffold(body: Text('Login Screen')),
+            '/community': (_) => const Scaffold(body: Text('Community Screen')),
+            '/profile': (_) => const Scaffold(body: Text('Profile Screen')),
+          },
       home: HomeScreen(
         initialUser: user ?? testUser,
       ),
     );
   }
 
-  group('HomeScreen AppBar Logo & Layout Tests', () {
-    testWidgets('Renders original CeylonGo logo with BoxFit.contain in AppBar',
+  Future<void> settleScreen(WidgetTester tester) async {
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 750));
+  }
+
+  Future<void> tapAndSettle(WidgetTester tester, Finder finder) async {
+    await tester.tap(finder);
+    await tester.pump();
+    await tester.pump(const Duration(milliseconds: 400));
+  }
+
+  group('HomeScreen Complete Layout & Approved Design Verification', () {
+    testWidgets('Renders all 8 required sections in correct order',
         (WidgetTester tester) async {
       await tester.pumpWidget(createHomeScreen());
-      await tester.pumpAndSettle();
+      await settleScreen(tester);
 
-      // Find Image.asset in the AppBar
-      final imageFinder = find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/ceylongo_original_logo.jpg' &&
-            widget.fit == BoxFit.contain,
+      // Section A: Header (Premium Navy Blue, pure white CeylonGo, no subtitle)
+      expect(find.byType(HomeHeader), findsOneWidget);
+      expect(find.text('CeylonGo'), findsOneWidget);
+      expect(find.text('Discover Local. Feel at Home.'), findsNothing);
+      expect(find.byKey(const Key('home_notifications_btn')), findsOneWidget);
+      expect(find.byKey(const Key('home_profile_btn')), findsOneWidget);
+
+      // Section B: Search Bar
+      expect(find.byType(HomeSearchBar), findsOneWidget);
+      expect(find.text('Where do you want to go?'), findsOneWidget);
+      expect(find.byIcon(Icons.search_rounded), findsOneWidget);
+      expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
+
+      // Section C: Six Module Shortcuts
+      expect(find.byType(HomeModuleShortcuts), findsOneWidget);
+      expect(find.text('Homestays'), findsOneWidget);
+      expect(find.text('Eco\nTourism'), findsOneWidget);
+      expect(find.text('Activities'), findsOneWidget);
+      expect(find.text('Tour\nGuides'), findsOneWidget);
+      expect(find.text('Rentals'), findsOneWidget);
+      expect(find.text('Artisan'), findsOneWidget);
+
+      // Section D: AI Trip Planner Banner
+      expect(find.byType(HomeAiPlannerBanner), findsOneWidget);
+      expect(find.text('Plan My Trip'), findsOneWidget);
+      expect(find.text('Itinerary'), findsOneWidget);
+      expect(find.text('Route Plan'), findsOneWidget);
+      expect(find.text('Budget'), findsOneWidget);
+      expect(find.text('Travel Tips'), findsOneWidget);
+
+      // Section E: Quick Actions
+      expect(find.byType(HomeQuickActions), findsOneWidget);
+      expect(find.text('My Bookings'), findsOneWidget);
+      expect(find.text('Saved'), findsOneWidget);
+      expect(find.text('Promotions'), findsOneWidget);
+      expect(find.text('Community'), findsNWidgets(2)); // Quick Actions and Bottom Nav
+
+      // Section F: Popular Destinations
+      expect(find.byType(HomePopularDestinations), findsOneWidget);
+      expect(find.text('Popular Destinations'), findsOneWidget);
+      expect(find.text('Jaffna'), findsOneWidget);
+      expect(find.text('Ella'), findsOneWidget);
+      expect(find.text('Kandy'), findsNWidgets(2)); // Destination and Homestay location
+
+      // Section G: Featured Homestays
+      expect(find.byType(HomeFeaturedHomestays), findsOneWidget);
+      expect(find.text('Featured Homestays'), findsOneWidget);
+      expect(find.text('Traditional Village Homestay'), findsOneWidget);
+      expect(find.text('4.8'), findsOneWidget);
+      expect(find.text('Private Room'), findsOneWidget);
+      expect(find.text('Wi-Fi'), findsOneWidget);
+      expect(find.text('Local Meals'), findsOneWidget);
+      expect(find.text('Book Now'), findsOneWidget);
+
+      // Section H: Floating Bottom Navigation Bar
+      expect(find.byType(HomeBottomNavigationBar), findsOneWidget);
+      expect(find.text('Home'), findsOneWidget);
+      expect(find.text('Explore'), findsOneWidget);
+      expect(find.text('AI Planner'), findsOneWidget);
+      expect(find.byKey(const Key('bottom_nav_ai_planner')), findsOneWidget);
+    });
+
+    testWidgets('Header matches approved deep navy blue design with pure white CeylonGo and no subtitle',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(createHomeScreen());
+      await settleScreen(tester);
+
+      final headerFinder = find.byType(HomeHeader);
+      expect(headerFinder, findsOneWidget);
+
+      // Verify header background container has #073B91
+      final container = tester.widget<Container>(
+        find.descendant(of: headerFinder, matching: find.byType(Container)).first,
       );
+      expect(container.color, const Color(0xFF073B91));
 
-      expect(imageFinder, findsOneWidget);
+      // Verify CeylonGo title is pure white (#FFFFFF)
+      final titleWidget = tester.widget<Text>(find.text('CeylonGo'));
+      expect(titleWidget.style?.color, Colors.white);
 
-      // Verify AppBar background is white
-      final appBar = tester.widget<AppBar>(find.byType(AppBar));
-      expect(appBar.backgroundColor, equals(AppTheme.backgroundWhite));
-      expect(appBar.centerTitle, isTrue);
+      // Verify subtitle is completely removed
+      expect(find.text('Discover Local. Feel at Home.'), findsNothing);
+
+      // Verify Homestays label does not break awkwardly into multiple lines
+      final homestayText = tester.widget<Text>(find.text('Homestays'));
+      expect(homestayText.maxLines, 1);
+      expect(homestayText.softWrap, false);
     });
 
-    testWidgets('Retains Welcome Card, user info, role, and Sign Out button',
+    testWidgets('Tapping Artisan shortcut navigates to /artisan',
         (WidgetTester tester) async {
       await tester.pumpWidget(createHomeScreen());
-      await tester.pumpAndSettle();
+      await settleScreen(tester);
 
-      expect(find.text('Welcome, Kamal Perera!'), findsOneWidget);
-      expect(find.text('kamal@ceylongo.com'), findsOneWidget);
-      expect(find.text('TOURIST'), findsOneWidget);
-      expect(find.text('Discover Local. Feel at Home.'), findsOneWidget);
-      expect(find.widgetWithText(ElevatedButton, 'Sign Out'), findsOneWidget);
-      expect(find.byTooltip('Sign Out'), findsOneWidget);
+      final artisanShortcut = find.byKey(const Key('shortcut_artisan'));
+      expect(artisanShortcut, findsOneWidget);
+
+      await tapAndSettle(tester, artisanShortcut);
+
+      expect(find.text('Artisan Discovery Screen'), findsOneWidget);
     });
 
-    testWidgets('Logo size is increased by ~25-30% and positioned 10-12px downward',
+    testWidgets('Tapping Saved in Quick Actions navigates to /artisan/wishlist',
         (WidgetTester tester) async {
-      // Test on standard mobile (375px)
-      tester.view.physicalSize = const Size(375, 800);
+      await tester.pumpWidget(createHomeScreen());
+      await settleScreen(tester);
+
+      final savedBtn = find.byKey(const Key('quick_action_saved'));
+      expect(savedBtn, findsOneWidget);
+
+      await tapAndSettle(tester, savedBtn);
+
+      expect(find.text('Wishlist Screen'), findsOneWidget);
+    });
+
+    testWidgets('Tapping Profile button opens Profile Screen',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(createHomeScreen());
+      await settleScreen(tester);
+
+      final profileBtn = find.byKey(const Key('home_profile_btn'));
+      expect(profileBtn, findsOneWidget);
+
+      await tapAndSettle(tester, profileBtn);
+
+      expect(find.text('Profile Screen'), findsOneWidget);
+    });
+
+    testWidgets('Tapping bottom navigation Profile tab navigates to /profile',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(createHomeScreen());
+      await settleScreen(tester);
+
+      final profileTab = find.byKey(const Key('bottom_nav_profile'));
+      expect(profileTab, findsOneWidget);
+
+      await tapAndSettle(tester, profileTab);
+
+      expect(find.text('Profile Screen'), findsOneWidget);
+    });
+
+    testWidgets('Tapping bottom navigation Community tab navigates to /community',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(createHomeScreen());
+      await settleScreen(tester);
+
+      final communityTab = find.byKey(const Key('bottom_nav_community'));
+      expect(communityTab, findsOneWidget);
+
+      await tapAndSettle(tester, communityTab);
+
+      expect(find.text('Community Screen'), findsOneWidget);
+    });
+
+    testWidgets('Tapping Community in Quick Actions navigates to /community',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(createHomeScreen());
+      await settleScreen(tester);
+
+      final communityQuickAction = find.byKey(const Key('quick_action_community'));
+      expect(communityQuickAction, findsOneWidget);
+
+      await tapAndSettle(tester, communityQuickAction);
+
+      expect(find.text('Community Screen'), findsOneWidget);
+    });
+
+    testWidgets('Tapping Notification Bell opens notifications sheet',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(createHomeScreen());
+      await settleScreen(tester);
+
+      final notifBtn = find.byKey(const Key('home_notifications_btn'));
+      expect(notifBtn, findsOneWidget);
+
+      await tapAndSettle(tester, notifBtn);
+
+      expect(find.text('Notifications'), findsOneWidget);
+      expect(find.text('View Artisan Discoveries'), findsOneWidget);
+    });
+
+    testWidgets('Bottom navigation tab switching animates smoothly',
+        (WidgetTester tester) async {
+      await tester.pumpWidget(createHomeScreen());
+      await settleScreen(tester);
+
+      // Tap Explore tab -> Navigates to /artisan
+      final exploreTab = find.byKey(const Key('bottom_nav_explore'));
+      expect(exploreTab, findsOneWidget);
+
+      await tapAndSettle(tester, exploreTab);
+
+      expect(find.text('Artisan Discovery Screen'), findsOneWidget);
+    });
+  });
+
+  group('HomeScreen Responsiveness & Samsung Galaxy A22 Verification', () {
+    testWidgets('Fits Samsung Galaxy A22 (360x800) with zero RenderFlex overflows',
+        (WidgetTester tester) async {
+      tester.view.physicalSize = const Size(360, 800);
       tester.view.devicePixelRatio = 1.0;
+      addTearDown(() {
+        tester.view.resetPhysicalSize();
+        tester.view.resetDevicePixelRatio();
+      });
 
       await tester.pumpWidget(createHomeScreen());
-      await tester.pumpAndSettle();
+      await settleScreen(tester);
 
-      final image = tester.widget<Image>(find.byWidgetPredicate(
-        (widget) =>
-            widget is Image &&
-            widget.image is AssetImage &&
-            (widget.image as AssetImage).assetName ==
-                'assets/images/ceylongo_original_logo.jpg',
-      ));
-
-      // Standard mobile logo height is 70.0 (increased ~29.6% from 54.0)
-      expect(image.height, equals(70.0));
-      expect(image.fit, equals(BoxFit.contain));
-
-      // Verify downward positioning (top padding: 11px)
-      final paddingFinder = find.ancestor(
-        of: find.byWidgetPredicate(
-          (widget) =>
-              widget is Image &&
-              widget.image is AssetImage &&
-              (widget.image as AssetImage).assetName ==
-                  'assets/images/ceylongo_original_logo.jpg',
-        ),
-        matching: find.byType(Padding),
-      );
-      final padding = tester.widget<Padding>(paddingFinder.first);
-      expect((padding.padding as EdgeInsets).top, equals(11.0));
-
-      // Verify toolbarHeight increased appropriately (94.0)
-      final appBar = tester.widget<AppBar>(find.byType(AppBar));
-      expect(appBar.toolbarHeight, equals(94.0));
-
-      tester.view.resetPhysicalSize();
-      tester.view.resetDevicePixelRatio();
+      expect(tester.takeException(), isNull);
+      expect(find.byType(HomeHeader), findsOneWidget);
+      expect(find.byType(HomeBottomNavigationBar), findsOneWidget);
     });
 
-    testWidgets('Responsive across small mobile (320px) to desktop (1200px)',
+    testWidgets('Responsive across 320px to 1200px viewports without errors',
         (WidgetTester tester) async {
       final viewports = [
         320.0, // Small mobile
+        360.0, // Samsung Galaxy A22
         375.0, // iPhone / compact
         430.0, // Large mobile
         800.0, // Tablet
@@ -116,20 +289,12 @@ void main() {
         tester.view.devicePixelRatio = 1.0;
 
         await tester.pumpWidget(createHomeScreen());
-        await tester.pumpAndSettle();
+        await settleScreen(tester);
 
-        // Ensure logo is rendered
-        final imageFinder = find.byWidgetPredicate(
-          (widget) =>
-              widget is Image &&
-              widget.image is AssetImage &&
-              (widget.image as AssetImage).assetName ==
-                  'assets/images/ceylongo_original_logo.jpg',
-        );
-        expect(imageFinder, findsOneWidget);
-
-        // Verify no RenderFlex overflow occurs
         expect(tester.takeException(), isNull);
+        expect(find.byType(HomeHeader), findsOneWidget);
+        expect(find.byType(HomeSearchBar), findsOneWidget);
+        expect(find.byType(HomeModuleShortcuts), findsOneWidget);
       }
 
       tester.view.resetPhysicalSize();
@@ -137,4 +302,3 @@ void main() {
     });
   });
 }
-

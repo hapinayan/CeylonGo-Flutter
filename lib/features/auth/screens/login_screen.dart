@@ -3,7 +3,9 @@ import 'package:flutter/material.dart';
 import '../../../core/services/secure_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
+import '../../artisan/services/artisan_demo_service.dart';
 import '../models/api_error.dart';
+import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_heading.dart';
@@ -82,6 +84,15 @@ class _LoginScreenState extends State<LoginScreen> {
     );
   }
 
+  static const String demoEmail = 'demo@ceylongo.com';
+  static const String demoPassword = 'Demo@1234';
+
+  void _onDemoLogin() {
+    _emailController.text = demoEmail;
+    _passwordController.text = demoPassword;
+    _onSubmit();
+  }
+
   Future<void> _onSubmit() async {
     setState(() {
       _errorMessage = null;
@@ -97,10 +108,45 @@ class _LoginScreenState extends State<LoginScreen> {
       _isLoading = true;
     });
 
+    final inputEmail = _emailController.text.trim();
+    final inputPassword = _passwordController.text;
+
+    // Offline Demo Flow: Strictly triggered only by designated demo credentials.
+    // Arbitrary credentials are NEVER accepted as authenticated sessions.
+    if (inputEmail.toLowerCase() == demoEmail && inputPassword == demoPassword) {
+      ArtisanDemoService.isDemoMode = true;
+      ArtisanDemoService.instance.resetToDefaults();
+
+      const demoUser = UserModel(
+        id: 'usr-demo-001',
+        fullName: 'Kamal Perera (Demo)',
+        email: demoEmail,
+        role: 'tourist',
+      );
+
+      try {
+        await _storageService.saveToken('demo-offline-jwt-token');
+        await _storageService.saveUser(demoUser);
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() {
+          _isLoading = false;
+        });
+
+        Navigator.pushReplacementNamed(
+          context,
+          '/login-success',
+          arguments: {'user': demoUser},
+        );
+      }
+      return;
+    }
+
     try {
       final response = await _authService.login(
-        email: _emailController.text.trim(),
-        password: _passwordController.text, // Never trim passwords
+        email: inputEmail,
+        password: inputPassword, // Never trim passwords
       );
 
       // Securely persist token and user profile
@@ -527,6 +573,89 @@ class _LoginScreenState extends State<LoginScreen> {
                                 ),
                               ),
                             ],
+                          ),
+                          const SizedBox(height: 20),
+
+                          // Clearly Labeled Offline Demo Flow
+                          Container(
+                            padding: const EdgeInsets.symmetric(
+                              horizontal: 14,
+                              vertical: 12,
+                            ),
+                            decoration: BoxDecoration(
+                              color: AppTheme.primarySubtle,
+                              borderRadius: BorderRadius.circular(12),
+                              border: Border.all(
+                                color: AppTheme.primaryNavy.withAlpha(45),
+                                width: 1,
+                              ),
+                            ),
+                            child: Column(
+                              children: [
+                                Row(
+                                  mainAxisAlignment: MainAxisAlignment.center,
+                                  children: const [
+                                    Icon(
+                                      Icons.offline_pin_outlined,
+                                      size: 17,
+                                      color: AppTheme.primaryNavy,
+                                    ),
+                                    SizedBox(width: 6),
+                                    Text(
+                                      'Offline Demo Flow',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 12.5,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.primaryNavy,
+                                      ),
+                                    ),
+                                  ],
+                                ),
+                                const SizedBox(height: 5),
+                                const Text(
+                                  'Explore CeylonGo without a backend server:\ndemo@ceylongo.com • Demo@1234',
+                                  textAlign: TextAlign.center,
+                                  style: TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 11.5,
+                                    color: AppTheme.textSecondary,
+                                    height: 1.3,
+                                  ),
+                                ),
+                                const SizedBox(height: 10),
+                                SizedBox(
+                                  width: double.infinity,
+                                  height: 38,
+                                  child: ElevatedButton.icon(
+                                    key: const Key('offline_demo_login_button'),
+                                    onPressed: _isLoading ? null : _onDemoLogin,
+                                    icon: const Icon(
+                                      Icons.play_circle_filled,
+                                      size: 18,
+                                      color: AppTheme.backgroundWhite,
+                                    ),
+                                    label: const Text(
+                                      'Sign In as Demo Traveler',
+                                      style: TextStyle(
+                                        fontFamily: 'Inter',
+                                        fontSize: 13,
+                                        fontWeight: FontWeight.w600,
+                                        color: AppTheme.backgroundWhite,
+                                      ),
+                                    ),
+                                    style: ElevatedButton.styleFrom(
+                                      backgroundColor: AppTheme.primaryNavy,
+                                      foregroundColor: AppTheme.backgroundWhite,
+                                      elevation: 0,
+                                      shape: RoundedRectangleBorder(
+                                        borderRadius: BorderRadius.circular(8),
+                                      ),
+                                    ),
+                                  ),
+                                ),
+                              ],
+                            ),
                           ),
                         ],
                       ),

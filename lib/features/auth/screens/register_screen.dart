@@ -1,8 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/services/secure_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
+import '../../artisan/services/artisan_demo_service.dart';
 import '../models/api_error.dart';
+import '../models/user_model.dart';
 import '../services/auth_service.dart';
 import '../widgets/auth_trust_footer.dart';
 import '../widgets/auth_wave_decoration.dart';
@@ -80,6 +83,60 @@ class _RegisterScreenState extends State<RegisterScreen> {
     super.dispose();
   }
 
+  Future<void> _onDemoRegister() async {
+    setState(() {
+      _errorMessage = null;
+      _fullNameServerError = null;
+      _emailServerError = null;
+      _passwordServerError = null;
+      _termsError = false;
+    });
+
+    final name = _fullNameController.text.trim().isNotEmpty
+        ? _fullNameController.text.trim()
+        : 'Demo Traveler';
+    final email = _emailController.text.trim().isNotEmpty &&
+            _emailController.text.contains('@')
+        ? _emailController.text.trim()
+        : 'demo@ceylongo.com';
+
+    ArtisanDemoService.isDemoMode = true;
+    ArtisanDemoService.instance.resetToDefaults();
+
+    final demoUser = UserModel(
+      id: 'usr-demo-001',
+      fullName: name,
+      email: email,
+      role: 'tourist',
+    );
+
+    try {
+      final storage = SecureStorageService();
+      await storage.saveToken('demo-offline-jwt-token');
+      await storage.saveUser(demoUser);
+    } catch (_) {}
+
+    if (mounted) {
+      ScaffoldMessenger.of(context).hideCurrentSnackBar();
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Offline Demo Traveler registered successfully.'),
+          backgroundColor: AppTheme.primaryNavy,
+          duration: Duration(seconds: 3),
+        ),
+      );
+
+      Navigator.pushReplacementNamed(
+        context,
+        '/registration-success',
+        arguments: {
+          'user': demoUser,
+          'message': 'Demo Traveler account created successfully in offline mode.',
+        },
+      );
+    }
+  }
+
   Future<void> _onSubmit() async {
     setState(() {
       _errorMessage = null;
@@ -92,6 +149,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
     final formValid = _formKey.currentState?.validate() ?? false;
 
     if (!formValid || !_acceptTerms) {
+      return;
+    }
+
+    final inputEmail = _emailController.text.trim();
+    if (inputEmail.toLowerCase() == 'demo@ceylongo.com' ||
+        inputEmail.toLowerCase() == 'traveler@ceylongo.demo') {
+      await _onDemoRegister();
       return;
     }
 
@@ -820,6 +884,34 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ),
                                   ],
                                 ),
+                                if (constraints.maxHeight > 750) ...[
+                                  SizedBox(
+                                    height: isShort ? 6 : (isCompact ? 8 : 12),
+                                  ),
+
+                                  // Offline Demo Mode Button
+                                  Center(
+                                    child: TextButton.icon(
+                                      key: const Key('demo_register_button'),
+                                      onPressed:
+                                          _isLoading ? null : _onDemoRegister,
+                                      icon: const Icon(
+                                        Icons.offline_pin_outlined,
+                                        size: 16,
+                                        color: AppTheme.primaryNavy,
+                                      ),
+                                      label: Text(
+                                        'Register Demo Traveler (Offline Demo)',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: isCompact ? 11.5 : 12.5,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.primaryNavy,
+                                        ),
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ],
                             ),
                           ),
