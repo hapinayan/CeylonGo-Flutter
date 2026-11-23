@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../home/widgets/home_bottom_navigation_bar.dart';
 import '../models/artisan_listing_model.dart';
 import '../services/artisan_demo_service.dart';
 import '../services/artisan_location_service.dart';
@@ -59,7 +60,8 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
   @override
   void initState() {
     super.initState();
-    _artisanService = widget.artisanService ??
+    _artisanService =
+        widget.artisanService ??
         (ArtisanDemoService.isDemoMode
             ? ArtisanDemoService.instance
             : ArtisanService());
@@ -76,7 +78,8 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
   }
 
   void _onScroll() {
-    if (_scrollController.position.pixels >= _scrollController.position.maxScrollExtent - 200 &&
+    if (_scrollController.position.pixels >=
+            _scrollController.position.maxScrollExtent - 200 &&
         !_isLoading &&
         !_isLoadingMore &&
         _currentPage < _totalPages) {
@@ -94,13 +97,17 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
       final futures = await Future.wait([
         _artisanService.getCategories().catchError((_) => <String>[]),
         _artisanService.getDistricts().catchError((_) => <String>[]),
-        _artisanService.getFeaturedListings(pageSize: 6).catchError((_) => const ArtisanListingPagination(
-              items: [],
-              total: 0,
-              page: 1,
-              pageSize: 6,
-              totalPages: 0,
-            )),
+        _artisanService
+            .getFeaturedListings(pageSize: 6)
+            .catchError(
+              (_) => const ArtisanListingPagination(
+                items: [],
+                total: 0,
+                page: 1,
+                pageSize: 6,
+                totalPages: 0,
+              ),
+            ),
         _fetchListingsPage(1),
       ]);
 
@@ -137,7 +144,9 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
         longitude: _userLongitude!,
         radiusKm: _searchRadiusKm,
         category: _selectedCategory == 'All' ? null : _selectedCategory,
-        search: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
+        search: _searchController.text.trim().isEmpty
+            ? null
+            : _searchController.text.trim(),
         page: page,
         pageSize: 12,
       );
@@ -150,7 +159,9 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
       );
     }
     return _artisanService.getListings(
-      search: _searchController.text.trim().isEmpty ? null : _searchController.text.trim(),
+      search: _searchController.text.trim().isEmpty
+          ? null
+          : _searchController.text.trim(),
       district: _selectedDistrict == 'All' ? null : _selectedDistrict,
       category: _selectedCategory == 'All' ? null : _selectedCategory,
       isFeatured: _featuredOnly ? true : null,
@@ -204,7 +215,9 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
       if (mounted) {
         ScaffoldMessenger.of(context).showSnackBar(
           const SnackBar(
-            content: Text('Location permission was not granted. Showing all workshops by district.'),
+            content: Text(
+              'Location permission was not granted. Showing all workshops by district.',
+            ),
             duration: Duration(seconds: 3),
           ),
         );
@@ -235,7 +248,10 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
     } else {
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text(locationResult.errorMessage ?? 'Unable to obtain GPS location. Showing all workshops.'),
+          content: Text(
+            locationResult.errorMessage ??
+                'Unable to obtain GPS location. Showing all workshops.',
+          ),
           duration: const Duration(seconds: 4),
         ),
       );
@@ -322,9 +338,8 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
               Navigator.push(
                 context,
                 MaterialPageRoute(
-                  builder: (_) => ArtisanWishlistScreen(
-                    artisanService: _artisanService,
-                  ),
+                  builder: (_) =>
+                      ArtisanWishlistScreen(artisanService: _artisanService),
                 ),
               );
             },
@@ -361,368 +376,461 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
         ],
       ),
       body: Column(
+        crossAxisAlignment: CrossAxisAlignment.stretch,
         children: [
           const ArtisanDemoBanner(),
+          _buildFixedFilterSection(),
           Expanded(
             child: RefreshIndicator(
               color: AppTheme.accentOrange,
               onRefresh: _loadInitialData,
               child: CustomScrollView(
-          controller: _scrollController,
-          slivers: [
-            // Search and Filter Bar
-            SliverToBoxAdapter(
-              child: Container(
-                color: AppTheme.backgroundWhite,
-                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.start,
-                  children: [
-                    // Search Bar
-                    TextField(
-                      controller: _searchController,
-                      decoration: InputDecoration(
-                        hintText: 'Search craft, workshop, or city...',
-                        prefixIcon: const Icon(Icons.search, color: AppTheme.textSecondary),
-                        suffixIcon: _searchController.text.isNotEmpty
-                            ? IconButton(
-                                icon: const Icon(Icons.clear, size: 18),
-                                onPressed: () {
-                                  _searchController.clear();
-                                  _applyFilters();
-                                },
-                              )
-                            : null,
-                      ),
-                      onSubmitted: (_) => _applyFilters(),
-                    ),
-                    const SizedBox(height: 12),
-
-                    // Category Filter Pills
-                    SizedBox(
-                      height: 36,
-                      child: ListView.separated(
-                        scrollDirection: Axis.horizontal,
-                        itemCount: _categories.length,
-                        separatorBuilder: (context, index) => const SizedBox(width: 8),
-                        itemBuilder: (context, index) {
-                          final cat = _categories[index];
-                          final isSelected = _selectedCategory == cat;
-                          return ChoiceChip(
-                            label: Text(cat),
-                            selected: isSelected,
-                            selectedColor: AppTheme.primaryNavy,
-                            backgroundColor: AppTheme.backgroundLight,
-                            labelStyle: TextStyle(
-                              color: isSelected ? Colors.white : AppTheme.textSecondary,
-                              fontSize: 12,
-                              fontWeight: isSelected ? FontWeight.bold : FontWeight.normal,
-                            ),
-                            side: BorderSide(
-                              color: isSelected ? AppTheme.primaryNavy : AppTheme.borderSlate,
-                            ),
-                            onSelected: (selected) {
-                              if (selected) {
-                                setState(() {
-                                  _selectedCategory = cat;
-                                });
-                                _applyFilters();
-                              }
-                            },
-                          );
-                        },
-                      ),
-                    ),
-                    const SizedBox(height: 10),
-
-                    // District & Featured Controls
-                    Row(
-                      children: [
-                        Expanded(
-                          child: Container(
-                            padding: const EdgeInsets.symmetric(horizontal: 12),
-                            decoration: BoxDecoration(
-                              border: Border.all(color: AppTheme.borderSlate),
-                              borderRadius: BorderRadius.circular(10),
-                              color: AppTheme.backgroundWhite,
-                            ),
-                            child: DropdownButtonHideUnderline(
-                              child: DropdownButton<String>(
-                                value: _districts.contains(_selectedDistrict)
-                                    ? _selectedDistrict
-                                    : 'All',
-                                isExpanded: true,
-                                icon: const Icon(Icons.arrow_drop_down, color: AppTheme.textSecondary),
-                                style: const TextStyle(
-                                  fontSize: 13,
-                                  color: AppTheme.textPrimary,
-                                ),
-                                items: _districts.map((d) {
-                                  return DropdownMenuItem(
-                                    value: d,
-                                    child: Text(d == 'All' ? 'All Districts' : d),
-                                  );
-                                }).toList(),
-                                onChanged: (val) {
-                                  if (val != null) {
-                                    setState(() {
-                                      _selectedDistrict = val;
-                                    });
-                                    _applyFilters();
-                                  }
-                                },
+                controller: _scrollController,
+                slivers: [
+                  // Featured Spotlights (Visible when not filtering by specific category/search)
+                  if (_featuredListings.isNotEmpty &&
+                      !_featuredOnly &&
+                      _searchController.text.isEmpty &&
+                      _selectedCategory == 'All') ...[
+                    SliverToBoxAdapter(
+                      child: Padding(
+                        padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                        child: Row(
+                          mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                          children: [
+                            const Expanded(
+                              child: Row(
+                                children: [
+                                  Icon(
+                                    Icons.stars,
+                                    color: Color(0xFFD97706),
+                                    size: 18,
+                                  ),
+                                  SizedBox(width: 6),
+                                  Flexible(
+                                    child: Text(
+                                      'Featured Spotlights',
+                                      overflow: TextOverflow.ellipsis,
+                                      style: TextStyle(
+                                        fontSize: 16,
+                                        fontWeight: FontWeight.bold,
+                                        color: AppTheme.primaryNavy,
+                                      ),
+                                    ),
+                                  ),
+                                ],
                               ),
                             ),
-                          ),
+                            const SizedBox(width: 8),
+                            Text(
+                              'Curated Artisans',
+                              style: TextStyle(
+                                fontSize: 12,
+                                color: AppTheme.textMuted,
+                                fontStyle: FontStyle.italic,
+                              ),
+                            ),
+                          ],
                         ),
-                        const SizedBox(width: 8),
-                        FilterChip(
-                          key: const Key('featured_filter_chip'),
-                          label: const Text('Featured'),
-                          selected: _featuredOnly,
-                          selectedColor: const Color(0xFFFEF3C7),
-                          checkmarkColor: const Color(0xFF92400E),
-                          labelStyle: TextStyle(
-                            fontSize: 12,
-                            fontWeight: _featuredOnly ? FontWeight.bold : FontWeight.normal,
-                            color: _featuredOnly ? const Color(0xFF92400E) : AppTheme.textSecondary,
-                          ),
-                          side: BorderSide(
-                            color: _featuredOnly ? const Color(0xFFFDE68A) : AppTheme.borderSlate,
-                          ),
-                          onSelected: (val) {
-                            setState(() {
-                              _featuredOnly = val;
-                            });
-                            _applyFilters();
+                      ),
+                    ),
+                    SliverToBoxAdapter(
+                      child: SizedBox(
+                        height: 220,
+                        child: ListView.separated(
+                          padding: const EdgeInsets.symmetric(horizontal: 16),
+                          scrollDirection: Axis.horizontal,
+                          itemCount: _featuredListings.length,
+                          separatorBuilder: (context, index) =>
+                              const SizedBox(width: 12),
+                          itemBuilder: (context, index) {
+                            final item = _featuredListings[index];
+                            return SizedBox(
+                              width: 240,
+                              child: ArtisanListingCard(
+                                listing: item,
+                                isCompact: true,
+                                onTap: () => _navigateToDetail(item.id),
+                              ),
+                            );
                           },
                         ),
-                        const SizedBox(width: 8),
-                        FilterChip(
-                          key: const Key('nearby_filter_chip'),
-                          label: Row(
-                            mainAxisSize: MainAxisSize.min,
-                            children: [
-                              if (_isAcquiringLocation)
-                                const SizedBox(
-                                  width: 12,
-                                  height: 12,
-                                  child: CircularProgressIndicator(strokeWidth: 2, color: AppTheme.accentOrange),
-                                )
-                              else
-                                const Icon(Icons.near_me, size: 13),
-                              const SizedBox(width: 4),
-                              Text(_isAcquiringLocation ? 'Locating...' : 'Nearby'),
-                            ],
-                          ),
-                          selected: _isNearbyMode,
-                          selectedColor: const Color(0xFFFFEDD5),
-                          checkmarkColor: AppTheme.accentOrange,
-                          labelStyle: TextStyle(
-                            fontSize: 12,
-                            fontWeight: _isNearbyMode ? FontWeight.bold : FontWeight.normal,
-                            color: _isNearbyMode ? AppTheme.accentOrange : AppTheme.textSecondary,
-                          ),
-                          side: BorderSide(
-                            color: _isNearbyMode ? AppTheme.accentOrange : AppTheme.borderSlate,
-                          ),
-                          onSelected: (_) => _toggleNearbyMode(),
-                        ),
-                      ],
+                      ),
                     ),
                   ],
-                ),
-              ),
-            ),
 
-            // Featured Spotlights (Visible when not filtering by specific category/search)
-            if (_featuredListings.isNotEmpty &&
-                !_featuredOnly &&
-                _searchController.text.isEmpty &&
-                _selectedCategory == 'All') ...[
-              SliverToBoxAdapter(
-                child: Padding(
-                  padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                  child: Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Row(
-                        children: [
-                          Icon(Icons.stars, color: Color(0xFFD97706), size: 18),
-                          SizedBox(width: 6),
-                          Text(
-                            'Featured Spotlights',
-                            style: TextStyle(
-                              fontSize: 16,
-                              fontWeight: FontWeight.bold,
-                              color: AppTheme.primaryNavy,
-                            ),
-                          ),
-                        ],
-                      ),
-                      Text(
-                        'Curated Artisans',
-                        style: TextStyle(
-                          fontSize: 12,
-                          color: AppTheme.textMuted,
-                          fontStyle: FontStyle.italic,
+                  // Main Listing Header
+                  SliverToBoxAdapter(
+                    child: Padding(
+                      padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
+                      child: Text(
+                        _featuredOnly
+                            ? 'Featured Workshops (${_listings.length})'
+                            : 'All Artisan Workshops (${_listings.length})',
+                        style: const TextStyle(
+                          fontSize: 16,
+                          fontWeight: FontWeight.bold,
+                          color: AppTheme.primaryNavy,
                         ),
                       ),
-                    ],
+                    ),
                   ),
-                ),
-              ),
-              SliverToBoxAdapter(
-                child: SizedBox(
-                  height: 220,
-                  child: ListView.separated(
-                    padding: const EdgeInsets.symmetric(horizontal: 16),
-                    scrollDirection: Axis.horizontal,
-                    itemCount: _featuredListings.length,
-                    separatorBuilder: (context, index) => const SizedBox(width: 12),
-                    itemBuilder: (context, index) {
-                      final item = _featuredListings[index];
-                      return SizedBox(
-                        width: 240,
-                        child: ArtisanListingCard(
-                          listing: item,
-                          isCompact: true,
-                          onTap: () => _navigateToDetail(item.id),
-                        ),
-                      );
-                    },
-                  ),
-                ),
-              ),
-            ],
 
-            // Main Listing Header
-            SliverToBoxAdapter(
-              child: Padding(
-                padding: const EdgeInsets.fromLTRB(16, 16, 16, 8),
-                child: Text(
-                  _featuredOnly
-                      ? 'Featured Workshops (${_listings.length})'
-                      : 'All Artisan Workshops (${_listings.length})',
-                  style: const TextStyle(
-                    fontSize: 16,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryNavy,
-                  ),
-                ),
+                  // Content or Loading or Empty
+                  if (_isLoading)
+                    const SliverFillRemaining(
+                      child: Center(
+                        child: CircularProgressIndicator(
+                          color: AppTheme.accentOrange,
+                        ),
+                      ),
+                    )
+                  else if (_errorMessage != null)
+                    SliverFillRemaining(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.error_outline,
+                                size: 48,
+                                color: AppTheme.errorRed,
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'Unable to Load Artisans',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryNavy,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              Text(
+                                _errorMessage!,
+                                textAlign: TextAlign.center,
+                                style: const TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              ElevatedButton.icon(
+                                onPressed: _loadInitialData,
+                                icon: const Icon(Icons.refresh, size: 18),
+                                label: const Text('Try Again'),
+                                style: ElevatedButton.styleFrom(
+                                  backgroundColor: AppTheme.primaryNavy,
+                                  foregroundColor: Colors.white,
+                                ),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  else if (_listings.isEmpty)
+                    SliverFillRemaining(
+                      child: Center(
+                        child: Padding(
+                          padding: const EdgeInsets.all(24.0),
+                          child: Column(
+                            mainAxisSize: MainAxisSize.min,
+                            children: [
+                              const Icon(
+                                Icons.search_off,
+                                size: 48,
+                                color: AppTheme.textMuted,
+                              ),
+                              const SizedBox(height: 12),
+                              const Text(
+                                'No Artisan Workshops Found',
+                                style: TextStyle(
+                                  fontSize: 18,
+                                  fontWeight: FontWeight.bold,
+                                  color: AppTheme.primaryNavy,
+                                ),
+                              ),
+                              const SizedBox(height: 6),
+                              const Text(
+                                'Try adjusting your search query, craft category, or district filter.',
+                                textAlign: TextAlign.center,
+                                style: TextStyle(
+                                  fontSize: 13,
+                                  color: AppTheme.textSecondary,
+                                ),
+                              ),
+                              const SizedBox(height: 16),
+                              OutlinedButton(
+                                onPressed: _resetFilters,
+                                child: const Text('Clear Filters'),
+                              ),
+                            ],
+                          ),
+                        ),
+                      ),
+                    )
+                  else
+                    SliverPadding(
+                      padding: const EdgeInsets.symmetric(horizontal: 16),
+                      sliver: SliverList(
+                        delegate: SliverChildBuilderDelegate((context, index) {
+                          final item = _listings[index];
+                          return ArtisanListingCard(
+                            listing: item,
+                            onTap: () => _navigateToDetail(item.id),
+                          );
+                        }, childCount: _listings.length),
+                      ),
+                    ),
+
+                  // Pagination loader at bottom
+                  if (_isLoadingMore)
+                    const SliverToBoxAdapter(
+                      child: Padding(
+                        padding: EdgeInsets.symmetric(vertical: 16),
+                        child: Center(
+                          child: CircularProgressIndicator(
+                            color: AppTheme.accentOrange,
+                          ),
+                        ),
+                      ),
+                    ),
+                ],
               ),
             ),
+          ),
+        ],
+      ),
+      bottomNavigationBar: HomeBottomNavigationBar(
+        currentIndex: 1,
+        onTabSelected: _onBottomNavSelected,
+      ),
+    );
+  }
 
-            // Content or Loading or Empty
-            if (_isLoading)
-              const SliverFillRemaining(
-                child: Center(
-                  child: CircularProgressIndicator(color: AppTheme.accentOrange),
-                ),
-              )
-            else if (_errorMessage != null)
-              SliverFillRemaining(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.error_outline, size: 48, color: AppTheme.errorRed),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'Unable to Load Artisans',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryNavy,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        Text(
-                          _errorMessage!,
-                          textAlign: TextAlign.center,
-                          style: const TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                        ),
-                        const SizedBox(height: 16),
-                        ElevatedButton.icon(
-                          onPressed: _loadInitialData,
-                          icon: const Icon(Icons.refresh, size: 18),
-                          label: const Text('Try Again'),
-                          style: ElevatedButton.styleFrom(
-                            backgroundColor: AppTheme.primaryNavy,
-                            foregroundColor: Colors.white,
-                          ),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              )
-            else if (_listings.isEmpty)
-              SliverFillRemaining(
-                child: Center(
-                  child: Padding(
-                    padding: const EdgeInsets.all(24.0),
-                    child: Column(
-                      mainAxisSize: MainAxisSize.min,
-                      children: [
-                        const Icon(Icons.search_off, size: 48, color: AppTheme.textMuted),
-                        const SizedBox(height: 12),
-                        const Text(
-                          'No Artisan Workshops Found',
-                          style: TextStyle(
-                            fontSize: 18,
-                            fontWeight: FontWeight.bold,
-                            color: AppTheme.primaryNavy,
-                          ),
-                        ),
-                        const SizedBox(height: 6),
-                        const Text(
-                          'Try adjusting your search query, craft category, or district filter.',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 13, color: AppTheme.textSecondary),
-                        ),
-                        const SizedBox(height: 16),
-                        OutlinedButton(
-                          onPressed: _resetFilters,
-                          child: const Text('Clear Filters'),
-                        ),
-                      ],
-                    ),
-                  ),
-                ),
-              )
-            else
-              SliverPadding(
-                padding: const EdgeInsets.symmetric(horizontal: 16),
-                sliver: SliverList(
-                  delegate: SliverChildBuilderDelegate(
-                    (context, index) {
-                      final item = _listings[index];
-                      return ArtisanListingCard(
-                        listing: item,
-                        onTap: () => _navigateToDetail(item.id),
-                      );
-                    },
-                    childCount: _listings.length,
-                  ),
-                ),
-              ),
+  void _onBottomNavSelected(int index) {
+    if (index == 1) return; // Already on Explore
 
-            // Pagination loader at bottom
-            if (_isLoadingMore)
-              const SliverToBoxAdapter(
-                child: Padding(
-                  padding: EdgeInsets.symmetric(vertical: 16),
-                  child: Center(
-                    child: CircularProgressIndicator(color: AppTheme.accentOrange),
-                  ),
-                ),
-              ),
-          ],
+    if (index == 0) {
+      // Home
+      if (Navigator.canPop(context)) {
+        Navigator.pop(context);
+      } else {
+        Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false);
+      }
+    } else if (index == 2) {
+      // AI Planner
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('CeylonGo AI Trip Planner is opening...'),
+          backgroundColor: Color(0xFF073B91),
+          duration: Duration(seconds: 2),
+        ),
+      );
+    } else if (index == 3) {
+      // Community -> /community
+      Navigator.pushNamed(context, '/community');
+    } else if (index == 4) {
+      // Profile -> /profile
+      Navigator.pushNamed(context, '/profile');
+    }
+  }
+
+  Widget _buildFixedFilterSection() {
+    return Container(
+      decoration: const BoxDecoration(
+        color: AppTheme.backgroundWhite,
+        border: Border(
+          bottom: BorderSide(color: Color(0xFFE2E8F0), width: 1.0),
         ),
       ),
+      padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 12),
+      child: Column(
+        crossAxisAlignment: CrossAxisAlignment.start,
+        mainAxisSize: MainAxisSize.min,
+        children: [
+          // Search Bar
+          TextField(
+            controller: _searchController,
+            decoration: InputDecoration(
+              hintText: 'Search craft, workshop, or city...',
+              prefixIcon: const Icon(
+                Icons.search,
+                color: AppTheme.textSecondary,
+              ),
+              suffixIcon: _searchController.text.isNotEmpty
+                  ? IconButton(
+                      icon: const Icon(Icons.clear, size: 18),
+                      onPressed: () {
+                        _searchController.clear();
+                        _applyFilters();
+                      },
+                    )
+                  : null,
+            ),
+            onChanged: (_) {
+              setState(() {});
+            },
+            onSubmitted: (_) => _applyFilters(),
+          ),
+          const SizedBox(height: 12),
+
+          // Category Filter Pills
+          SizedBox(
+            height: 36,
+            child: ListView.separated(
+              scrollDirection: Axis.horizontal,
+              itemCount: _categories.length,
+              separatorBuilder: (context, index) => const SizedBox(width: 8),
+              itemBuilder: (context, index) {
+                final cat = _categories[index];
+                final isSelected = _selectedCategory == cat;
+                return ChoiceChip(
+                  label: Text(cat),
+                  selected: isSelected,
+                  selectedColor: AppTheme.primaryNavy,
+                  backgroundColor: AppTheme.backgroundLight,
+                  labelStyle: TextStyle(
+                    color: isSelected ? Colors.white : AppTheme.textSecondary,
+                    fontSize: 12,
+                    fontWeight: isSelected
+                        ? FontWeight.bold
+                        : FontWeight.normal,
+                  ),
+                  side: BorderSide(
+                    color: isSelected
+                        ? AppTheme.primaryNavy
+                        : AppTheme.borderSlate,
+                  ),
+                  onSelected: (selected) {
+                    if (selected) {
+                      setState(() {
+                        _selectedCategory = cat;
+                      });
+                      _applyFilters();
+                    }
+                  },
+                );
+              },
+            ),
+          ),
+          const SizedBox(height: 10),
+
+          // District & Featured Controls
+          Row(
+            children: [
+              Expanded(
+                child: Container(
+                  padding: const EdgeInsets.symmetric(horizontal: 12),
+                  decoration: BoxDecoration(
+                    border: Border.all(color: AppTheme.borderSlate),
+                    borderRadius: BorderRadius.circular(10),
+                    color: AppTheme.backgroundWhite,
+                  ),
+                  child: DropdownButtonHideUnderline(
+                    child: DropdownButton<String>(
+                      value: _districts.contains(_selectedDistrict)
+                          ? _selectedDistrict
+                          : 'All',
+                      isExpanded: true,
+                      icon: const Icon(
+                        Icons.arrow_drop_down,
+                        color: AppTheme.textSecondary,
+                      ),
+                      style: const TextStyle(
+                        fontSize: 13,
+                        color: AppTheme.textPrimary,
+                      ),
+                      items: _districts.map((d) {
+                        return DropdownMenuItem(
+                          value: d,
+                          child: Text(d == 'All' ? 'All Districts' : d),
+                        );
+                      }).toList(),
+                      onChanged: (val) {
+                        if (val != null) {
+                          setState(() {
+                            _selectedDistrict = val;
+                          });
+                          _applyFilters();
+                        }
+                      },
+                    ),
+                  ),
+                ),
+              ),
+              const SizedBox(width: 8),
+              FilterChip(
+                key: const Key('featured_filter_chip'),
+                label: const Text('Featured'),
+                selected: _featuredOnly,
+                selectedColor: const Color(0xFFFEF3C7),
+                checkmarkColor: const Color(0xFF92400E),
+                labelStyle: TextStyle(
+                  fontSize: 12,
+                  fontWeight: _featuredOnly
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                  color: _featuredOnly
+                      ? const Color(0xFF92400E)
+                      : AppTheme.textSecondary,
+                ),
+                side: BorderSide(
+                  color: _featuredOnly
+                      ? const Color(0xFFFDE68A)
+                      : AppTheme.borderSlate,
+                ),
+                onSelected: (val) {
+                  setState(() {
+                    _featuredOnly = val;
+                  });
+                  _applyFilters();
+                },
+              ),
+              const SizedBox(width: 8),
+              FilterChip(
+                key: const Key('nearby_filter_chip'),
+                label: Row(
+                  mainAxisSize: MainAxisSize.min,
+                  children: [
+                    if (_isAcquiringLocation)
+                      const SizedBox(
+                        width: 12,
+                        height: 12,
+                        child: CircularProgressIndicator(
+                          strokeWidth: 2,
+                          color: AppTheme.accentOrange,
+                        ),
+                      )
+                    else
+                      const Icon(Icons.near_me, size: 13),
+                    const SizedBox(width: 4),
+                    Text(_isAcquiringLocation ? 'Locating...' : 'Nearby'),
+                  ],
+                ),
+                selected: _isNearbyMode,
+                selectedColor: const Color(0xFFFFEDD5),
+                checkmarkColor: AppTheme.accentOrange,
+                labelStyle: TextStyle(
+                  fontSize: 12,
+                  fontWeight: _isNearbyMode
+                      ? FontWeight.bold
+                      : FontWeight.normal,
+                  color: _isNearbyMode
+                      ? AppTheme.accentOrange
+                      : AppTheme.textSecondary,
+                ),
+                side: BorderSide(
+                  color: _isNearbyMode
+                      ? AppTheme.accentOrange
+                      : AppTheme.borderSlate,
+                ),
+                onSelected: (_) => _toggleNearbyMode(),
+              ),
+            ],
           ),
         ],
       ),
