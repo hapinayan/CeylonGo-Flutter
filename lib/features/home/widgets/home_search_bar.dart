@@ -9,11 +9,7 @@ class HomeSearchBar extends StatefulWidget {
   final Animation<double> animation;
   final ValueChanged<String>? onSearch;
 
-  const HomeSearchBar({
-    super.key,
-    required this.animation,
-    this.onSearch,
-  });
+  const HomeSearchBar({super.key, required this.animation, this.onSearch});
 
   @override
   State<HomeSearchBar> createState() => _HomeSearchBarState();
@@ -35,9 +31,7 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (ctx) => Padding(
-        padding: EdgeInsets.only(
-          bottom: MediaQuery.of(ctx).viewInsets.bottom,
-        ),
+        padding: EdgeInsets.only(bottom: MediaQuery.of(ctx).viewInsets.bottom),
         child: Container(
           decoration: const BoxDecoration(
             color: Colors.white,
@@ -84,7 +78,10 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
                 textInputAction: TextInputAction.search,
                 decoration: InputDecoration(
                   hintText: 'e.g. Kandy, Masks, Homestay...',
-                  prefixIcon: const Icon(Icons.search, color: AppTheme.primaryNavy),
+                  prefixIcon: const Icon(
+                    Icons.search,
+                    color: AppTheme.primaryNavy,
+                  ),
                   suffixIcon: IconButton(
                     icon: const Icon(Icons.clear, size: 18),
                     onPressed: () => _controller.clear(),
@@ -136,15 +133,13 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
 
   @override
   Widget build(BuildContext context) {
-    final slideAnimation = Tween<Offset>(
-      begin: const Offset(0, 0.35),
-      end: Offset.zero,
-    ).animate(
-      CurvedAnimation(
-        parent: widget.animation,
-        curve: const Interval(0.1, 0.75, curve: Curves.easeOutCubic),
-      ),
-    );
+    final slideAnimation =
+        Tween<Offset>(begin: const Offset(0, 0.35), end: Offset.zero).animate(
+          CurvedAnimation(
+            parent: widget.animation,
+            curve: const Interval(0.1, 0.75, curve: Curves.easeOutCubic),
+          ),
+        );
 
     final fadeAnimation = CurvedAnimation(
       parent: widget.animation,
@@ -156,31 +151,31 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
       child: FadeTransition(
         opacity: fadeAnimation,
         child: Padding(
-          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+          padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 0.0),
           child: InkWell(
             key: const Key('home_search_bar'),
             onTap: () => _showSearchDialog(context),
-            borderRadius: BorderRadius.circular(26),
+            borderRadius: BorderRadius.circular(22),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              height: 52,
-              padding: const EdgeInsets.symmetric(horizontal: 16),
+              height: 42,
+              padding: const EdgeInsets.symmetric(horizontal: 14),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(26),
+                borderRadius: BorderRadius.circular(22),
                 border: Border.all(
                   color: _isFocused
                       ? const Color(0xFF2563EB)
                       : const Color(0xFFE2E8F0),
-                  width: _isFocused ? 1.6 : 1.2,
+                  width: _isFocused ? 1.5 : 1.1,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: _isFocused
                         ? const Color(0xFF2563EB).withAlpha(20)
                         : Colors.black.withAlpha(6),
-                    blurRadius: 10,
-                    offset: const Offset(0, 3),
+                    blurRadius: 8,
+                    offset: const Offset(0, 2),
                   ),
                 ],
               ),
@@ -189,15 +184,15 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
                   const Icon(
                     Icons.search_rounded,
                     color: Color(0xFF0F172A),
-                    size: 22,
+                    size: 20,
                   ),
-                  const SizedBox(width: 12),
+                  const SizedBox(width: 10),
                   const Expanded(
                     child: Text(
                       'Where do you want to go?',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 14.5,
+                        fontSize: 13.5,
                         fontWeight: FontWeight.w400,
                         color: Color(0xFF64748B),
                         letterSpacing: 0.1,
@@ -208,14 +203,21 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
                     icon: const Icon(
                       Icons.mic_none_rounded,
                       color: Color(0xFF0F172A),
-                      size: 22,
+                      size: 20,
                     ),
-                    splashRadius: 20,
+                    padding: EdgeInsets.zero,
+                    constraints: const BoxConstraints(
+                      minWidth: 32,
+                      minHeight: 32,
+                    ),
+                    splashRadius: 18,
                     tooltip: 'Voice Search Placeholder',
                     onPressed: () {
                       ScaffoldMessenger.of(context).showSnackBar(
                         const SnackBar(
-                          content: Text('Voice search will be available in future releases.'),
+                          content: Text(
+                            'Voice search will be available in future releases.',
+                          ),
                           duration: Duration(seconds: 2),
                         ),
                       );

@@ -27,18 +27,20 @@ void main() {
   }) {
     return MaterialApp(
       theme: AppTheme.lightTheme,
-      routes: routes ??
+      routes:
+          routes ??
           {
-            '/artisan': (_) => const Scaffold(body: Text('Artisan Discovery Screen')),
-            '/artisan/wishlist': (_) => const Scaffold(body: Text('Wishlist Screen')),
-            '/artisan/reservations': (_) => const Scaffold(body: Text('Reservations Screen')),
+            '/artisan': (_) =>
+                const Scaffold(body: Text('Artisan Discovery Screen')),
+            '/artisan/wishlist': (_) =>
+                const Scaffold(body: Text('Wishlist Screen')),
+            '/artisan/reservations': (_) =>
+                const Scaffold(body: Text('Reservations Screen')),
             '/login': (_) => const Scaffold(body: Text('Login Screen')),
             '/community': (_) => const Scaffold(body: Text('Community Screen')),
             '/profile': (_) => const Scaffold(body: Text('Profile Screen')),
           },
-      home: HomeScreen(
-        initialUser: user ?? testUser,
-      ),
+      home: HomeScreen(initialUser: user ?? testUser),
     );
   }
 
@@ -54,8 +56,9 @@ void main() {
   }
 
   group('HomeScreen Complete Layout & Approved Design Verification', () {
-    testWidgets('Renders all 8 required sections in correct order',
-        (WidgetTester tester) async {
+    testWidgets('Renders all 8 required sections in correct order', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createHomeScreen());
       await settleScreen(tester);
 
@@ -94,14 +97,20 @@ void main() {
       expect(find.text('My Bookings'), findsOneWidget);
       expect(find.text('Saved'), findsOneWidget);
       expect(find.text('Promotions'), findsOneWidget);
-      expect(find.text('Community'), findsNWidgets(2)); // Quick Actions and Bottom Nav
+      expect(
+        find.text('Community'),
+        findsNWidgets(2),
+      ); // Quick Actions and Bottom Nav
 
       // Section F: Popular Destinations
       expect(find.byType(HomePopularDestinations), findsOneWidget);
       expect(find.text('Popular Destinations'), findsOneWidget);
       expect(find.text('Jaffna'), findsOneWidget);
       expect(find.text('Ella'), findsOneWidget);
-      expect(find.text('Kandy'), findsNWidgets(2)); // Destination and Homestay location
+      expect(
+        find.text('Kandy'),
+        findsNWidgets(2),
+      ); // Destination and Homestay location
 
       // Section G: Featured Homestays
       expect(find.byType(HomeFeaturedHomestays), findsOneWidget);
@@ -121,35 +130,40 @@ void main() {
       expect(find.byKey(const Key('bottom_nav_ai_planner')), findsOneWidget);
     });
 
-    testWidgets('Header matches approved deep navy blue design with pure white CeylonGo and no subtitle',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(createHomeScreen());
-      await settleScreen(tester);
+    testWidgets(
+      'Header matches approved deep navy blue design with pure white CeylonGo and no subtitle',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(createHomeScreen());
+        await settleScreen(tester);
 
-      final headerFinder = find.byType(HomeHeader);
-      expect(headerFinder, findsOneWidget);
+        final headerFinder = find.byType(HomeHeader);
+        expect(headerFinder, findsOneWidget);
 
-      // Verify header background container has #073B91
-      final container = tester.widget<Container>(
-        find.descendant(of: headerFinder, matching: find.byType(Container)).first,
-      );
-      expect(container.color, const Color(0xFF073B91));
+        // Verify header background container has #073B91
+        final container = tester.widget<Container>(
+          find
+              .descendant(of: headerFinder, matching: find.byType(Container))
+              .first,
+        );
+        expect(container.color, const Color(0xFF073B91));
 
-      // Verify CeylonGo title is pure white (#FFFFFF)
-      final titleWidget = tester.widget<Text>(find.text('CeylonGo'));
-      expect(titleWidget.style?.color, Colors.white);
+        // Verify CeylonGo title is pure white (#FFFFFF)
+        final titleWidget = tester.widget<Text>(find.text('CeylonGo'));
+        expect(titleWidget.style?.color, Colors.white);
 
-      // Verify subtitle is completely removed
-      expect(find.text('Discover Local. Feel at Home.'), findsNothing);
+        // Verify subtitle is completely removed
+        expect(find.text('Discover Local. Feel at Home.'), findsNothing);
 
-      // Verify Homestays label does not break awkwardly into multiple lines
-      final homestayText = tester.widget<Text>(find.text('Homestays'));
-      expect(homestayText.maxLines, 1);
-      expect(homestayText.softWrap, false);
-    });
+        // Verify Homestays label does not break awkwardly into multiple lines
+        final homestayText = tester.widget<Text>(find.text('Homestays'));
+        expect(homestayText.maxLines, 1);
+        expect(homestayText.softWrap, false);
+      },
+    );
 
-    testWidgets('Tapping Artisan shortcut navigates to /artisan',
-        (WidgetTester tester) async {
+    testWidgets('Tapping Artisan shortcut navigates to /artisan', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createHomeScreen());
       await settleScreen(tester);
 
@@ -161,21 +175,24 @@ void main() {
       expect(find.text('Artisan Discovery Screen'), findsOneWidget);
     });
 
-    testWidgets('Tapping Saved in Quick Actions navigates to /artisan/wishlist',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(createHomeScreen());
-      await settleScreen(tester);
+    testWidgets(
+      'Tapping Saved in Quick Actions navigates to /artisan/wishlist',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(createHomeScreen());
+        await settleScreen(tester);
 
-      final savedBtn = find.byKey(const Key('quick_action_saved'));
-      expect(savedBtn, findsOneWidget);
+        final savedBtn = find.byKey(const Key('quick_action_saved'));
+        expect(savedBtn, findsOneWidget);
 
-      await tapAndSettle(tester, savedBtn);
+        await tapAndSettle(tester, savedBtn);
 
-      expect(find.text('Wishlist Screen'), findsOneWidget);
-    });
+        expect(find.text('Wishlist Screen'), findsOneWidget);
+      },
+    );
 
-    testWidgets('Tapping Profile button opens Profile Screen',
-        (WidgetTester tester) async {
+    testWidgets('Tapping Profile button opens Profile Screen', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createHomeScreen());
       await settleScreen(tester);
 
@@ -187,8 +204,9 @@ void main() {
       expect(find.text('Profile Screen'), findsOneWidget);
     });
 
-    testWidgets('Tapping bottom navigation Profile tab navigates to /profile',
-        (WidgetTester tester) async {
+    testWidgets('Tapping bottom navigation Profile tab navigates to /profile', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createHomeScreen());
       await settleScreen(tester);
 
@@ -200,25 +218,30 @@ void main() {
       expect(find.text('Profile Screen'), findsOneWidget);
     });
 
-    testWidgets('Tapping bottom navigation Community tab navigates to /community',
-        (WidgetTester tester) async {
+    testWidgets(
+      'Tapping bottom navigation Community tab navigates to /community',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(createHomeScreen());
+        await settleScreen(tester);
+
+        final communityTab = find.byKey(const Key('bottom_nav_community'));
+        expect(communityTab, findsOneWidget);
+
+        await tapAndSettle(tester, communityTab);
+
+        expect(find.text('Community Screen'), findsOneWidget);
+      },
+    );
+
+    testWidgets('Tapping Community in Quick Actions navigates to /community', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createHomeScreen());
       await settleScreen(tester);
 
-      final communityTab = find.byKey(const Key('bottom_nav_community'));
-      expect(communityTab, findsOneWidget);
-
-      await tapAndSettle(tester, communityTab);
-
-      expect(find.text('Community Screen'), findsOneWidget);
-    });
-
-    testWidgets('Tapping Community in Quick Actions navigates to /community',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(createHomeScreen());
-      await settleScreen(tester);
-
-      final communityQuickAction = find.byKey(const Key('quick_action_community'));
+      final communityQuickAction = find.byKey(
+        const Key('quick_action_community'),
+      );
       expect(communityQuickAction, findsOneWidget);
 
       await tapAndSettle(tester, communityQuickAction);
@@ -226,8 +249,9 @@ void main() {
       expect(find.text('Community Screen'), findsOneWidget);
     });
 
-    testWidgets('Tapping Notification Bell opens notifications sheet',
-        (WidgetTester tester) async {
+    testWidgets('Tapping Notification Bell opens notifications sheet', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createHomeScreen());
       await settleScreen(tester);
 
@@ -240,8 +264,9 @@ void main() {
       expect(find.text('View Artisan Discoveries'), findsOneWidget);
     });
 
-    testWidgets('Bottom navigation tab switching animates smoothly',
-        (WidgetTester tester) async {
+    testWidgets('Bottom navigation tab switching animates smoothly', (
+      WidgetTester tester,
+    ) async {
       await tester.pumpWidget(createHomeScreen());
       await settleScreen(tester);
 
@@ -256,25 +281,28 @@ void main() {
   });
 
   group('HomeScreen Responsiveness & Samsung Galaxy A22 Verification', () {
-    testWidgets('Fits Samsung Galaxy A22 (360x800) with zero RenderFlex overflows',
-        (WidgetTester tester) async {
-      tester.view.physicalSize = const Size(360, 800);
-      tester.view.devicePixelRatio = 1.0;
-      addTearDown(() {
-        tester.view.resetPhysicalSize();
-        tester.view.resetDevicePixelRatio();
-      });
+    testWidgets(
+      'Fits Samsung Galaxy A22 (360x800) with zero RenderFlex overflows',
+      (WidgetTester tester) async {
+        tester.view.physicalSize = const Size(360, 800);
+        tester.view.devicePixelRatio = 1.0;
+        addTearDown(() {
+          tester.view.resetPhysicalSize();
+          tester.view.resetDevicePixelRatio();
+        });
 
-      await tester.pumpWidget(createHomeScreen());
-      await settleScreen(tester);
+        await tester.pumpWidget(createHomeScreen());
+        await settleScreen(tester);
 
-      expect(tester.takeException(), isNull);
-      expect(find.byType(HomeHeader), findsOneWidget);
-      expect(find.byType(HomeBottomNavigationBar), findsOneWidget);
-    });
+        expect(tester.takeException(), isNull);
+        expect(find.byType(HomeHeader), findsOneWidget);
+        expect(find.byType(HomeBottomNavigationBar), findsOneWidget);
+      },
+    );
 
-    testWidgets('Responsive across 320px to 1200px viewports without errors',
-        (WidgetTester tester) async {
+    testWidgets('Responsive across 320px to 1200px viewports without errors', (
+      WidgetTester tester,
+    ) async {
       final viewports = [
         320.0, // Small mobile
         360.0, // Samsung Galaxy A22
@@ -301,4 +329,128 @@ void main() {
       tester.view.resetDevicePixelRatio();
     });
   });
+
+  group(
+    'HomeScreen Fixed Header, Search Bar & Category Buttons Verification',
+    () {
+      testWidgets(
+        'Header, Search Bar, and Category Buttons are fixed outside SingleChildScrollView',
+        (WidgetTester tester) async {
+          await tester.pumpWidget(createHomeScreen());
+          await settleScreen(tester);
+
+          final scrollFinder = find.byType(SingleChildScrollView);
+          expect(scrollFinder, findsOneWidget);
+
+          // Verify Header, Search Bar, and Category Buttons are NOT inside SingleChildScrollView
+          expect(
+            find.descendant(
+              of: scrollFinder,
+              matching: find.byType(HomeHeader),
+            ),
+            findsNothing,
+          );
+          expect(
+            find.descendant(
+              of: scrollFinder,
+              matching: find.byType(HomeSearchBar),
+            ),
+            findsNothing,
+          );
+          expect(
+            find.descendant(
+              of: scrollFinder,
+              matching: find.byType(HomeModuleShortcuts),
+            ),
+            findsNothing,
+          );
+
+          // Verify scrollable sections ARE inside SingleChildScrollView
+          expect(
+            find.descendant(
+              of: scrollFinder,
+              matching: find.byType(HomeAiPlannerBanner),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(
+              of: scrollFinder,
+              matching: find.byType(HomeQuickActions),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(
+              of: scrollFinder,
+              matching: find.byType(HomePopularDestinations),
+            ),
+            findsOneWidget,
+          );
+          expect(
+            find.descendant(
+              of: scrollFinder,
+              matching: find.byType(HomeFeaturedHomestays),
+            ),
+            findsOneWidget,
+          );
+        },
+      );
+
+      testWidgets(
+        'Vertical scrolling moves lower content while Header, Search Bar, and Category Buttons stay fixed',
+        (WidgetTester tester) async {
+          await tester.pumpWidget(createHomeScreen());
+          await settleScreen(tester);
+
+          // Record initial positions of fixed widgets
+          final headerPosBefore = tester.getTopLeft(find.byType(HomeHeader));
+          final searchBarPosBefore = tester.getTopLeft(
+            find.byType(HomeSearchBar),
+          );
+          final shortcutsPosBefore = tester.getTopLeft(
+            find.byType(HomeModuleShortcuts),
+          );
+          final bottomNavPosBefore = tester.getTopLeft(
+            find.byType(HomeBottomNavigationBar),
+          );
+
+          // Record initial position of scrollable content
+          final aiBannerPosBefore = tester.getTopLeft(
+            find.byType(HomeAiPlannerBanner),
+          );
+
+          // Perform a vertical drag gesture on the scrollable area
+          await tester.drag(
+            find.byType(SingleChildScrollView),
+            const Offset(0, -200),
+          );
+          await tester.pump();
+
+          // Verify fixed widgets have NOT moved
+          final headerPosAfter = tester.getTopLeft(find.byType(HomeHeader));
+          final searchBarPosAfter = tester.getTopLeft(
+            find.byType(HomeSearchBar),
+          );
+          final shortcutsPosAfter = tester.getTopLeft(
+            find.byType(HomeModuleShortcuts),
+          );
+          final bottomNavPosAfter = tester.getTopLeft(
+            find.byType(HomeBottomNavigationBar),
+          );
+
+          expect(headerPosAfter, equals(headerPosBefore));
+          expect(searchBarPosAfter, equals(searchBarPosBefore));
+          expect(shortcutsPosAfter, equals(shortcutsPosBefore));
+          expect(bottomNavPosAfter, equals(bottomNavPosBefore));
+
+          // Verify lower content HAS scrolled upwards
+          final aiBannerPosAfter = tester.getTopLeft(
+            find.byType(HomeAiPlannerBanner),
+          );
+          expect(aiBannerPosAfter.dy, lessThan(aiBannerPosBefore.dy));
+        },
+      );
+    },
+  );
 }

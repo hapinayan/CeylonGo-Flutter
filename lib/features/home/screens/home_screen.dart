@@ -150,7 +150,10 @@ class _HomeScreenState extends State<HomeScreen>
           children: [
             Row(
               children: const [
-                Icon(Icons.notifications_active_outlined, color: Color(0xFF2563EB)),
+                Icon(
+                  Icons.notifications_active_outlined,
+                  color: Color(0xFF2563EB),
+                ),
                 SizedBox(width: 10),
                 Text(
                   'Notifications',
@@ -196,7 +199,9 @@ class _HomeScreenState extends State<HomeScreen>
                 style: ElevatedButton.styleFrom(
                   backgroundColor: AppTheme.primaryNavy,
                   foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
                 ),
                 onPressed: () {
                   Navigator.pop(ctx);
@@ -229,7 +234,9 @@ class _HomeScreenState extends State<HomeScreen>
       // AI Planner
       ScaffoldMessenger.of(context).showSnackBar(
         const SnackBar(
-          content: Text('AI Trip Planner will be available in the upcoming release.'),
+          content: Text(
+            'AI Trip Planner will be available in the upcoming release.',
+          ),
           backgroundColor: Color(0xFF2563EB),
           duration: Duration(seconds: 2),
         ),
@@ -259,67 +266,70 @@ class _HomeScreenState extends State<HomeScreen>
             ? const Center(
                 child: CircularProgressIndicator(color: AppTheme.accentOrange),
               )
-            : SingleChildScrollView(
-                physics: const BouncingScrollPhysics(),
-                padding: const EdgeInsets.only(bottom: 24.0),
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.stretch,
-                  children: [
-                    // A. Header (Navy Blue Background, pure white CeylonGo, Notification & Profile)
-                    HomeHeader(
-                      animation: _entranceController,
-                      user: _user,
-                      onNotificationTap: _onNotificationTap,
-                      onProfileTap: _onProfileTap,
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // A. Fixed Header (Navy Blue Background, pure white CeylonGo, Notification & Profile)
+                  HomeHeader(
+                    animation: _entranceController,
+                    user: _user,
+                    onNotificationTap: _onNotificationTap,
+                    onProfileTap: _onProfileTap,
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // B. Fixed Rounded Search Bar ("Where do you want to go?")
+                  HomeSearchBar(
+                    animation: _entranceController,
+                    onSearch: (query) {
+                      Navigator.pushNamed(context, '/artisan');
+                    },
+                  ),
+
+                  const SizedBox(height: 10),
+
+                  // C. Fixed Six Module Shortcuts (Homestays, Eco Tourism, Activities, Tour Guides, Rentals, Artisan)
+                  HomeModuleShortcuts(animation: _entranceController),
+
+                  const SizedBox(height: 8),
+
+                  // D-G. Scrollable Home Content: ONLY content below the six category buttons scrolls vertically
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // D. AI Trip Planner Banner
+                          HomeAiPlannerBanner(animation: _entranceController),
+
+                          const SizedBox(height: 8),
+
+                          // E. Quick Actions (My Bookings, Saved, Promotions, Community)
+                          HomeQuickActions(
+                            animation: _entranceController,
+                            onCommunityTap: () =>
+                                Navigator.pushNamed(context, '/community'),
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // F. Popular Destinations (Jaffna, Ella, Kandy)
+                          HomePopularDestinations(
+                            animation: _entranceController,
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // G. Featured Homestays Carousel
+                          HomeFeaturedHomestays(animation: _entranceController),
+                        ],
+                      ),
                     ),
-
-                    const SizedBox(height: 12),
-
-                    // B. Rounded Search Bar
-                    HomeSearchBar(
-                      animation: _entranceController,
-                      onSearch: (query) {
-                        Navigator.pushNamed(context, '/artisan');
-                      },
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // C. Six Module Shortcuts (Homestays, Eco Tourism, Activities, Tour Guides, Rentals, Artisan)
-                    HomeModuleShortcuts(
-                      animation: _entranceController,
-                    ),
-
-                    const SizedBox(height: 12),
-
-                    // D. AI Trip Planner Banner
-                    HomeAiPlannerBanner(
-                      animation: _entranceController,
-                    ),
-
-                    const SizedBox(height: 8),
-
-                    // E. Quick Actions (My Bookings, Saved, Promotions, Community)
-                    HomeQuickActions(
-                      animation: _entranceController,
-                      onCommunityTap: () => Navigator.pushNamed(context, '/community'),
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // F. Popular Destinations (Jaffna, Ella, Kandy)
-                    HomePopularDestinations(
-                      animation: _entranceController,
-                    ),
-
-                    const SizedBox(height: 14),
-
-                    // G. Featured Homestays Carousel
-                    HomeFeaturedHomestays(
-                      animation: _entranceController,
-                    ),
-                  ],
-                ),
+                  ),
+                ],
               ),
         // H. Floating Bottom Navigation Bar
         bottomNavigationBar: HomeBottomNavigationBar(

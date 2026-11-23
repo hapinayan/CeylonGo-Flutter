@@ -30,10 +30,7 @@ class ModuleItem {
 class HomeModuleShortcuts extends StatelessWidget {
   final Animation<double> animation;
 
-  const HomeModuleShortcuts({
-    super.key,
-    required this.animation,
-  });
+  const HomeModuleShortcuts({super.key, required this.animation});
 
   static const List<ModuleItem> modules = [
     ModuleItem(
@@ -97,7 +94,9 @@ class HomeModuleShortcuts extends StatelessWidget {
       ScaffoldMessenger.of(context).hideCurrentSnackBar();
       ScaffoldMessenger.of(context).showSnackBar(
         SnackBar(
-          content: Text('${item.label.replaceAll('\n', ' ')} module is coming soon!'),
+          content: Text(
+            '${item.label.replaceAll('\n', ' ')} module is coming soon!',
+          ),
           duration: const Duration(seconds: 2),
           backgroundColor: AppTheme.primaryNavy,
         ),
@@ -110,12 +109,12 @@ class HomeModuleShortcuts extends StatelessWidget {
     final screenWidth = MediaQuery.of(context).size.width;
     final isTiny = screenWidth < 350;
     final isNarrow = screenWidth < 380;
-    final iconBoxSize = isTiny ? 44.0 : 48.0;
-    final iconSize = isTiny ? 22.0 : 25.0;
-    final fontSize = isTiny ? 10.0 : (isNarrow ? 10.8 : 11.5);
+    final iconBoxSize = isTiny ? 36.0 : (isNarrow ? 40.0 : 42.0);
+    final iconSize = isTiny ? 19.0 : (isNarrow ? 20.0 : 21.0);
+    final fontSize = isTiny ? 9.5 : (isNarrow ? 10.0 : 10.5);
 
     return Padding(
-      padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+      padding: const EdgeInsets.symmetric(horizontal: 14.0, vertical: 0.0),
       child: Row(
         mainAxisAlignment: MainAxisAlignment.spaceBetween,
         crossAxisAlignment: CrossAxisAlignment.start,
@@ -126,20 +125,18 @@ class HomeModuleShortcuts extends StatelessWidget {
           final start = (0.15 + (index * 0.08)).clamp(0.0, 0.9);
           final end = (start + 0.3).clamp(0.0, 1.0);
 
-          final itemSlide = Tween<Offset>(
-            begin: const Offset(0, 0.35),
-            end: Offset.zero,
-          ).animate(
-            CurvedAnimation(
-              parent: animation,
-              curve: Interval(start, end, curve: Curves.easeOutCubic),
-            ),
-          );
+          final itemSlide =
+              Tween<Offset>(
+                begin: const Offset(0, 0.35),
+                end: Offset.zero,
+              ).animate(
+                CurvedAnimation(
+                  parent: animation,
+                  curve: Interval(start, end, curve: Curves.easeOutCubic),
+                ),
+              );
 
-          final itemScale = Tween<double>(
-            begin: 0.92,
-            end: 1.0,
-          ).animate(
+          final itemScale = Tween<double>(begin: 0.92, end: 1.0).animate(
             CurvedAnimation(
               parent: animation,
               curve: Interval(start, end, curve: Curves.easeOutBack),
@@ -218,7 +215,7 @@ class _ModuleShortcutButtonState extends State<_ModuleShortcutButton> {
               height: widget.iconBoxSize,
               decoration: BoxDecoration(
                 color: widget.item.backgroundColor,
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(13),
                 border: Border.all(
                   color: widget.item.iconColor.withAlpha(20),
                   width: 1,
@@ -226,7 +223,7 @@ class _ModuleShortcutButtonState extends State<_ModuleShortcutButton> {
                 boxShadow: [
                   BoxShadow(
                     color: widget.item.iconColor.withAlpha(12),
-                    blurRadius: 6,
+                    blurRadius: 5,
                     offset: const Offset(0, 2),
                   ),
                 ],
@@ -237,9 +234,9 @@ class _ModuleShortcutButtonState extends State<_ModuleShortcutButton> {
                 size: widget.iconSize,
               ),
             ),
-            const SizedBox(height: 6),
+            const SizedBox(height: 3),
             SizedBox(
-              height: 28,
+              height: 24,
               child: FittedBox(
                 fit: BoxFit.scaleDown,
                 alignment: Alignment.topCenter,
@@ -265,4 +262,3 @@ class _ModuleShortcutButtonState extends State<_ModuleShortcutButton> {
     );
   }
 }
-
