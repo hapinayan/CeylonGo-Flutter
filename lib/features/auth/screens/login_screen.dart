@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/services/secure_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
@@ -212,9 +213,19 @@ class _LoginScreenState extends State<LoginScreen> {
       color: AppTheme.textPrimary,
     );
 
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundWhite,
-      body: SafeArea(
+    const royalBlue = Color(0xFF0A4DF5);
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.black,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundWhite,
+        body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isCompact = constraints.maxHeight <= 800;
@@ -246,11 +257,12 @@ class _LoginScreenState extends State<LoginScreen> {
                           const AuthHeader(showBack: true),
                           const SizedBox(height: 18),
 
-                          // Heading with signature orange underline
+                          // Heading with royal-blue underline
                           const AuthHeading(
                             title: 'Welcome Back',
                             subtitle:
                                 'Sign in to continue your CeylonGo journey',
+                            underlineColor: royalBlue,
                           ),
                           const SizedBox(height: 22),
 
@@ -391,7 +403,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                       fontFamily: 'Inter',
                                       fontSize: 13,
                                       fontWeight: FontWeight.w600,
-                                      color: AppTheme.accentOrange,
+                                      color: royalBlue,
                                     ),
                                   ),
                                 ),
@@ -498,20 +510,43 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 20),
 
-                          // Sign In Primary Button
-                          SizedBox(
-                            height: 48,
+                          // Sign In Primary Button (Royal-blue to deep-blue vertical gradient)
+                          Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              gradient: LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: _isLoading
+                                    ? [
+                                        const Color(0xFF1D63FF).withAlpha(150),
+                                        const Color(0xFF0839B8).withAlpha(150),
+                                      ]
+                                    : const [
+                                        Color(0xFF1D63FF),
+                                        Color(0xFF0839B8),
+                                      ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: royalBlue.withAlpha(55),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
                             child: ElevatedButton(
                               key: const Key('login_submit_button'),
                               onPressed: _isLoading ? null : _onSubmit,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.accentOrange,
+                                backgroundColor: Colors.transparent,
+                                disabledBackgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
                                 foregroundColor: AppTheme.backgroundWhite,
-                                disabledBackgroundColor: AppTheme.accentOrange
-                                    .withAlpha(150),
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                               child: _isLoading
@@ -568,7 +603,7 @@ class _LoginScreenState extends State<LoginScreen> {
                                     fontFamily: 'Inter',
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.accentOrange,
+                                    color: royalBlue,
                                   ),
                                 ),
                               ),
@@ -665,7 +700,10 @@ class _LoginScreenState extends State<LoginScreen> {
               ),
               if (showTrustFooter)
                 AuthTrustFooter(isCompact: isCompact),
-              const AuthWaveDecoration(),
+              const AuthWaveDecoration(
+                upperWaveColor: Color(0xFF60C3FF),
+                lowerWaveColor: Color(0xFF082B5C),
+              ),
             ],
           ),
         ),
@@ -673,6 +711,7 @@ class _LoginScreenState extends State<LoginScreen> {
     },
   ),
 ),
+    ),
     );
   }
 }

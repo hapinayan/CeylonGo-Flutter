@@ -6,26 +6,21 @@ import '../../../core/theme/app_theme.dart';
 import '../../artisan/services/artisan_demo_service.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/services/auth_service.dart';
-import '../widgets/home_ai_planner_banner.dart';
 import '../widgets/home_bottom_navigation_bar.dart';
+import '../widgets/home_category_filters.dart';
 import '../widgets/home_featured_homestays.dart';
 import '../widgets/home_header.dart';
-import '../widgets/home_module_shortcuts.dart';
 import '../widgets/home_popular_destinations.dart';
-import '../widgets/home_quick_actions.dart';
 import '../widgets/home_search_bar.dart';
 
 /// CeylonGo Traveler Home Screen
-/// Premium, professional, animated Home Screen matching the approved reference design.
-/// Layout Order:
-/// A. Header (Brand logo, Tagline, Notification bell with dot, Profile button)
-/// B. Rounded Search Bar ("Where do you want to go?")
-/// C. Six Module Shortcuts (Homestays, Eco Tourism, Activities, Tour Guides, Rentals, Artisan)
-/// D. AI Trip Planner Banner ("Plan Your Trip with AI", CTA, Floating Orb, 4 Feature Chips)
-/// E. Quick Actions (My Bookings, Saved, Promotions, Community)
-/// F. Popular Destinations (Jaffna, Ella, Kandy)
-/// G. Featured Homestays (Horizontal carousel with rating, amenities, pricing, book now)
-/// H. Floating Bottom Navigation Bar (Home, Explore, AI Planner, Community, Profile)
+/// Matches the approved white-theme reference design:
+/// A. White Header (Dark navy CeylonGo, Notification bell with dot, Profile button)
+/// B. Rounded Search Bar ("Start your search")
+/// C. Horizontally Scrollable Category Filter Row (All, Homestays, Eco, Activities, Guides, Rentals)
+/// D. Popular Destinations (Jaffna, Ella, Kandy)
+/// E. Featured Homestays (Traditional Villa with garden, Ella Mountain Homestay)
+/// F. Fixed Floating Bottom Navigation Bar (Home, Explore, AI Planner, Community, Profile)
 class HomeScreen extends StatefulWidget {
   final UserModel? initialUser;
   final AuthService? authService;
@@ -51,6 +46,7 @@ class _HomeScreenState extends State<HomeScreen>
   UserModel? _user;
   bool _isLoading = true;
   int _currentNavIndex = 0;
+  String _selectedCategoryId = 'all';
 
   @override
   void initState() {
@@ -254,9 +250,9 @@ class _HomeScreenState extends State<HomeScreen>
   Widget build(BuildContext context) {
     return AnnotatedRegion<SystemUiOverlayStyle>(
       value: const SystemUiOverlayStyle(
-        statusBarColor: Color(0xFF073B91),
-        statusBarIconBrightness: Brightness.light,
-        statusBarBrightness: Brightness.dark,
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
         systemNavigationBarColor: Colors.white,
         systemNavigationBarIconBrightness: Brightness.dark,
       ),
@@ -269,7 +265,7 @@ class _HomeScreenState extends State<HomeScreen>
             : Column(
                 crossAxisAlignment: CrossAxisAlignment.stretch,
                 children: [
-                  // A. Fixed Header (Navy Blue Background, pure white CeylonGo, Notification & Profile)
+                  // A. Fixed White Header (Dark navy CeylonGo, Notification & Profile)
                   HomeHeader(
                     animation: _entranceController,
                     user: _user,
@@ -277,9 +273,7 @@ class _HomeScreenState extends State<HomeScreen>
                     onProfileTap: _onProfileTap,
                   ),
 
-                  const SizedBox(height: 8),
-
-                  // B. Fixed Rounded Search Bar ("Where do you want to go?")
+                  // B. Fixed Rounded Search Bar ("Start your search")
                   HomeSearchBar(
                     animation: _entranceController,
                     onSearch: (query) {
@@ -287,14 +281,22 @@ class _HomeScreenState extends State<HomeScreen>
                     },
                   ),
 
-                  const SizedBox(height: 10),
-
-                  // C. Fixed Six Module Shortcuts (Homestays, Eco Tourism, Activities, Tour Guides, Rentals, Artisan)
-                  HomeModuleShortcuts(animation: _entranceController),
-
                   const SizedBox(height: 8),
 
-                  // D-G. Scrollable Home Content: ONLY content below the six category buttons scrolls vertically
+                  // C. Horizontally Scrollable Category Filter Row
+                  HomeCategoryFilters(
+                    animation: _entranceController,
+                    selectedCategoryId: _selectedCategoryId,
+                    onCategorySelected: (category) {
+                      setState(() {
+                        _selectedCategoryId = category.id;
+                      });
+                    },
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // D-G. Scrollable Home Content
                   Expanded(
                     child: SingleChildScrollView(
                       physics: const BouncingScrollPhysics(),
@@ -302,28 +304,14 @@ class _HomeScreenState extends State<HomeScreen>
                       child: Column(
                         crossAxisAlignment: CrossAxisAlignment.stretch,
                         children: [
-                          // D. AI Trip Planner Banner
-                          HomeAiPlannerBanner(animation: _entranceController),
-
-                          const SizedBox(height: 8),
-
-                          // E. Quick Actions (My Bookings, Saved, Promotions, Community)
-                          HomeQuickActions(
-                            animation: _entranceController,
-                            onCommunityTap: () =>
-                                Navigator.pushNamed(context, '/community'),
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // F. Popular Destinations (Jaffna, Ella, Kandy)
+                          // D. Popular Destinations (Jaffna, Ella, Kandy)
                           HomePopularDestinations(
                             animation: _entranceController,
                           ),
 
                           const SizedBox(height: 14),
 
-                          // G. Featured Homestays Carousel
+                          // E. Featured Homestays
                           HomeFeaturedHomestays(animation: _entranceController),
                         ],
                       ),

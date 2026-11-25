@@ -6,6 +6,7 @@ import 'package:ceylongo/features/auth/models/user_model.dart';
 import 'package:ceylongo/features/home/screens/home_screen.dart';
 import 'package:ceylongo/features/home/widgets/home_ai_planner_banner.dart';
 import 'package:ceylongo/features/home/widgets/home_bottom_navigation_bar.dart';
+import 'package:ceylongo/features/home/widgets/home_category_filters.dart';
 import 'package:ceylongo/features/home/widgets/home_featured_homestays.dart';
 import 'package:ceylongo/features/home/widgets/home_header.dart';
 import 'package:ceylongo/features/home/widgets/home_module_shortcuts.dart';
@@ -27,8 +28,7 @@ void main() {
   }) {
     return MaterialApp(
       theme: AppTheme.lightTheme,
-      routes:
-          routes ??
+      routes: routes ??
           {
             '/artisan': (_) =>
                 const Scaffold(body: Text('Artisan Discovery Screen')),
@@ -55,83 +55,73 @@ void main() {
     await tester.pump(const Duration(milliseconds: 400));
   }
 
-  group('HomeScreen Complete Layout & Approved Design Verification', () {
-    testWidgets('Renders all 8 required sections in correct order', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(createHomeScreen());
-      await settleScreen(tester);
+  group('HomeScreen Approved White-Theme Layout Verification', () {
+    testWidgets(
+      'Renders all 6 approved sections and confirms removed sections are absent',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(createHomeScreen());
+        await settleScreen(tester);
 
-      // Section A: Header (Premium Navy Blue, pure white CeylonGo, no subtitle)
-      expect(find.byType(HomeHeader), findsOneWidget);
-      expect(find.text('CeylonGo'), findsOneWidget);
-      expect(find.text('Discover Local. Feel at Home.'), findsNothing);
-      expect(find.byKey(const Key('home_notifications_btn')), findsOneWidget);
-      expect(find.byKey(const Key('home_profile_btn')), findsOneWidget);
+        // Section A: White Header (Dark navy CeylonGo, no subtitle)
+        expect(find.byType(HomeHeader), findsOneWidget);
+        expect(find.text('CeylonGo'), findsOneWidget);
+        expect(find.text('Discover Local. Feel at Home.'), findsNothing);
+        expect(find.byKey(const Key('home_notifications_btn')), findsOneWidget);
+        expect(find.byKey(const Key('home_profile_btn')), findsOneWidget);
 
-      // Section B: Search Bar
-      expect(find.byType(HomeSearchBar), findsOneWidget);
-      expect(find.text('Where do you want to go?'), findsOneWidget);
-      expect(find.byIcon(Icons.search_rounded), findsOneWidget);
-      expect(find.byIcon(Icons.mic_none_rounded), findsOneWidget);
+        // Section B: Search Bar ("Start your search")
+        expect(find.byType(HomeSearchBar), findsOneWidget);
+        expect(find.text('Start your search'), findsOneWidget);
+        expect(find.text('Where do you want to go?'), findsNothing);
+        expect(find.byIcon(Icons.search_rounded), findsOneWidget);
 
-      // Section C: Six Module Shortcuts
-      expect(find.byType(HomeModuleShortcuts), findsOneWidget);
-      expect(find.text('Homestays'), findsOneWidget);
-      expect(find.text('Eco\nTourism'), findsOneWidget);
-      expect(find.text('Activities'), findsOneWidget);
-      expect(find.text('Tour\nGuides'), findsOneWidget);
-      expect(find.text('Rentals'), findsOneWidget);
-      expect(find.text('Artisan'), findsOneWidget);
+        // Section C: Single Category Filter Row (6 filters)
+        expect(find.byType(HomeCategoryFilters), findsOneWidget);
+        expect(find.text('All'), findsOneWidget);
+        expect(find.text('Homestays'), findsOneWidget);
+        expect(find.text('Eco'), findsOneWidget);
+        expect(find.text('Activities'), findsOneWidget);
+        expect(find.text('Guides'), findsOneWidget);
+        expect(find.text('Rentals'), findsOneWidget);
 
-      // Section D: AI Trip Planner Banner
-      expect(find.byType(HomeAiPlannerBanner), findsOneWidget);
-      expect(find.text('Plan My Trip'), findsOneWidget);
-      expect(find.text('Itinerary'), findsOneWidget);
-      expect(find.text('Route Plan'), findsOneWidget);
-      expect(find.text('Budget'), findsOneWidget);
-      expect(find.text('Travel Tips'), findsOneWidget);
+        // Section D: Popular Destinations (Jaffna, Ella, Kandy)
+        expect(find.byType(HomePopularDestinations), findsOneWidget);
+        expect(find.text('Popular Destinations'), findsOneWidget);
+        expect(find.text('Jaffna'), findsNWidgets(2)); // Destination + Card 1
+        expect(find.text('Ella'), findsNWidgets(2)); // Destination + Card 2
+        expect(find.text('Kandy'), findsOneWidget);
 
-      // Section E: Quick Actions
-      expect(find.byType(HomeQuickActions), findsOneWidget);
-      expect(find.text('My Bookings'), findsOneWidget);
-      expect(find.text('Saved'), findsOneWidget);
-      expect(find.text('Promotions'), findsOneWidget);
-      expect(
-        find.text('Community'),
-        findsNWidgets(2),
-      ); // Quick Actions and Bottom Nav
+        // Section E: Featured Homestays (2 stacked cards)
+        expect(find.byType(HomeFeaturedHomestays), findsOneWidget);
+        expect(find.text('Featured Homestays'), findsOneWidget);
+        expect(find.text('Traditional Villa with garden'), findsOneWidget);
+        expect(find.text('Ella Mountain Homestay'), findsOneWidget);
+        expect(find.text('4.8 (128 reviews)'), findsOneWidget);
+        expect(find.text('4.9 (256 reviews)'), findsOneWidget);
+        expect(find.byKey(const Key('homestay_card_1')), findsOneWidget);
+        expect(find.byKey(const Key('homestay_card_2')), findsOneWidget);
 
-      // Section F: Popular Destinations
-      expect(find.byType(HomePopularDestinations), findsOneWidget);
-      expect(find.text('Popular Destinations'), findsOneWidget);
-      expect(find.text('Jaffna'), findsOneWidget);
-      expect(find.text('Ella'), findsOneWidget);
-      expect(
-        find.text('Kandy'),
-        findsNWidgets(2),
-      ); // Destination and Homestay location
+        // Section F: Fixed Bottom Navigation Bar
+        expect(find.byType(HomeBottomNavigationBar), findsOneWidget);
+        expect(find.text('Home'), findsOneWidget);
+        expect(find.text('Explore'), findsOneWidget);
+        expect(find.text('AI Planner'), findsOneWidget);
+        expect(find.text('Community'), findsOneWidget);
+        expect(find.text('Profile'), findsOneWidget);
+        expect(find.byKey(const Key('bottom_nav_ai_planner')), findsOneWidget);
 
-      // Section G: Featured Homestays
-      expect(find.byType(HomeFeaturedHomestays), findsOneWidget);
-      expect(find.text('Featured Homestays'), findsOneWidget);
-      expect(find.text('Traditional Village Homestay'), findsOneWidget);
-      expect(find.text('4.8'), findsOneWidget);
-      expect(find.text('Private Room'), findsOneWidget);
-      expect(find.text('Wi-Fi'), findsOneWidget);
-      expect(find.text('Local Meals'), findsOneWidget);
-      expect(find.text('Book Now'), findsOneWidget);
-
-      // Section H: Floating Bottom Navigation Bar
-      expect(find.byType(HomeBottomNavigationBar), findsOneWidget);
-      expect(find.text('Home'), findsOneWidget);
-      expect(find.text('Explore'), findsOneWidget);
-      expect(find.text('AI Planner'), findsOneWidget);
-      expect(find.byKey(const Key('bottom_nav_ai_planner')), findsOneWidget);
-    });
+        // Removed Old Sections MUST be absent
+        expect(find.byType(HomeModuleShortcuts), findsNothing);
+        expect(find.byType(HomeAiPlannerBanner), findsNothing);
+        expect(find.byType(HomeQuickActions), findsNothing);
+        expect(find.text('Plan My Trip'), findsNothing);
+        expect(find.text('My Bookings'), findsNothing);
+        expect(find.text('Promotions'), findsNothing);
+      },
+    );
 
     testWidgets(
-      'Header matches approved deep navy blue design with pure white CeylonGo and no subtitle',
+      'Header has pure white background and dark navy CeylonGo title',
       (WidgetTester tester) async {
         await tester.pumpWidget(createHomeScreen());
         await settleScreen(tester);
@@ -139,54 +129,51 @@ void main() {
         final headerFinder = find.byType(HomeHeader);
         expect(headerFinder, findsOneWidget);
 
-        // Verify header background container has #073B91
         final container = tester.widget<Container>(
           find
               .descendant(of: headerFinder, matching: find.byType(Container))
               .first,
         );
-        expect(container.color, const Color(0xFF073B91));
+        expect(container.color, Colors.white);
 
-        // Verify CeylonGo title is pure white (#FFFFFF)
         final titleWidget = tester.widget<Text>(find.text('CeylonGo'));
-        expect(titleWidget.style?.color, Colors.white);
-
-        // Verify subtitle is completely removed
-        expect(find.text('Discover Local. Feel at Home.'), findsNothing);
-
-        // Verify Homestays label does not break awkwardly into multiple lines
-        final homestayText = tester.widget<Text>(find.text('Homestays'));
-        expect(homestayText.maxLines, 1);
-        expect(homestayText.softWrap, false);
+        expect(titleWidget.style?.color, AppTheme.primaryNavy);
       },
     );
 
-    testWidgets('Tapping Artisan shortcut navigates to /artisan', (
+    testWidgets('Tapping category filter chip updates selection', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(createHomeScreen());
       await settleScreen(tester);
 
-      final artisanShortcut = find.byKey(const Key('shortcut_artisan'));
-      expect(artisanShortcut, findsOneWidget);
+      final ecoFilter = find.byKey(const Key('category_filter_eco'));
+      expect(ecoFilter, findsOneWidget);
 
-      await tapAndSettle(tester, artisanShortcut);
+      await tapAndSettle(tester, ecoFilter);
 
-      expect(find.text('Artisan Discovery Screen'), findsOneWidget);
+      final ecoLabel = tester.widget<Text>(find.text('Eco'));
+      expect(ecoLabel.style?.color, Colors.white);
     });
 
     testWidgets(
-      'Tapping Saved in Quick Actions navigates to /artisan/wishlist',
+      'Tapping Featured Homestay card does not open Artisan bottom sheet',
       (WidgetTester tester) async {
         await tester.pumpWidget(createHomeScreen());
         await settleScreen(tester);
 
-        final savedBtn = find.byKey(const Key('quick_action_saved'));
-        expect(savedBtn, findsOneWidget);
+        final card1 = find.byKey(const Key('homestay_card_1'));
+        expect(card1, findsOneWidget);
 
-        await tapAndSettle(tester, savedBtn);
+        await tester.ensureVisible(card1);
+        await tapAndSettle(tester, card1);
 
-        expect(find.text('Wishlist Screen'), findsOneWidget);
+        expect(find.text('Explore Traditional Artisans'), findsNothing);
+        expect(find.text('Artisan Discovery Screen'), findsNothing);
+        expect(
+          find.textContaining('Traditional Villa with garden'),
+          findsWidgets,
+        );
       },
     );
 
@@ -233,22 +220,6 @@ void main() {
       },
     );
 
-    testWidgets('Tapping Community in Quick Actions navigates to /community', (
-      WidgetTester tester,
-    ) async {
-      await tester.pumpWidget(createHomeScreen());
-      await settleScreen(tester);
-
-      final communityQuickAction = find.byKey(
-        const Key('quick_action_community'),
-      );
-      expect(communityQuickAction, findsOneWidget);
-
-      await tapAndSettle(tester, communityQuickAction);
-
-      expect(find.text('Community Screen'), findsOneWidget);
-    });
-
     testWidgets('Tapping Notification Bell opens notifications sheet', (
       WidgetTester tester,
     ) async {
@@ -264,13 +235,12 @@ void main() {
       expect(find.text('View Artisan Discoveries'), findsOneWidget);
     });
 
-    testWidgets('Bottom navigation tab switching animates smoothly', (
+    testWidgets('Bottom navigation Explore tab navigates to /artisan', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(createHomeScreen());
       await settleScreen(tester);
 
-      // Tap Explore tab -> Navigates to /artisan
       final exploreTab = find.byKey(const Key('bottom_nav_explore'));
       expect(exploreTab, findsOneWidget);
 
@@ -296,6 +266,7 @@ void main() {
 
         expect(tester.takeException(), isNull);
         expect(find.byType(HomeHeader), findsOneWidget);
+        expect(find.byType(HomeCategoryFilters), findsOneWidget);
         expect(find.byType(HomeBottomNavigationBar), findsOneWidget);
       },
     );
@@ -322,7 +293,7 @@ void main() {
         expect(tester.takeException(), isNull);
         expect(find.byType(HomeHeader), findsOneWidget);
         expect(find.byType(HomeSearchBar), findsOneWidget);
-        expect(find.byType(HomeModuleShortcuts), findsOneWidget);
+        expect(find.byType(HomeCategoryFilters), findsOneWidget);
       }
 
       tester.view.resetPhysicalSize();
@@ -331,65 +302,54 @@ void main() {
   });
 
   group(
-    'HomeScreen Fixed Header, Search Bar & Category Buttons Verification',
+    'HomeScreen Fixed Header, Search Bar & Category Filters Verification',
     () {
       testWidgets(
-        'Header, Search Bar, and Category Buttons are fixed outside SingleChildScrollView',
+        'Header, Search Bar, and Category Filters are fixed outside vertical SingleChildScrollView',
         (WidgetTester tester) async {
           await tester.pumpWidget(createHomeScreen());
           await settleScreen(tester);
 
-          final scrollFinder = find.byType(SingleChildScrollView);
-          expect(scrollFinder, findsOneWidget);
+          final bodyScrollFinder = find.descendant(
+            of: find.byType(Expanded),
+            matching: find.byType(SingleChildScrollView),
+          );
+          expect(bodyScrollFinder, findsOneWidget);
 
-          // Verify Header, Search Bar, and Category Buttons are NOT inside SingleChildScrollView
+          // Verify Header, Search Bar, and Category Filters are NOT inside vertical body scroll
           expect(
             find.descendant(
-              of: scrollFinder,
+              of: bodyScrollFinder,
               matching: find.byType(HomeHeader),
             ),
             findsNothing,
           );
           expect(
             find.descendant(
-              of: scrollFinder,
+              of: bodyScrollFinder,
               matching: find.byType(HomeSearchBar),
             ),
             findsNothing,
           );
           expect(
             find.descendant(
-              of: scrollFinder,
-              matching: find.byType(HomeModuleShortcuts),
+              of: bodyScrollFinder,
+              matching: find.byType(HomeCategoryFilters),
             ),
             findsNothing,
           );
 
-          // Verify scrollable sections ARE inside SingleChildScrollView
+          // Verify Popular Destinations and Featured Homestays ARE inside vertical body scroll
           expect(
             find.descendant(
-              of: scrollFinder,
-              matching: find.byType(HomeAiPlannerBanner),
-            ),
-            findsOneWidget,
-          );
-          expect(
-            find.descendant(
-              of: scrollFinder,
-              matching: find.byType(HomeQuickActions),
-            ),
-            findsOneWidget,
-          );
-          expect(
-            find.descendant(
-              of: scrollFinder,
+              of: bodyScrollFinder,
               matching: find.byType(HomePopularDestinations),
             ),
             findsOneWidget,
           );
           expect(
             find.descendant(
-              of: scrollFinder,
+              of: bodyScrollFinder,
               matching: find.byType(HomeFeaturedHomestays),
             ),
             findsOneWidget,
@@ -398,57 +358,52 @@ void main() {
       );
 
       testWidgets(
-        'Vertical scrolling moves lower content while Header, Search Bar, and Category Buttons stay fixed',
+        'Vertical scrolling moves lower content while Header, Search Bar, Category Filters, and Bottom Nav stay fixed',
         (WidgetTester tester) async {
           await tester.pumpWidget(createHomeScreen());
           await settleScreen(tester);
 
-          // Record initial positions of fixed widgets
+          final bodyScrollFinder = find.descendant(
+            of: find.byType(Expanded),
+            matching: find.byType(SingleChildScrollView),
+          );
+
           final headerPosBefore = tester.getTopLeft(find.byType(HomeHeader));
           final searchBarPosBefore = tester.getTopLeft(
             find.byType(HomeSearchBar),
           );
-          final shortcutsPosBefore = tester.getTopLeft(
-            find.byType(HomeModuleShortcuts),
+          final filtersPosBefore = tester.getTopLeft(
+            find.byType(HomeCategoryFilters),
           );
           final bottomNavPosBefore = tester.getTopLeft(
             find.byType(HomeBottomNavigationBar),
           );
-
-          // Record initial position of scrollable content
-          final aiBannerPosBefore = tester.getTopLeft(
-            find.byType(HomeAiPlannerBanner),
+          final destinationsPosBefore = tester.getTopLeft(
+            find.byType(HomePopularDestinations),
           );
 
-          // Perform a vertical drag gesture on the scrollable area
-          await tester.drag(
-            find.byType(SingleChildScrollView),
-            const Offset(0, -200),
-          );
+          await tester.drag(bodyScrollFinder, const Offset(0, -150));
           await tester.pump();
 
-          // Verify fixed widgets have NOT moved
           final headerPosAfter = tester.getTopLeft(find.byType(HomeHeader));
           final searchBarPosAfter = tester.getTopLeft(
             find.byType(HomeSearchBar),
           );
-          final shortcutsPosAfter = tester.getTopLeft(
-            find.byType(HomeModuleShortcuts),
+          final filtersPosAfter = tester.getTopLeft(
+            find.byType(HomeCategoryFilters),
           );
           final bottomNavPosAfter = tester.getTopLeft(
             find.byType(HomeBottomNavigationBar),
           );
+          final destinationsPosAfter = tester.getTopLeft(
+            find.byType(HomePopularDestinations),
+          );
 
           expect(headerPosAfter, equals(headerPosBefore));
           expect(searchBarPosAfter, equals(searchBarPosBefore));
-          expect(shortcutsPosAfter, equals(shortcutsPosBefore));
+          expect(filtersPosAfter, equals(filtersPosBefore));
           expect(bottomNavPosAfter, equals(bottomNavPosBefore));
-
-          // Verify lower content HAS scrolled upwards
-          final aiBannerPosAfter = tester.getTopLeft(
-            find.byType(HomeAiPlannerBanner),
-          );
-          expect(aiBannerPosAfter.dy, lessThan(aiBannerPosBefore.dy));
+          expect(destinationsPosAfter.dy, lessThan(destinationsPosBefore.dy));
         },
       );
     },

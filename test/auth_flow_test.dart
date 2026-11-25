@@ -255,6 +255,48 @@ void main() {
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();
     });
+
+    testWidgets(
+        'Navigates to Login on Continue with Email and Register on Create Account',
+        (WidgetTester tester) async {
+      bool loginNavigated = false;
+      bool registerNavigated = false;
+
+      await tester.pumpWidget(wrapWithTheme(
+        const AuthLandingScreen(),
+        routes: {
+          '/login': (_) {
+            loginNavigated = true;
+            return const Scaffold(body: Text('Login Screen'));
+          },
+          '/register': (_) {
+            registerNavigated = true;
+            return const Scaffold(body: Text('Register Screen'));
+          },
+        },
+      ));
+
+      await tester.enterText(
+        find.byKey(const Key('entry_email_field')),
+        'traveler@ceylongo.com',
+      );
+      await tester.tap(find.byKey(const Key('continue_with_email_button')));
+      await tester.pumpAndSettle();
+
+      expect(loginNavigated, isTrue);
+      expect(find.text('Login Screen'), findsOneWidget);
+
+      Navigator.of(tester.element(find.text('Login Screen'))).pop();
+      await tester.pumpAndSettle();
+
+      final createAccountLink = find.text('Create Account');
+      await tester.ensureVisible(createAccountLink);
+      await tester.tap(createAccountLink);
+      await tester.pumpAndSettle();
+
+      expect(registerNavigated, isTrue);
+      expect(find.text('Register Screen'), findsOneWidget);
+    });
   });
 
   group('Screen 3: RegistrationSuccessScreen Tests', () {
@@ -357,6 +399,82 @@ void main() {
       }
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();
+    });
+
+    testWidgets('Navigates to Registration Screen when Create Account is tapped',
+        (WidgetTester tester) async {
+      bool registerNavigated = false;
+
+      await tester.pumpWidget(wrapWithTheme(
+        LoginScreen(
+          authService: mockAuthService,
+          storageService: fakeStorageService,
+        ),
+        routes: {
+          '/register': (_) {
+            registerNavigated = true;
+            return const Scaffold(body: Text('Register Screen'));
+          },
+        },
+      ));
+
+      final createAccountLink = find.text('Create Account');
+      expect(createAccountLink, findsOneWidget);
+      await tester.ensureVisible(createAccountLink);
+      await tester.tap(createAccountLink);
+      await tester.pumpAndSettle();
+
+      expect(registerNavigated, isTrue);
+      expect(find.text('Register Screen'), findsOneWidget);
+    });
+
+    testWidgets('Toggles password visibility and supports Offline Demo Flow',
+        (WidgetTester tester) async {
+      bool demoNavigated = false;
+
+      await tester.pumpWidget(wrapWithTheme(
+        LoginScreen(
+          authService: mockAuthService,
+          storageService: fakeStorageService,
+        ),
+        routes: {
+          '/login-success': (_) {
+            demoNavigated = true;
+            return const Scaffold(body: Text('Demo Login Success'));
+          },
+        },
+      ));
+
+      // Password obscured by default
+      final editableBefore = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('login_password_field')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(editableBefore.obscureText, isTrue);
+
+      // Toggle visibility
+      await tester.tap(find.byIcon(Icons.visibility_off_outlined));
+      await tester.pump();
+
+      final editableAfter = tester.widget<EditableText>(
+        find.descendant(
+          of: find.byKey(const Key('login_password_field')),
+          matching: find.byType(EditableText),
+        ),
+      );
+      expect(editableAfter.obscureText, isFalse);
+
+      // Trigger Offline Demo Flow
+      final demoBtn = find.byKey(const Key('offline_demo_login_button'));
+      expect(demoBtn, findsOneWidget);
+      await tester.ensureVisible(demoBtn);
+      await tester.tap(demoBtn);
+      await tester.pumpAndSettle();
+
+      expect(demoNavigated, isTrue);
+      expect(find.text('Demo Login Success'), findsOneWidget);
     });
   });
 

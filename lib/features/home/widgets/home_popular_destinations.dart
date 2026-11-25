@@ -78,7 +78,7 @@ class HomePopularDestinations extends StatelessWidget {
           children: [
             // Section Header
             Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16.0, vertical: 8.0),
+              padding: const EdgeInsets.fromLTRB(16.0, 6.0, 16.0, 10.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 children: [
@@ -90,7 +90,7 @@ class HomePopularDestinations extends StatelessWidget {
                       style: TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 18,
-                        fontWeight: FontWeight.bold,
+                        fontWeight: FontWeight.w700,
                         color: Color(0xFF0F172A),
                         letterSpacing: -0.3,
                       ),
@@ -114,16 +114,16 @@ class HomePopularDestinations extends StatelessWidget {
                           'View all',
                           style: TextStyle(
                             fontFamily: 'Inter',
-                            fontSize: 13,
+                            fontSize: 13.5,
                             fontWeight: FontWeight.w600,
-                            color: Color(0xFF2563EB),
+                            color: Color(0xFF0A4DF5),
                           ),
                         ),
                         SizedBox(width: 4),
                         Icon(
                           Icons.arrow_forward_rounded,
-                          size: 14,
-                          color: Color(0xFF2563EB),
+                          size: 15,
+                          color: Color(0xFF0A4DF5),
                         ),
                       ],
                     ),
@@ -134,13 +134,13 @@ class HomePopularDestinations extends StatelessWidget {
 
             // Horizontal Scrollable Cards List
             SizedBox(
-              height: 155,
+              height: 146,
               child: ListView.separated(
                 padding: const EdgeInsets.symmetric(horizontal: 16.0),
                 scrollDirection: Axis.horizontal,
                 physics: const BouncingScrollPhysics(),
                 itemCount: destinations.length,
-                separatorBuilder: (context, index) => const SizedBox(width: 14),
+                separatorBuilder: (context, index) => const SizedBox(width: 12),
                 itemBuilder: (context, index) {
                   final destination = destinations[index];
                   return _DestinationCard(
@@ -177,8 +177,8 @@ class _DestinationCardState extends State<_DestinationCard> {
 
   Widget _buildPlaceholder() {
     return Container(
-      width: 135,
-      height: 110,
+      width: 122,
+      height: 108,
       decoration: BoxDecoration(
         gradient: LinearGradient(
           colors: [
@@ -211,10 +211,10 @@ class _DestinationCardState extends State<_DestinationCard> {
           mainAxisSize: MainAxisSize.min,
           children: [
             Container(
-              width: 135,
-              height: 110,
+              width: 122,
+              height: 108,
               decoration: BoxDecoration(
-                borderRadius: BorderRadius.circular(16),
+                borderRadius: BorderRadius.circular(14),
                 boxShadow: [
                   BoxShadow(
                     color: Colors.black.withAlpha(12),

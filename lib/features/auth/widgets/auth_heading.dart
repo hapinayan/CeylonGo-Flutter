@@ -1,12 +1,13 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
-/// Standard CeylonGo Auth Heading with signature orange underline
+/// Standard CeylonGo Auth Heading with customizable accent underline
 class AuthHeading extends StatelessWidget {
   final String title;
   final String? subtitle;
   final TextAlign textAlign;
   final double? fontSize;
+  final Color? underlineColor;
 
   const AuthHeading({
     super.key,
@@ -14,6 +15,7 @@ class AuthHeading extends StatelessWidget {
     this.subtitle,
     this.textAlign = TextAlign.center,
     this.fontSize,
+    this.underlineColor,
   });
 
   @override
@@ -39,12 +41,12 @@ class AuthHeading extends StatelessWidget {
           ),
         ),
         const SizedBox(height: 6),
-        // Signature CeylonGo Orange Heading Underline
+        // Heading Underline
         Container(
           width: 42,
           height: 3.5,
           decoration: BoxDecoration(
-            color: AppTheme.accentOrange,
+            color: underlineColor ?? AppTheme.accentOrange,
             borderRadius: BorderRadius.circular(2),
           ),
         ),

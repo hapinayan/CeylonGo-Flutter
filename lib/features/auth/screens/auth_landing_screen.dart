@@ -1,4 +1,5 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
@@ -49,9 +50,19 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
     final horizontalPadding =
         screenWidth < 360 ? 16.0 : (screenWidth < 430 ? 20.0 : 24.0);
 
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundWhite,
-      body: SafeArea(
+    const royalBlue = Color(0xFF0A4DF5);
+
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.black,
+        systemNavigationBarIconBrightness: Brightness.light,
+      ),
+      child: Scaffold(
+        backgroundColor: AppTheme.backgroundWhite,
+        body: SafeArea(
         child: LayoutBuilder(
           builder: (context, constraints) {
             final isCompact = constraints.maxHeight <= 800;
@@ -83,11 +94,12 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                                 const AuthHeader(showBack: false),
                           const SizedBox(height: 20),
 
-                          // Heading with signature orange underline
+                          // Heading with royal-blue underline
                           const AuthHeading(
                             title: 'Welcome to CeylonGo',
                             subtitle:
                                 'Sign in or create an account to start exploring Sri Lanka',
+                            underlineColor: royalBlue,
                           ),
                           const SizedBox(height: 24),
 
@@ -98,7 +110,7 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                               fontFamily: 'Inter',
                               fontSize: 13.5,
                               fontWeight: FontWeight.w600,
-                              color: AppTheme.textPrimary,
+                              color: AppTheme.primaryNavy,
                             ),
                           ),
                           const SizedBox(height: 6),
@@ -127,41 +139,41 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                               fillColor: AppTheme.backgroundWhite,
                               contentPadding: const EdgeInsets.symmetric(
                                 horizontal: 14,
-                                vertical: 12,
+                                vertical: 13,
                               ),
                               border: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                  color: AppTheme.borderSlate,
-                                  width: 1,
+                                  color: AppTheme.primaryNavy,
+                                  width: 1.2,
                                 ),
                               ),
                               enabledBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
-                                  color: AppTheme.borderSlate,
-                                  width: 1,
+                                  color: AppTheme.primaryNavy,
+                                  width: 1.2,
                                 ),
                               ),
                               focusedBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
                                   color: AppTheme.primaryNavy,
-                                  width: 1.5,
+                                  width: 1.6,
                                 ),
                               ),
                               errorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
                                   color: AppTheme.errorRed,
-                                  width: 1,
+                                  width: 1.2,
                                 ),
                               ),
                               focusedErrorBorder: OutlineInputBorder(
-                                borderRadius: BorderRadius.circular(10),
+                                borderRadius: BorderRadius.circular(12),
                                 borderSide: const BorderSide(
                                   color: AppTheme.errorRed,
-                                  width: 1.5,
+                                  width: 1.6,
                                 ),
                               ),
                             ),
@@ -169,18 +181,37 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                           ),
                           const SizedBox(height: 18),
 
-                          // Primary Button: Continue with Email
-                          SizedBox(
-                            height: 48,
+                          // Primary Button: Continue with Email (Royal-blue to deep-blue gradient)
+                          Container(
+                            height: 50,
+                            decoration: BoxDecoration(
+                              gradient: const LinearGradient(
+                                begin: Alignment.topCenter,
+                                end: Alignment.bottomCenter,
+                                colors: [
+                                  Color(0xFF1D63FF),
+                                  Color(0xFF0839B8),
+                                ],
+                              ),
+                              borderRadius: BorderRadius.circular(12),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: royalBlue.withAlpha(55),
+                                  blurRadius: 12,
+                                  offset: const Offset(0, 4),
+                                ),
+                              ],
+                            ),
                             child: ElevatedButton(
                               key: const Key('continue_with_email_button'),
                               onPressed: _onContinueWithEmail,
                               style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.accentOrange,
+                                backgroundColor: Colors.transparent,
+                                shadowColor: Colors.transparent,
                                 foregroundColor: AppTheme.backgroundWhite,
                                 elevation: 0,
                                 shape: RoundedRectangleBorder(
-                                  borderRadius: BorderRadius.circular(10),
+                                  borderRadius: BorderRadius.circular(12),
                                 ),
                               ),
                               child: const Text(
@@ -261,7 +292,7 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
                                     fontFamily: 'Inter',
                                     fontSize: 13.5,
                                     fontWeight: FontWeight.bold,
-                                    color: AppTheme.accentOrange,
+                                    color: royalBlue,
                                   ),
                                 ),
                               ),
@@ -275,7 +306,10 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
               ),
               if (showTrustFooter)
                 AuthTrustFooter(isCompact: isCompact),
-              const AuthWaveDecoration(),
+              const AuthWaveDecoration(
+                upperWaveColor: Color(0xFF60C3FF),
+                lowerWaveColor: Color(0xFF082B5C),
+              ),
             ],
           ),
         ),
@@ -283,6 +317,7 @@ class _AuthLandingScreenState extends State<AuthLandingScreen> {
     },
   ),
 ),
+    ),
     );
   }
 }

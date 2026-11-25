@@ -1,11 +1,11 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/theme/app_theme.dart';
 import '../../auth/models/user_model.dart';
 
-/// Section A: CeylonGo Premium Navy Blue Animated Header
-/// Inspired by the latest approved reference design.
-/// Features a full-width deep-blue background (#073B91), pure-white CeylonGo brand typography,
-/// and white outlined circular notification & profile buttons with micro-interactions.
+/// Section A: CeylonGo White Animated Header
+/// Features a pure-white background, dark navy CeylonGo brand typography,
+/// and white circular notification & profile buttons with light-blue borders.
 class HomeHeader extends StatefulWidget {
   final Animation<double> animation;
   final UserModel? user;
@@ -28,7 +28,7 @@ class _HomeHeaderState extends State<HomeHeader> {
   double _notifScale = 1.0;
   double _profileScale = 1.0;
 
-  static const Color headerBlue = Color(0xFF073B91);
+  static const Color _lightBlueBorder = Color(0xFFDBEAFE);
 
   @override
   Widget build(BuildContext context) {
@@ -49,7 +49,7 @@ class _HomeHeaderState extends State<HomeHeader> {
 
     return Container(
       width: double.infinity,
-      color: headerBlue,
+      color: Colors.white,
       child: SafeArea(
         bottom: false,
         child: SlideTransition(
@@ -57,12 +57,12 @@ class _HomeHeaderState extends State<HomeHeader> {
           child: FadeTransition(
             opacity: fadeAnimation,
             child: Padding(
-              padding: const EdgeInsets.fromLTRB(16.0, 10.0, 16.0, 16.0),
+              padding: const EdgeInsets.fromLTRB(16.0, 8.0, 16.0, 12.0),
               child: Row(
                 mainAxisAlignment: MainAxisAlignment.spaceBetween,
                 crossAxisAlignment: CrossAxisAlignment.center,
                 children: [
-                  // Left: Pure White CeylonGo Brand Title (No subtitle)
+                  // Left: Dark Navy CeylonGo Brand Title
                   const Expanded(
                     child: Text(
                       'CeylonGo',
@@ -70,13 +70,13 @@ class _HomeHeaderState extends State<HomeHeader> {
                         fontFamily: 'Inter',
                         fontSize: 27,
                         fontWeight: FontWeight.w900,
-                        color: Colors.white,
+                        color: AppTheme.primaryNavy,
                         letterSpacing: -0.6,
                       ),
                     ),
                   ),
 
-                  // Right: White Outlined Circular Action Buttons
+                  // Right: White Circular Action Buttons with Light-Blue Borders
                   Row(
                     mainAxisSize: MainAxisSize.min,
                     children: [
@@ -95,19 +95,26 @@ class _HomeHeaderState extends State<HomeHeader> {
                             width: 42,
                             height: 42,
                             decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(22),
+                              color: Colors.white,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white.withAlpha(200),
+                                color: _lightBlueBorder,
                                 width: 1.3,
                               ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withAlpha(10),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: Stack(
                               alignment: Alignment.center,
                               children: [
                                 const Icon(
                                   Icons.notifications_none_rounded,
-                                  color: Colors.white,
+                                  color: AppTheme.primaryNavy,
                                   size: 22,
                                 ),
                                 Positioned(
@@ -144,16 +151,23 @@ class _HomeHeaderState extends State<HomeHeader> {
                             width: 42,
                             height: 42,
                             decoration: BoxDecoration(
-                              color: Colors.white.withAlpha(22),
+                              color: Colors.white,
                               shape: BoxShape.circle,
                               border: Border.all(
-                                color: Colors.white.withAlpha(200),
+                                color: _lightBlueBorder,
                                 width: 1.3,
                               ),
+                              boxShadow: [
+                                BoxShadow(
+                                  color: Colors.black.withAlpha(10),
+                                  blurRadius: 8,
+                                  offset: const Offset(0, 2),
+                                ),
+                              ],
                             ),
                             child: const Icon(
                               Icons.person_outline_rounded,
-                              color: Colors.white,
+                              color: AppTheme.primaryNavy,
                               size: 22,
                             ),
                           ),

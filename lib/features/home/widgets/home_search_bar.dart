@@ -3,8 +3,8 @@ import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
 /// Section B: CeylonGo Modern Rounded Search Bar
-/// Features search icon, placeholder "Where do you want to go?",
-/// microphone icon, and subtle border/shadow animation.
+/// Features search icon, placeholder "Start your search",
+/// and subtle pale-blue border/shadow styling.
 class HomeSearchBar extends StatefulWidget {
   final Animation<double> animation;
   final ValueChanged<String>? onSearch;
@@ -155,73 +155,49 @@ class _HomeSearchBarState extends State<HomeSearchBar> {
           child: InkWell(
             key: const Key('home_search_bar'),
             onTap: () => _showSearchDialog(context),
-            borderRadius: BorderRadius.circular(22),
+            borderRadius: BorderRadius.circular(24),
             child: AnimatedContainer(
               duration: const Duration(milliseconds: 200),
-              height: 42,
-              padding: const EdgeInsets.symmetric(horizontal: 14),
+              height: 46,
+              padding: const EdgeInsets.symmetric(horizontal: 16),
               decoration: BoxDecoration(
                 color: Colors.white,
-                borderRadius: BorderRadius.circular(22),
+                borderRadius: BorderRadius.circular(24),
                 border: Border.all(
                   color: _isFocused
                       ? const Color(0xFF2563EB)
-                      : const Color(0xFFE2E8F0),
-                  width: _isFocused ? 1.5 : 1.1,
+                      : const Color(0xFFDBEAFE),
+                  width: _isFocused ? 1.5 : 1.2,
                 ),
                 boxShadow: [
                   BoxShadow(
                     color: _isFocused
                         ? const Color(0xFF2563EB).withAlpha(20)
-                        : Colors.black.withAlpha(6),
-                    blurRadius: 8,
-                    offset: const Offset(0, 2),
+                        : Colors.black.withAlpha(10),
+                    blurRadius: 10,
+                    offset: const Offset(0, 3),
                   ),
                 ],
               ),
-              child: Row(
+              child: const Row(
                 children: [
-                  const Icon(
+                  Icon(
                     Icons.search_rounded,
-                    color: Color(0xFF0F172A),
-                    size: 20,
+                    color: AppTheme.primaryNavy,
+                    size: 21,
                   ),
-                  const SizedBox(width: 10),
-                  const Expanded(
+                  SizedBox(width: 10),
+                  Expanded(
                     child: Text(
-                      'Where do you want to go?',
+                      'Start your search',
                       style: TextStyle(
                         fontFamily: 'Inter',
-                        fontSize: 13.5,
+                        fontSize: 14,
                         fontWeight: FontWeight.w400,
                         color: Color(0xFF64748B),
                         letterSpacing: 0.1,
                       ),
                     ),
-                  ),
-                  IconButton(
-                    icon: const Icon(
-                      Icons.mic_none_rounded,
-                      color: Color(0xFF0F172A),
-                      size: 20,
-                    ),
-                    padding: EdgeInsets.zero,
-                    constraints: const BoxConstraints(
-                      minWidth: 32,
-                      minHeight: 32,
-                    ),
-                    splashRadius: 18,
-                    tooltip: 'Voice Search Placeholder',
-                    onPressed: () {
-                      ScaffoldMessenger.of(context).showSnackBar(
-                        const SnackBar(
-                          content: Text(
-                            'Voice search will be available in future releases.',
-                          ),
-                          duration: Duration(seconds: 2),
-                        ),
-                      );
-                    },
                   ),
                 ],
               ),
