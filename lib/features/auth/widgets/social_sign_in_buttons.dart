@@ -9,8 +9,17 @@ import '../../../core/theme/app_theme.dart';
 /// Apple sign-in is completely omitted.
 class SocialSignInButtons extends StatelessWidget {
   final ValueChanged<String>? onProviderSelected;
+  final double buttonHeight;
+  final double borderRadius;
+  final double spacing;
 
-  const SocialSignInButtons({super.key, this.onProviderSelected});
+  const SocialSignInButtons({
+    super.key,
+    this.onProviderSelected,
+    this.buttonHeight = 50.0,
+    this.borderRadius = 12.0,
+    this.spacing = 12.0,
+  });
 
   void _handleTap(BuildContext context, String provider) {
     if (onProviderSelected != null) {
@@ -42,15 +51,19 @@ class SocialSignInButtons extends StatelessWidget {
           key: const Key('social_btn_google'),
           label: 'Continue with Google',
           icon: const _GoogleIcon(),
+          height: buttonHeight,
+          borderRadius: borderRadius,
           onPressed: () => _handleTap(context, 'Google'),
         ),
-        const SizedBox(height: 12),
+        SizedBox(height: spacing),
 
         // Continue with WhatsApp
         _SocialOutlineButton(
           key: const Key('social_btn_whatsapp'),
           label: 'Continue with WhatsApp',
           icon: const _WhatsAppIcon(),
+          height: buttonHeight,
+          borderRadius: borderRadius,
           onPressed: () => _handleTap(context, 'WhatsApp'),
         ),
       ],
@@ -63,12 +76,16 @@ class _SocialOutlineButton extends StatelessWidget {
   final String label;
   final Widget icon;
   final VoidCallback onPressed;
+  final double height;
+  final double borderRadius;
 
   const _SocialOutlineButton({
     super.key,
     required this.label,
     required this.icon,
     required this.onPressed,
+    this.height = 50.0,
+    this.borderRadius = 12.0,
   });
 
   @override
@@ -79,23 +96,18 @@ class _SocialOutlineButton extends StatelessWidget {
         backgroundColor: AppTheme.backgroundWhite,
         foregroundColor: AppTheme.textPrimary,
         elevation: 0,
-        minimumSize: const Size.fromHeight(48),
-        side: const BorderSide(
-          color: AppTheme.borderSlate,
-          width: 1,
-        ),
+        minimumSize: Size.fromHeight(height),
+        fixedSize: Size.fromHeight(height),
+        side: const BorderSide(color: AppTheme.borderSlate, width: 1),
         shape: RoundedRectangleBorder(
-          borderRadius: BorderRadius.circular(10),
+          borderRadius: BorderRadius.circular(borderRadius),
         ),
         padding: const EdgeInsets.symmetric(horizontal: 16),
       ),
       child: Stack(
         alignment: Alignment.center,
         children: [
-          Align(
-            alignment: Alignment.centerLeft,
-            child: icon,
-          ),
+          Align(alignment: Alignment.centerLeft, child: icon),
           Align(
             alignment: Alignment.center,
             child: Text(
@@ -125,9 +137,7 @@ class _GoogleIcon extends StatelessWidget {
     return SizedBox(
       width: 20,
       height: 20,
-      child: CustomPaint(
-        painter: _GoogleLogoPainter(),
-      ),
+      child: CustomPaint(painter: _GoogleLogoPainter()),
     );
   }
 }
@@ -189,11 +199,7 @@ class _WhatsAppIcon extends StatelessWidget {
             size: const Size(22, 22),
             painter: _WhatsAppBubblePainter(),
           ),
-          const Icon(
-            Icons.phone,
-            color: Colors.white,
-            size: 12,
-          ),
+          const Icon(Icons.phone, color: Colors.white, size: 12),
         ],
       ),
     );
@@ -204,7 +210,8 @@ class _WhatsAppBubblePainter extends CustomPainter {
   @override
   void paint(Canvas canvas, Size size) {
     final greenPaint = Paint()
-      ..color = const Color(0xFF25D366) // WhatsApp brand green
+      ..color =
+          const Color(0xFF25D366) // WhatsApp brand green
       ..style = PaintingStyle.fill;
 
     final path = Path();

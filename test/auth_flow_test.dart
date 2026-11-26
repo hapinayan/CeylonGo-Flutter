@@ -17,6 +17,7 @@ import 'package:ceylongo/features/auth/screens/registration_success_screen.dart'
 import 'package:ceylongo/features/auth/services/auth_service.dart';
 import 'package:ceylongo/features/auth/widgets/auth_trust_footer.dart';
 import 'package:ceylongo/features/auth/widgets/auth_wave_decoration.dart';
+import 'package:ceylongo/features/auth/widgets/light_blue_wave_decoration.dart';
 
 class FakeSecureStorageService extends SecureStorageService {
   String? token;
@@ -315,34 +316,41 @@ void main() {
       role: 'tourist',
     );
 
-    testWidgets('Displays real registered user details',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(wrapWithTheme(
-        const RegistrationSuccessScreen(
-          user: testUser,
-          message: 'Account registered successfully',
+    testWidgets('Displays Account Created confirmation and Continue to Home', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrapWithTheme(
+          const RegistrationSuccessScreen(
+            user: testUser,
+            message: 'Account registered successfully',
+          ),
         ),
-      ));
+      );
 
-      expect(find.text('Registration Successful'), findsOneWidget);
-      expect(find.text('Kamal Perera'), findsOneWidget);
-      expect(find.text('kamal@example.com'), findsOneWidget);
-      expect(find.text('Explore CeylonGo'), findsOneWidget);
+      expect(find.text('Account Created!'), findsOneWidget);
+      expect(
+        find.text('Your CeylonGo account has been created successfully.'),
+        findsOneWidget,
+      );
+      expect(find.text('Continue to Home'), findsOneWidget);
+      expect(find.byType(LightBlueWaveDecoration), findsOneWidget);
     });
 
-    testWidgets('Responsive at 320px, 375px, and 430px widths',
-        (WidgetTester tester) async {
+    testWidgets('Responsive at 320px, 375px, and 430px widths', (
+      WidgetTester tester,
+    ) async {
       for (final width in [320.0, 375.0, 430.0]) {
         tester.view.physicalSize = Size(width, 700);
         tester.view.devicePixelRatio = 1.0;
 
-        await tester.pumpWidget(wrapWithTheme(
-          const RegistrationSuccessScreen(user: testUser),
-        ));
+        await tester.pumpWidget(
+          wrapWithTheme(const RegistrationSuccessScreen(user: testUser)),
+        );
         await tester.pumpAndSettle();
 
-        expect(find.text('Registration Successful'), findsOneWidget);
-        expect(find.byKey(const Key('explore_ceylongo_button')), findsOneWidget);
+        expect(find.text('Account Created!'), findsOneWidget);
+        expect(find.byType(LightBlueWaveDecoration), findsOneWidget);
       }
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();
@@ -598,45 +606,50 @@ void main() {
   });
 
   group('Screen 6: ForgotPasswordScreen Tests', () {
-    testWidgets('Renders Forgot Password with honest backend message on submit',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(wrapWithTheme(
-        ForgotPasswordScreen(authService: mockAuthService),
-      ));
+    testWidgets(
+      'Renders Forgot Password? with honest backend message on submit',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(
+          wrapWithTheme(ForgotPasswordScreen(authService: mockAuthService)),
+        );
 
-      expect(find.text('Forgot Password'), findsOneWidget);
-      expect(find.byType(AuthTrustFooter), findsOneWidget);
-      expect(find.byKey(const Key('auth_trust_shield_icon')), findsOneWidget);
+        expect(find.text('Forgot Password?'), findsOneWidget);
+        expect(
+          find.text('Enter your email address to reset your password.'),
+          findsOneWidget,
+        );
+        expect(find.byType(LightBlueWaveDecoration), findsOneWidget);
 
-      await tester.enterText(
-        find.byKey(const Key('forgot_email_field')),
-        'user@ceylongo.com',
-      );
+        await tester.enterText(
+          find.byKey(const Key('forgot_email_field')),
+          'user@ceylongo.com',
+        );
 
-      await tester.tap(find.byKey(const Key('send_reset_link_button')));
-      await tester.pumpAndSettle();
+        await tester.tap(find.byKey(const Key('send_reset_link_button')));
+        await tester.pumpAndSettle();
 
-      // Does not fake success; displays honest backend status
-      expect(
-        find.textContaining('Password reset is not yet supported'),
-        findsOneWidget,
-      );
-    });
+        // Does not fake success; displays honest backend status
+        expect(
+          find.textContaining('Password reset is not yet supported'),
+          findsOneWidget,
+        );
+      },
+    );
 
-    testWidgets('Responsive at 320px, 375px, and 430px widths',
-        (WidgetTester tester) async {
+    testWidgets('Responsive at 320px, 375px, and 430px widths', (
+      WidgetTester tester,
+    ) async {
       for (final width in [320.0, 375.0, 430.0]) {
         tester.view.physicalSize = Size(width, 700);
         tester.view.devicePixelRatio = 1.0;
 
-        await tester.pumpWidget(wrapWithTheme(
-          ForgotPasswordScreen(authService: mockAuthService),
-        ));
+        await tester.pumpWidget(
+          wrapWithTheme(ForgotPasswordScreen(authService: mockAuthService)),
+        );
         await tester.pumpAndSettle();
 
-        expect(find.text('Forgot Password'), findsOneWidget);
-      expect(find.byType(AuthTrustFooter), findsOneWidget);
-      expect(find.byKey(const Key('auth_trust_shield_icon')), findsOneWidget);
+        expect(find.text('Forgot Password?'), findsOneWidget);
+        expect(find.byType(LightBlueWaveDecoration), findsOneWidget);
       }
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();
@@ -644,30 +657,38 @@ void main() {
   });
 
   group('Screen 7: CheckEmailScreen Tests', () {
-    testWidgets('Displays target email address and action buttons',
-        (WidgetTester tester) async {
-      await tester.pumpWidget(wrapWithTheme(
-        const CheckEmailScreen(email: 'tourist@ceylongo.com'),
-      ));
+    testWidgets('Displays Reset Email Sent! and Back to Sign In', (
+      WidgetTester tester,
+    ) async {
+      await tester.pumpWidget(
+        wrapWithTheme(const CheckEmailScreen(email: 'tourist@ceylongo.com')),
+      );
 
-      expect(find.text('Check Your Email'), findsOneWidget);
-      expect(find.text('tourist@ceylongo.com'), findsOneWidget);
-      expect(find.byKey(const Key('open_email_app_button')), findsOneWidget);
+      expect(find.text('Reset Email Sent!'), findsOneWidget);
+      expect(
+        find.text(
+          "We've sent a password reset link to your email address. Please check your inbox.",
+        ),
+        findsOneWidget,
+      );
       expect(find.byKey(const Key('back_to_signin_button')), findsOneWidget);
+      expect(find.byType(LightBlueWaveDecoration), findsOneWidget);
     });
 
-    testWidgets('Responsive at 320px, 375px, and 430px widths',
-        (WidgetTester tester) async {
+    testWidgets('Responsive at 320px, 375px, and 430px widths', (
+      WidgetTester tester,
+    ) async {
       for (final width in [320.0, 375.0, 430.0]) {
         tester.view.physicalSize = Size(width, 700);
         tester.view.devicePixelRatio = 1.0;
 
-        await tester.pumpWidget(wrapWithTheme(
-          const CheckEmailScreen(email: 'tourist@ceylongo.com'),
-        ));
+        await tester.pumpWidget(
+          wrapWithTheme(const CheckEmailScreen(email: 'tourist@ceylongo.com')),
+        );
         await tester.pumpAndSettle();
 
-        expect(find.text('Check Your Email'), findsOneWidget);
+        expect(find.text('Reset Email Sent!'), findsOneWidget);
+        expect(find.byType(LightBlueWaveDecoration), findsOneWidget);
       }
       tester.view.resetPhysicalSize();
       tester.view.resetDevicePixelRatio();
