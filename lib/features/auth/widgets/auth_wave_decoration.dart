@@ -1,11 +1,18 @@
 import 'package:flutter/material.dart';
 import '../../../core/theme/app_theme.dart';
 
-/// Subtle navy and orange wave decoration matching CeylonGo reference design
+/// Subtle layered wave decoration matching CeylonGo reference design
 class AuthWaveDecoration extends StatelessWidget {
   final double? height;
+  final Color? upperWaveColor;
+  final Color? lowerWaveColor;
 
-  const AuthWaveDecoration({super.key, this.height});
+  const AuthWaveDecoration({
+    super.key,
+    this.height,
+    this.upperWaveColor,
+    this.lowerWaveColor,
+  });
 
   @override
   Widget build(BuildContext context) {
@@ -16,65 +23,78 @@ class AuthWaveDecoration extends StatelessWidget {
       height: waveHeight,
       width: double.infinity,
       child: CustomPaint(
-        painter: _AuthWavePainter(),
+        painter: _AuthWavePainter(
+          upperWaveColor: upperWaveColor ?? AppTheme.accentOrange,
+          lowerWaveColor: lowerWaveColor ?? AppTheme.primaryNavy,
+        ),
       ),
     );
   }
 }
 
 class _AuthWavePainter extends CustomPainter {
+  final Color upperWaveColor;
+  final Color lowerWaveColor;
+
+  const _AuthWavePainter({
+    required this.upperWaveColor,
+    required this.lowerWaveColor,
+  });
+
   @override
   void paint(Canvas canvas, Size size) {
-    // Orange accent wave (background wave)
-    final orangePaint = Paint()
-      ..color = AppTheme.accentOrange
+    // Upper accent wave (background wave)
+    final upperPaint = Paint()
+      ..color = upperWaveColor
       ..style = PaintingStyle.fill;
 
-    final orangePath = Path();
-    orangePath.moveTo(0, size.height * 0.45);
-    orangePath.quadraticBezierTo(
+    final upperPath = Path();
+    upperPath.moveTo(0, size.height * 0.45);
+    upperPath.quadraticBezierTo(
       size.width * 0.28,
       size.height * 0.1,
       size.width * 0.58,
       size.height * 0.5,
     );
-    orangePath.quadraticBezierTo(
+    upperPath.quadraticBezierTo(
       size.width * 0.82,
       size.height * 0.85,
       size.width,
       size.height * 0.4,
     );
-    orangePath.lineTo(size.width, size.height);
-    orangePath.lineTo(0, size.height);
-    orangePath.close();
-    canvas.drawPath(orangePath, orangePaint);
+    upperPath.lineTo(size.width, size.height);
+    upperPath.lineTo(0, size.height);
+    upperPath.close();
+    canvas.drawPath(upperPath, upperPaint);
 
-    // Navy primary wave (foreground wave)
-    final navyPaint = Paint()
-      ..color = AppTheme.primaryNavy
+    // Lower primary wave (foreground wave)
+    final lowerPaint = Paint()
+      ..color = lowerWaveColor
       ..style = PaintingStyle.fill;
 
-    final navyPath = Path();
-    navyPath.moveTo(0, size.height * 0.65);
-    navyPath.quadraticBezierTo(
+    final lowerPath = Path();
+    lowerPath.moveTo(0, size.height * 0.65);
+    lowerPath.quadraticBezierTo(
       size.width * 0.24,
       size.height * 0.35,
       size.width * 0.52,
       size.height * 0.7,
     );
-    navyPath.quadraticBezierTo(
+    lowerPath.quadraticBezierTo(
       size.width * 0.78,
       size.height * 0.98,
       size.width,
       size.height * 0.6,
     );
-    navyPath.lineTo(size.width, size.height);
-    navyPath.lineTo(0, size.height);
-    navyPath.close();
-    canvas.drawPath(navyPath, navyPaint);
+    lowerPath.lineTo(size.width, size.height);
+    lowerPath.lineTo(0, size.height);
+    lowerPath.close();
+    canvas.drawPath(lowerPath, lowerPaint);
   }
 
   @override
-  bool shouldRepaint(covariant CustomPainter oldDelegate) => false;
+  bool shouldRepaint(covariant _AuthWavePainter oldDelegate) =>
+      oldDelegate.upperWaveColor != upperWaveColor ||
+      oldDelegate.lowerWaveColor != lowerWaveColor;
 }
 

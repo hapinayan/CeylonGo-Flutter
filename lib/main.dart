@@ -2,6 +2,19 @@ import 'package:flutter/material.dart';
 
 import 'core/services/secure_storage_service.dart';
 import 'core/theme/app_theme.dart';
+import 'features/navigation/screens/main_navigation_shell.dart';
+import 'features/categories/screens/activities_category_screen.dart';
+import 'features/categories/screens/eco_tourism_category_screen.dart';
+import 'features/categories/screens/homestays_category_screen.dart';
+import 'features/categories/screens/local_guides_category_screen.dart';
+import 'features/categories/screens/rentals_category_screen.dart';
+import 'features/artisan/screens/artisan_business_detail_screen.dart';
+import 'features/artisan/screens/artisan_product_catalog_screen.dart';
+import 'features/artisan/screens/artisan_product_detail_screen.dart';
+import 'features/artisan/screens/artisan_reservation_form_screen.dart';
+import 'features/artisan/screens/artisan_reservation_history_screen.dart';
+import 'features/artisan/screens/artisan_wishlist_screen.dart';
+import 'features/artisan/services/artisan_demo_service.dart';
 import 'features/auth/models/api_error.dart';
 import 'features/auth/models/user_model.dart';
 import 'features/auth/screens/auth_landing_screen.dart';
@@ -14,7 +27,6 @@ import 'features/auth/screens/password_reset_success_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/registration_success_screen.dart';
 import 'features/auth/services/auth_service.dart';
-import 'features/home/screens/home_screen.dart';
 
 void main() {
   runApp(const CeylonGoApp());
@@ -104,7 +116,37 @@ class CeylonGoApp extends StatefulWidget {
       },
       '/password-reset-success': (context) =>
           const PasswordResetSuccessScreen(),
-      '/home': (context) => HomeScreen(
+      '/home': (context) => MainNavigationShell(
+            initialIndex: 0,
+            authService: authService,
+            storageService: storageService,
+          ),
+      '/artisan': (context) => MainNavigationShell(
+            initialIndex: 1,
+            authService: authService,
+            storageService: storageService,
+          ),
+      '/artisan/products': (context) => const ArtisanProductCatalogScreen(),
+      '/artisan/reservations': (context) =>
+          const ArtisanReservationHistoryScreen(),
+      '/artisan/wishlist': (context) => const ArtisanWishlistScreen(),
+      '/community': (context) => MainNavigationShell(
+            initialIndex: 3,
+            authService: authService,
+            storageService: storageService,
+          ),
+      '/ai-planner': (context) => MainNavigationShell(
+            initialIndex: 2,
+            authService: authService,
+            storageService: storageService,
+          ),
+      '/category/homestays': (context) => const HomestaysCategoryScreen(),
+      '/category/eco': (context) => const EcoTourismCategoryScreen(),
+      '/category/activities': (context) => const ActivitiesCategoryScreen(),
+      '/category/guides': (context) => const LocalGuidesCategoryScreen(),
+      '/category/rentals': (context) => const RentalsCategoryScreen(),
+      '/profile': (context) => MainNavigationShell(
+            initialIndex: 4,
             authService: authService,
             storageService: storageService,
           ),
@@ -150,6 +192,57 @@ class CeylonGoApp extends StatefulWidget {
           authService: authService,
           resetToken: token,
         ),
+      );
+    }
+
+    if (uri.path == '/artisan/business' || uri.path == 'artisan/business') {
+      int? listingId;
+      if (uri.queryParameters.containsKey('id')) {
+        listingId = int.tryParse(uri.queryParameters['id']!);
+      }
+      if (listingId == null && settings.arguments is Map) {
+        final map = settings.arguments as Map;
+        listingId = map['id'] is int ? map['id'] as int : int.tryParse('${map['id']}');
+      }
+      if (listingId != null) {
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) => ArtisanBusinessDetailScreen(listingId: listingId!),
+        );
+      }
+    }
+
+    if (uri.path == '/artisan/product' || uri.path == 'artisan/product') {
+      int? productId;
+      if (uri.queryParameters.containsKey('id')) {
+        productId = int.tryParse(uri.queryParameters['id']!);
+      }
+      if (productId == null && settings.arguments is Map) {
+        final map = settings.arguments as Map;
+        productId = map['id'] is int ? map['id'] as int : int.tryParse('${map['id']}');
+      }
+      if (productId != null) {
+        return MaterialPageRoute<void>(
+          settings: settings,
+          builder: (context) => ArtisanProductDetailScreen(productId: productId!),
+        );
+      }
+    }
+
+    if (uri.path == '/artisan/reserve' || uri.path == 'artisan/reserve') {
+      int? productId;
+      if (uri.queryParameters.containsKey('product_id')) {
+        productId = int.tryParse(uri.queryParameters['product_id']!);
+      }
+      if (productId == null && settings.arguments is Map) {
+        final map = settings.arguments as Map;
+        productId = map['product_id'] is int
+            ? map['product_id'] as int
+            : int.tryParse('${map['product_id']}');
+      }
+      return MaterialPageRoute<void>(
+        settings: settings,
+        builder: (context) => ArtisanReservationFormScreen(productId: productId),
       );
     }
 
@@ -339,6 +432,19 @@ class _AuthGateState extends State<AuthGate> {
         return;
       }
 
+      // Check if session is an offline demo session
+      if (token.startsWith('demo-') || ArtisanDemoService.isDemoMode) {
+        final cachedUser = await _storageService.getUser();
+        if (cachedUser != null && mounted) {
+          ArtisanDemoService.isDemoMode = true;
+          setState(() {
+            _authenticatedUser = cachedUser;
+            _status = AuthStatus.authenticated;
+          });
+          return;
+        }
+      }
+
       // If token exists, validate it using GET /api/v1/auth/me
       final user = await _authService.getMe(token);
 
@@ -400,7 +506,8 @@ class _AuthGateState extends State<AuthGate> {
         );
 
       case AuthStatus.authenticated:
-        return HomeScreen(
+        return MainNavigationShell(
+          initialIndex: 0,
           initialUser: _authenticatedUser,
           authService: _authService,
           storageService: _storageService,

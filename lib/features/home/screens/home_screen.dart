@@ -1,42 +1,83 @@
 import 'package:flutter/material.dart';
+import 'package:flutter/services.dart';
 
 import '../../../core/services/secure_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../../artisan/services/artisan_demo_service.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/services/auth_service.dart';
+import '../widgets/home_bottom_navigation_bar.dart';
+import '../widgets/home_category_filters.dart';
+import '../widgets/home_category_showcase.dart';
+import '../widgets/home_featured_homestays.dart';
+import '../widgets/home_header.dart';
+import '../widgets/home_popular_destinations.dart';
+import '../widgets/home_search_bar.dart';
 
 /// CeylonGo Traveler Home Screen
-/// Conforms to Sections 1, 2, 4 and 7 of Common Development Specification v1.0
+/// Matches the approved white-theme reference design:
+/// A. White Header (Dark navy CeylonGo, Notification bell with dot, Profile button)
+/// B. Rounded Search Bar ("Start your search")
+/// C. Horizontally Scrollable Category Filter Row (All, Homestays, Eco, Activities, Guides, Rentals)
+/// D. Popular Destinations (Jaffna, Ella, Kandy)
+/// E. Featured Homestays (Traditional Villa with garden, Ella Mountain Homestay)
+/// F. Fixed Floating Bottom Navigation Bar (Home, Explore, AI Planner, Community, Profile)
 class HomeScreen extends StatefulWidget {
   final UserModel? initialUser;
   final AuthService? authService;
   final SecureStorageService? storageService;
+  final bool showBottomNav;
 
   const HomeScreen({
     super.key,
     this.initialUser,
     this.authService,
     this.storageService,
+    this.showBottomNav = true,
   });
 
   @override
   State<HomeScreen> createState() => _HomeScreenState();
 }
 
-class _HomeScreenState extends State<HomeScreen> {
+class _HomeScreenState extends State<HomeScreen>
+    with SingleTickerProviderStateMixin {
   late final AuthService _authService;
   late final SecureStorageService _storageService;
+  late final AnimationController _entranceController;
 
   UserModel? _user;
   bool _isLoading = true;
-  bool _isLoggingOut = false;
+  String _selectedCategoryId = 'all';
 
   @override
   void initState() {
     super.initState();
     _authService = widget.authService ?? AuthService();
     _storageService = widget.storageService ?? SecureStorageService();
+
+    _entranceController = AnimationController(
+      duration: const Duration(milliseconds: 700),
+      vsync: this,
+    );
+
     _loadUser();
+
+    WidgetsBinding.instance.addPostFrameCallback((_) {
+      if (mounted) {
+        if (MediaQuery.of(context).disableAnimations) {
+          _entranceController.value = 1.0;
+        } else {
+          _entranceController.forward();
+        }
+      }
+    });
+  }
+
+  @override
+  void dispose() {
+    _entranceController.dispose();
+    super.dispose();
   }
 
   Future<void> _loadUser() async {
@@ -61,6 +102,15 @@ class _HomeScreenState extends State<HomeScreen> {
 
       final token = await _storageService.getToken();
       if (token != null && token.isNotEmpty) {
+        if (token.startsWith('demo-') || ArtisanDemoService.isDemoMode) {
+          if (mounted) {
+            setState(() {
+              _isLoading = false;
+            });
+          }
+          return;
+        }
+
         final verifiedUser = await _authService.getMe(token);
         if (mounted) {
           setState(() {
@@ -84,199 +134,207 @@ class _HomeScreenState extends State<HomeScreen> {
     }
   }
 
-  Future<void> _onSignOut() async {
-    // Prevent multiple logout clicks and race conditions
-    if (_isLoggingOut) return;
+  void _onNotificationTap() {
+    showModalBottomSheet(
+      context: context,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (ctx) => Padding(
+        padding: const EdgeInsets.all(24.0),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          crossAxisAlignment: CrossAxisAlignment.start,
+          children: [
+            Row(
+              children: const [
+                Icon(
+                  Icons.notifications_active_outlined,
+                  color: Color(0xFF2563EB),
+                ),
+                SizedBox(width: 10),
+                Text(
+                  'Notifications',
+                  style: TextStyle(
+                    fontFamily: 'Inter',
+                    fontSize: 18,
+                    fontWeight: FontWeight.bold,
+                    color: AppTheme.primaryNavy,
+                  ),
+                ),
+              ],
+            ),
+            const SizedBox(height: 16),
+            Container(
+              padding: const EdgeInsets.all(12),
+              decoration: BoxDecoration(
+                color: const Color(0xFFF0F7FF),
+                borderRadius: BorderRadius.circular(12),
+                border: Border.all(color: const Color(0xFFBFDBFE)),
+              ),
+              child: Row(
+                children: const [
+                  Icon(Icons.stars, color: Color(0xFF2563EB), size: 20),
+                  SizedBox(width: 10),
+                  Expanded(
+                    child: Text(
+                      'Welcome to CeylonGo! Explore authentic Sri Lankan artisan craft workshops in Galle & Kandy.',
+                      style: TextStyle(
+                        fontFamily: 'Inter',
+                        fontSize: 13,
+                        color: Color(0xFF334155),
+                      ),
+                    ),
+                  ),
+                ],
+              ),
+            ),
+            const SizedBox(height: 20),
+            SizedBox(
+              width: double.infinity,
+              height: 44,
+              child: ElevatedButton(
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryNavy,
+                  foregroundColor: Colors.white,
+                  shape: RoundedRectangleBorder(
+                    borderRadius: BorderRadius.circular(10),
+                  ),
+                ),
+                onPressed: () {
+                  Navigator.pop(ctx);
+                  Navigator.pushNamed(context, '/artisan');
+                },
+                child: const Text('View Artisan Discoveries'),
+              ),
+            ),
+          ],
+        ),
+      ),
+    );
+  }
 
-    setState(() {
-      _isLoggingOut = true;
-    });
+  void _onProfileTap() {
+    Navigator.pushNamed(context, '/profile');
+  }
 
-    try {
-      // Securely clear access token and user profile
-      await _storageService.clear();
-
-      if (mounted) {
-        // Clear entire navigation stack and return to Login
-        Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
-      }
-    } catch (_) {
-      if (mounted) {
-        setState(() {
-          _isLoggingOut = false;
-        });
-        ScaffoldMessenger.of(context).showSnackBar(
-          const SnackBar(
-            content: Text('Failed to sign out safely. Please try again.'),
-            backgroundColor: AppTheme.errorRed,
-          ),
-        );
-      }
+  void _onBottomNavSelected(int index) {
+    if (index == 0) {
+      // Already on Home
+      return;
+    } else if (index == 1) {
+      // Explore -> Navigate to Artisan Discovery
+      Navigator.pushNamed(context, '/artisan');
+    } else if (index == 2) {
+      // AI Planner
+      Navigator.pushNamed(context, '/ai-planner');
+    } else if (index == 3) {
+      // Community -> Navigate to Community Feed
+      Navigator.pushNamed(context, '/community');
+    } else if (index == 4) {
+      // Profile
+      _onProfileTap();
     }
   }
 
   @override
   Widget build(BuildContext context) {
-    final screenWidth = MediaQuery.of(context).size.width;
-    final isDesktop = screenWidth >= 600;
-    // Increased logo size by ~28-30% and shifted ~10-12px downward with proportional toolbar
-    final toolbarHeight = isDesktop ? 106.0 : (screenWidth < 360 ? 84.0 : 94.0);
-    final logoHeight = isDesktop ? 78.0 : (screenWidth < 360 ? 59.0 : 70.0);
-    final logoTopShift = isDesktop ? 12.0 : (screenWidth < 360 ? 10.0 : 11.0);
-
-    return Scaffold(
-      backgroundColor: AppTheme.backgroundLight,
-      appBar: AppBar(
-        backgroundColor: AppTheme.backgroundWhite,
-        elevation: 0,
-        scrolledUnderElevation: 0,
-        centerTitle: true,
-        toolbarHeight: toolbarHeight,
-        automaticallyImplyLeading: false,
-        leading: const SizedBox(width: 48),
-        leadingWidth: 48,
-        title: Padding(
-          padding: EdgeInsets.only(top: logoTopShift),
-          child: Center(
-            child: Image.asset(
-              'assets/images/ceylongo_original_logo.jpg',
-              height: logoHeight,
-              fit: BoxFit.contain,
-              semanticLabel: 'CeylonGo Logo',
-            ),
-          ),
-        ),
-        actions: [
-          IconButton(
-            icon: _isLoggingOut
-                ? const SizedBox(
-                    width: 20,
-                    height: 20,
-                    child: CircularProgressIndicator(
-                      strokeWidth: 2,
-                      color: AppTheme.primaryNavy,
-                    ),
-                  )
-                : const Icon(Icons.logout, color: AppTheme.primaryNavy),
-            tooltip: 'Sign Out',
-            onPressed: _isLoggingOut ? null : _onSignOut,
-          ),
-        ],
+    return AnnotatedRegion<SystemUiOverlayStyle>(
+      value: const SystemUiOverlayStyle(
+        statusBarColor: Colors.white,
+        statusBarIconBrightness: Brightness.dark,
+        statusBarBrightness: Brightness.light,
+        systemNavigationBarColor: Colors.white,
+        systemNavigationBarIconBrightness: Brightness.dark,
       ),
-      body: SafeArea(
-        child: Center(
-          child: _isLoading
-              ? const CircularProgressIndicator(color: AppTheme.accentOrange)
-              : SingleChildScrollView(
-                  padding: const EdgeInsets.symmetric(
-                    horizontal: 24,
-                    vertical: 32,
+      child: Scaffold(
+        backgroundColor: Colors.white,
+        body: _isLoading
+            ? const Center(
+                child: CircularProgressIndicator(color: AppTheme.accentOrange),
+              )
+            : Column(
+                crossAxisAlignment: CrossAxisAlignment.stretch,
+                children: [
+                  // A. Fixed White Header (Dark navy CeylonGo, Notification & Profile)
+                  HomeHeader(
+                    animation: _entranceController,
+                    user: _user,
+                    onNotificationTap: _onNotificationTap,
+                    onProfileTap: _onProfileTap,
                   ),
-                  child: ConstrainedBox(
-                    constraints: const BoxConstraints(maxWidth: 440),
-                    child: Card(
-                      elevation: 0,
-                      color: AppTheme.backgroundWhite,
-                      shape: RoundedRectangleBorder(
-                        borderRadius: BorderRadius.circular(12),
-                        side: const BorderSide(color: AppTheme.borderSlate),
-                      ),
-                      child: Padding(
-                        padding: const EdgeInsets.all(28.0),
-                        child: Column(
-                          mainAxisSize: MainAxisSize.min,
-                          children: [
-                            Container(
-                              padding: const EdgeInsets.all(16),
-                              decoration: const BoxDecoration(
-                                color: AppTheme.primarySubtle,
-                                shape: BoxShape.circle,
-                              ),
-                              child: const Icon(
-                                Icons.person,
-                                size: 54,
-                                color: AppTheme.primaryNavy,
-                              ),
+
+                  // B. Fixed Rounded Search Bar ("Start your search")
+                  HomeSearchBar(
+                    animation: _entranceController,
+                    onSearch: (query) {
+                      Navigator.pushNamed(context, '/artisan');
+                    },
+                  ),
+
+                  const SizedBox(height: 8),
+
+                  // C. Horizontally Scrollable Category Filter Row
+                  HomeCategoryFilters(
+                    animation: _entranceController,
+                    selectedCategoryId: _selectedCategoryId,
+                    onCategorySelected: (category) {
+                      if (category.id == 'all') {
+                        setState(() {
+                          _selectedCategoryId = 'all';
+                        });
+                        return;
+                      }
+                      Navigator.pushNamed(
+                        context,
+                        '/category/${category.id}',
+                      );
+                    },
+                  ),
+
+                  const SizedBox(height: 6),
+
+                  // D-G. Scrollable Home Content
+                  Expanded(
+                    child: SingleChildScrollView(
+                      physics: const BouncingScrollPhysics(),
+                      padding: const EdgeInsets.only(bottom: 24.0),
+                      child: Column(
+                        crossAxisAlignment: CrossAxisAlignment.stretch,
+                        children: [
+                          // D. Popular Destinations (Jaffna, Ella, Kandy)
+                          HomePopularDestinations(
+                            animation: _entranceController,
+                          ),
+
+                          const SizedBox(height: 14),
+
+                          // E. Featured Homestays
+                          HomeFeaturedHomestays(
+                            animation: _entranceController,
+                            onViewAllTap: () => Navigator.pushNamed(
+                              context,
+                              '/category/homestays',
                             ),
-                            const SizedBox(height: 18),
-                            Text(
-                              'Welcome, ${_user?.fullName ?? "Traveler"}!',
-                              textAlign: TextAlign.center,
-                              style: const TextStyle(
-                                fontSize: 24,
-                                fontWeight: FontWeight.bold,
-                                color: AppTheme.primaryNavy,
-                              ),
-                            ),
-                            const SizedBox(height: 6),
-                            if (_user?.email.isNotEmpty ?? false) ...[
-                              Text(
-                                _user!.email,
-                                style: const TextStyle(
-                                  fontSize: 14,
-                                  color: AppTheme.textSecondary,
-                                ),
-                              ),
-                              const SizedBox(height: 12),
-                            ],
-                            Container(
-                              padding: const EdgeInsets.symmetric(
-                                horizontal: 12,
-                                vertical: 6,
-                              ),
-                              decoration: BoxDecoration(
-                                color: AppTheme.accentOrange.withAlpha(30),
-                                borderRadius: BorderRadius.circular(16),
-                              ),
-                              child: Text(
-                                (_user?.role ?? 'Traveler').toUpperCase(),
-                                style: const TextStyle(
-                                  color: AppTheme.accentOrange,
-                                  fontSize: 12,
-                                  fontWeight: FontWeight.bold,
-                                  letterSpacing: 1,
-                                ),
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            const Divider(color: AppTheme.borderSlate),
-                            const SizedBox(height: 16),
-                            const Text(
-                              'Discover Local. Feel at Home.',
-                              style: TextStyle(
-                                fontStyle: FontStyle.italic,
-                                color: AppTheme.textSecondary,
-                                fontSize: 14,
-                              ),
-                            ),
-                            const SizedBox(height: 28),
-                            ElevatedButton.icon(
-                              onPressed: _isLoggingOut ? null : _onSignOut,
-                              icon: _isLoggingOut
-                                  ? const SizedBox(
-                                      width: 20,
-                                      height: 20,
-                                      child: CircularProgressIndicator(
-                                        strokeWidth: 2,
-                                        color: AppTheme.backgroundWhite,
-                                      ),
-                                    )
-                                  : const Icon(Icons.logout),
-                              label: const Text('Sign Out'),
-                              style: ElevatedButton.styleFrom(
-                                backgroundColor: AppTheme.primaryNavy,
-                                foregroundColor: AppTheme.backgroundWhite,
-                                disabledBackgroundColor: AppTheme.primaryNavy
-                                    .withAlpha(150),
-                              ),
-                            ),
+                          ),
+
+                          if (_selectedCategoryId == 'all') ...[
+                            const SizedBox(height: 14),
+                            const HomeCategoryShowcase(),
                           ],
-                        ),
+                        ],
                       ),
                     ),
                   ),
-                ),
-        ),
+                ],
+              ),
+        // H. Floating Bottom Navigation Bar
+        bottomNavigationBar: widget.showBottomNav
+            ? HomeBottomNavigationBar(
+                currentIndex: 0,
+                onTabSelected: _onBottomNavSelected,
+              )
+            : null,
       ),
     );
   }
