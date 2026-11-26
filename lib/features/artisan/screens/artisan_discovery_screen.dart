@@ -10,17 +10,18 @@ import '../widgets/artisan_demo_banner.dart';
 import '../widgets/artisan_listing_card.dart';
 import 'artisan_business_detail_screen.dart';
 import 'artisan_product_catalog_screen.dart';
-import 'artisan_reservation_history_screen.dart';
 import 'artisan_wishlist_screen.dart';
 
 class ArtisanDiscoveryScreen extends StatefulWidget {
   final ArtisanService? artisanService;
   final ArtisanLocationService? locationService;
+  final bool showBottomNav;
 
   const ArtisanDiscoveryScreen({
     super.key,
     this.artisanService,
     this.locationService,
+    this.showBottomNav = true,
   });
 
   @override
@@ -345,21 +346,6 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
             },
           ),
           IconButton(
-            key: const Key('nav_reservations_btn'),
-            icon: const Icon(Icons.event_note_outlined),
-            tooltip: 'My Reservations',
-            onPressed: () {
-              Navigator.push(
-                context,
-                MaterialPageRoute(
-                  builder: (_) => ArtisanReservationHistoryScreen(
-                    artisanService: _artisanService,
-                  ),
-                ),
-              );
-            },
-          ),
-          IconButton(
             icon: const Icon(Icons.shopping_bag_outlined),
             tooltip: 'Browse All Products',
             onPressed: () {
@@ -373,6 +359,7 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
               );
             },
           ),
+          const SizedBox(width: 4),
         ],
       ),
       body: Column(
@@ -604,10 +591,12 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
           ),
         ],
       ),
-      bottomNavigationBar: HomeBottomNavigationBar(
-        currentIndex: 1,
-        onTabSelected: _onBottomNavSelected,
-      ),
+      bottomNavigationBar: widget.showBottomNav
+          ? HomeBottomNavigationBar(
+              currentIndex: 1,
+              onTabSelected: _onBottomNavSelected,
+            )
+          : null,
     );
   }
 
@@ -622,20 +611,14 @@ class _ArtisanDiscoveryScreenState extends State<ArtisanDiscoveryScreen> {
         Navigator.pushNamedAndRemoveUntil(context, '/home', (r) => false);
       }
     } else if (index == 2) {
-      // AI Planner
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('CeylonGo AI Trip Planner is opening...'),
-          backgroundColor: Color(0xFF073B91),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      // AI Planner -> /ai-planner
+      Navigator.pushReplacementNamed(context, '/ai-planner');
     } else if (index == 3) {
       // Community -> /community
-      Navigator.pushNamed(context, '/community');
+      Navigator.pushReplacementNamed(context, '/community');
     } else if (index == 4) {
       // Profile -> /profile
-      Navigator.pushNamed(context, '/profile');
+      Navigator.pushReplacementNamed(context, '/profile');
     }
   }
 

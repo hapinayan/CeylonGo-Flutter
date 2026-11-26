@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 
 import '../../../core/theme/app_theme.dart';
+import '../../../core/widgets/ceylongo_network_image.dart';
 
 class HomestayItem {
   final int id;
@@ -225,21 +226,10 @@ class _HomeFeaturedHomestaysState extends State<HomeFeaturedHomestays> {
                                 color: const Color(0xFFF1F5F9),
                               ),
                               clipBehavior: Clip.antiAlias,
-                              child: Image.network(
-                                item.imageUrl,
-                                fit: BoxFit.cover,
-                                errorBuilder: (context, error, stackTrace) {
-                                  return Container(
-                                    color: const Color(0xFFE2E8F0),
-                                    child: const Center(
-                                      child: Icon(
-                                        Icons.holiday_village_rounded,
-                                        size: 30,
-                                        color: Color(0xFF94A3B8),
-                                      ),
-                                    ),
-                                  );
-                                },
+                              child: CeylonGoNetworkImage(
+                                imageUrl: item.imageUrl,
+                                fallbackIcon: Icons.holiday_village_rounded,
+                                iconSize: 30,
                               ),
                             ),
 

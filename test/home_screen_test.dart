@@ -7,6 +7,7 @@ import 'package:ceylongo/features/home/screens/home_screen.dart';
 import 'package:ceylongo/features/home/widgets/home_ai_planner_banner.dart';
 import 'package:ceylongo/features/home/widgets/home_bottom_navigation_bar.dart';
 import 'package:ceylongo/features/home/widgets/home_category_filters.dart';
+import 'package:ceylongo/features/home/widgets/home_category_showcase.dart';
 import 'package:ceylongo/features/home/widgets/home_featured_homestays.dart';
 import 'package:ceylongo/features/home/widgets/home_header.dart';
 import 'package:ceylongo/features/home/widgets/home_module_shortcuts.dart';
@@ -32,6 +33,17 @@ void main() {
           {
             '/artisan': (_) =>
                 const Scaffold(body: Text('Artisan Discovery Screen')),
+            '/ai-planner': (_) =>
+                const Scaffold(body: Text('AI Planner Screen')),
+            '/category/homestays': (_) =>
+                const Scaffold(body: Text('Homestays Page')),
+            '/category/eco': (_) => const Scaffold(body: Text('Eco Page')),
+            '/category/activities': (_) =>
+                const Scaffold(body: Text('Activities Page')),
+            '/category/guides': (_) =>
+                const Scaffold(body: Text('Guides Page')),
+            '/category/rentals': (_) =>
+                const Scaffold(body: Text('Rentals Page')),
             '/artisan/wishlist': (_) =>
                 const Scaffold(body: Text('Wishlist Screen')),
             '/artisan/reservations': (_) =>
@@ -77,12 +89,48 @@ void main() {
 
         // Section C: Single Category Filter Row (6 filters)
         expect(find.byType(HomeCategoryFilters), findsOneWidget);
-        expect(find.text('All'), findsOneWidget);
-        expect(find.text('Homestays'), findsOneWidget);
-        expect(find.text('Eco'), findsOneWidget);
-        expect(find.text('Activities'), findsOneWidget);
-        expect(find.text('Guides'), findsOneWidget);
-        expect(find.text('Rentals'), findsOneWidget);
+        expect(
+          find.descendant(
+            of: find.byType(HomeCategoryFilters),
+            matching: find.text('All'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(HomeCategoryFilters),
+            matching: find.text('Homestays'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(HomeCategoryFilters),
+            matching: find.text('Eco'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(HomeCategoryFilters),
+            matching: find.text('Activities'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(HomeCategoryFilters),
+            matching: find.text('Guides'),
+          ),
+          findsOneWidget,
+        );
+        expect(
+          find.descendant(
+            of: find.byType(HomeCategoryFilters),
+            matching: find.text('Rentals'),
+          ),
+          findsOneWidget,
+        );
 
         // Section D: Popular Destinations (Jaffna, Ella, Kandy)
         expect(find.byType(HomePopularDestinations), findsOneWidget);
@@ -91,7 +139,7 @@ void main() {
         expect(find.text('Ella'), findsNWidgets(2)); // Destination + Card 2
         expect(find.text('Kandy'), findsOneWidget);
 
-        // Section E: Featured Homestays (2 stacked cards)
+        // Section E: Featured Homestays (2 stacked cards, no duplicate Homestays section)
         expect(find.byType(HomeFeaturedHomestays), findsOneWidget);
         expect(find.text('Featured Homestays'), findsOneWidget);
         expect(find.text('Traditional Villa with garden'), findsOneWidget);
@@ -100,6 +148,15 @@ void main() {
         expect(find.text('4.9 (256 reviews)'), findsOneWidget);
         expect(find.byKey(const Key('homestay_card_1')), findsOneWidget);
         expect(find.byKey(const Key('homestay_card_2')), findsOneWidget);
+
+        // Unified "All" Category Showcase (Eco Tourism, Activities, Local Guides, Rentals)
+        expect(find.byType(HomeCategoryShowcase), findsOneWidget);
+        expect(find.text('Eco Tourism'), findsOneWidget);
+        expect(find.text('Local Guides'), findsOneWidget);
+        expect(find.byKey(const Key('see_all_eco')), findsOneWidget);
+        expect(find.byKey(const Key('see_all_activities')), findsOneWidget);
+        expect(find.byKey(const Key('see_all_guides')), findsOneWidget);
+        expect(find.byKey(const Key('see_all_rentals')), findsOneWidget);
 
         // Section F: Fixed Bottom Navigation Bar
         expect(find.byType(HomeBottomNavigationBar), findsOneWidget);
@@ -141,7 +198,7 @@ void main() {
       },
     );
 
-    testWidgets('Tapping category filter chip updates selection', (
+    testWidgets('Tapping category filter chip navigates to category page', (
       WidgetTester tester,
     ) async {
       await tester.pumpWidget(createHomeScreen());
@@ -152,9 +209,34 @@ void main() {
 
       await tapAndSettle(tester, ecoFilter);
 
-      final ecoLabel = tester.widget<Text>(find.text('Eco'));
-      expect(ecoLabel.style?.color, Colors.white);
+      expect(find.text('Eco Page'), findsOneWidget);
     });
+
+    testWidgets(
+      'See All buttons in All view navigate to their category pages and preserve All on return',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(createHomeScreen());
+        await settleScreen(tester);
+
+        final cases = [
+          ('see_all_eco', 'Eco Page'),
+          ('see_all_activities', 'Activities Page'),
+          ('see_all_guides', 'Guides Page'),
+          ('see_all_rentals', 'Rentals Page'),
+        ];
+
+        for (final (keyName, expectedText) in cases) {
+          final btn = find.byKey(Key(keyName));
+          await tester.ensureVisible(btn);
+          await tapAndSettle(tester, btn);
+          expect(find.text(expectedText), findsOneWidget);
+
+          Navigator.of(tester.element(find.text(expectedText))).pop();
+          await tester.pumpAndSettle();
+          expect(find.byType(HomeCategoryShowcase), findsOneWidget);
+        }
+      },
+    );
 
     testWidgets(
       'Tapping Featured Homestay card does not open Artisan bottom sheet',
@@ -248,6 +330,22 @@ void main() {
 
       expect(find.text('Artisan Discovery Screen'), findsOneWidget);
     });
+
+    testWidgets(
+      'Bottom navigation AI Planner tab navigates to /ai-planner and not Explore',
+      (WidgetTester tester) async {
+        await tester.pumpWidget(createHomeScreen());
+        await settleScreen(tester);
+
+        final aiPlannerTab = find.byKey(const Key('bottom_nav_ai_planner'));
+        expect(aiPlannerTab, findsOneWidget);
+
+        await tapAndSettle(tester, aiPlannerTab);
+
+        expect(find.text('AI Planner Screen'), findsOneWidget);
+        expect(find.text('Artisan Discovery Screen'), findsNothing);
+      },
+    );
   });
 
   group('HomeScreen Responsiveness & Samsung Galaxy A22 Verification', () {

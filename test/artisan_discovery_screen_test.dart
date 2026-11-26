@@ -377,6 +377,8 @@ void main() {
 
         final routes = <String, WidgetBuilder>{
           '/home': (_) => const Scaffold(body: Text('Mock Home Screen')),
+          '/ai-planner': (_) =>
+              const Scaffold(body: Text('Mock AI Planner Screen')),
           '/community': (_) =>
               const Scaffold(body: Text('Mock Community Screen')),
           '/profile': (_) => const Scaffold(body: Text('Mock Profile Screen')),
@@ -384,32 +386,40 @@ void main() {
 
         await tester.pumpWidget(
           MaterialApp(
+            key: UniqueKey(),
             routes: routes,
             home: ArtisanDiscoveryScreen(artisanService: artisanService),
           ),
         );
         await tester.pumpAndSettle();
 
-        // Tap AI Planner (index 2) -> shows SnackBar
+        // Tap AI Planner (index 2) -> replaces with /ai-planner
         await tester.tap(find.byIcon(Icons.auto_awesome));
-        await tester.pump();
-        expect(
-          find.text('CeylonGo AI Trip Planner is opening...'),
-          findsOneWidget,
+        await tester.pumpAndSettle();
+        expect(find.text('Mock AI Planner Screen'), findsOneWidget);
+
+        // Re-mount Artisan Discovery to verify Community (index 3) -> /community
+        await tester.pumpWidget(
+          MaterialApp(
+            key: UniqueKey(),
+            routes: routes,
+            home: ArtisanDiscoveryScreen(artisanService: artisanService),
+          ),
         );
         await tester.pumpAndSettle();
-
-        // Tap Community (index 3) -> pushes /community
         await tester.tap(find.text('Community'));
         await tester.pumpAndSettle();
         expect(find.text('Mock Community Screen'), findsOneWidget);
 
-        // Pop back to Artisan Discovery
-        Navigator.of(tester.element(find.text('Mock Community Screen'))).pop();
+        // Re-mount Artisan Discovery to verify Profile (index 4) -> /profile
+        await tester.pumpWidget(
+          MaterialApp(
+            key: UniqueKey(),
+            routes: routes,
+            home: ArtisanDiscoveryScreen(artisanService: artisanService),
+          ),
+        );
         await tester.pumpAndSettle();
-        expect(find.text('Artisan Discovery'), findsOneWidget);
-
-        // Tap Profile (index 4) -> pushes /profile
         await tester.tap(find.text('Profile'));
         await tester.pumpAndSettle();
         expect(find.text('Mock Profile Screen'), findsOneWidget);
@@ -506,35 +516,48 @@ void main() {
 
       final routes = <String, WidgetBuilder>{
         '/home': (_) => const Scaffold(body: Text('Mock Home Screen')),
+        '/ai-planner': (_) =>
+            const Scaffold(body: Text('Mock AI Planner Screen')),
         '/community': (_) => const Scaffold(body: Text('Mock Community Screen')),
         '/profile': (_) => const Scaffold(body: Text('Mock Profile Screen')),
       };
 
       await tester.pumpWidget(
         MaterialApp(
+          key: UniqueKey(),
           routes: routes,
           home: ArtisanDiscoveryScreen(artisanService: artisanService),
         ),
       );
       await tester.pumpAndSettle();
 
-      // Tap AI Planner (index 2) -> shows SnackBar
+      // Tap AI Planner (index 2) -> replaces with /ai-planner
       await tester.tap(find.byIcon(Icons.auto_awesome));
-      await tester.pump();
-      expect(find.text('CeylonGo AI Trip Planner is opening...'), findsOneWidget);
       await tester.pumpAndSettle();
+      expect(find.text('Mock AI Planner Screen'), findsOneWidget);
 
-      // Tap Community (index 3) -> pushes /community
+      // Re-mount Artisan Discovery to verify Community (index 3) -> /community
+      await tester.pumpWidget(
+        MaterialApp(
+          key: UniqueKey(),
+          routes: routes,
+          home: ArtisanDiscoveryScreen(artisanService: artisanService),
+        ),
+      );
+      await tester.pumpAndSettle();
       await tester.tap(find.text('Community'));
       await tester.pumpAndSettle();
       expect(find.text('Mock Community Screen'), findsOneWidget);
 
-      // Pop back to Artisan Discovery
-      Navigator.of(tester.element(find.text('Mock Community Screen'))).pop();
+      // Re-mount Artisan Discovery to verify Profile (index 4) -> /profile
+      await tester.pumpWidget(
+        MaterialApp(
+          key: UniqueKey(),
+          routes: routes,
+          home: ArtisanDiscoveryScreen(artisanService: artisanService),
+        ),
+      );
       await tester.pumpAndSettle();
-      expect(find.text('Artisan Discovery'), findsOneWidget);
-
-      // Tap Profile (index 4) -> pushes /profile
       await tester.tap(find.text('Profile'));
       await tester.pumpAndSettle();
       expect(find.text('Mock Profile Screen'), findsOneWidget);

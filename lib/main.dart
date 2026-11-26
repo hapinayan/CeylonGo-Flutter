@@ -2,8 +2,13 @@ import 'package:flutter/material.dart';
 
 import 'core/services/secure_storage_service.dart';
 import 'core/theme/app_theme.dart';
+import 'features/navigation/screens/main_navigation_shell.dart';
+import 'features/categories/screens/activities_category_screen.dart';
+import 'features/categories/screens/eco_tourism_category_screen.dart';
+import 'features/categories/screens/homestays_category_screen.dart';
+import 'features/categories/screens/local_guides_category_screen.dart';
+import 'features/categories/screens/rentals_category_screen.dart';
 import 'features/artisan/screens/artisan_business_detail_screen.dart';
-import 'features/artisan/screens/artisan_discovery_screen.dart';
 import 'features/artisan/screens/artisan_product_catalog_screen.dart';
 import 'features/artisan/screens/artisan_product_detail_screen.dart';
 import 'features/artisan/screens/artisan_reservation_form_screen.dart';
@@ -22,9 +27,6 @@ import 'features/auth/screens/password_reset_success_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/registration_success_screen.dart';
 import 'features/auth/services/auth_service.dart';
-import 'features/community/screens/community_feed_screen.dart';
-import 'features/home/screens/home_screen.dart';
-import 'features/profile/screens/profile_screen.dart';
 
 void main() {
   runApp(const CeylonGoApp());
@@ -114,20 +116,37 @@ class CeylonGoApp extends StatefulWidget {
       },
       '/password-reset-success': (context) =>
           const PasswordResetSuccessScreen(),
-      '/home': (context) => HomeScreen(
+      '/home': (context) => MainNavigationShell(
+            initialIndex: 0,
             authService: authService,
             storageService: storageService,
           ),
-      '/artisan': (context) => const ArtisanDiscoveryScreen(),
+      '/artisan': (context) => MainNavigationShell(
+            initialIndex: 1,
+            authService: authService,
+            storageService: storageService,
+          ),
       '/artisan/products': (context) => const ArtisanProductCatalogScreen(),
       '/artisan/reservations': (context) =>
           const ArtisanReservationHistoryScreen(),
       '/artisan/wishlist': (context) => const ArtisanWishlistScreen(),
-      '/community': (context) => CommunityFeedScreen(
+      '/community': (context) => MainNavigationShell(
+            initialIndex: 3,
             authService: authService,
             storageService: storageService,
           ),
-      '/profile': (context) => ProfileScreen(
+      '/ai-planner': (context) => MainNavigationShell(
+            initialIndex: 2,
+            authService: authService,
+            storageService: storageService,
+          ),
+      '/category/homestays': (context) => const HomestaysCategoryScreen(),
+      '/category/eco': (context) => const EcoTourismCategoryScreen(),
+      '/category/activities': (context) => const ActivitiesCategoryScreen(),
+      '/category/guides': (context) => const LocalGuidesCategoryScreen(),
+      '/category/rentals': (context) => const RentalsCategoryScreen(),
+      '/profile': (context) => MainNavigationShell(
+            initialIndex: 4,
             authService: authService,
             storageService: storageService,
           ),
@@ -487,7 +506,8 @@ class _AuthGateState extends State<AuthGate> {
         );
 
       case AuthStatus.authenticated:
-        return HomeScreen(
+        return MainNavigationShell(
+          initialIndex: 0,
           initialUser: _authenticatedUser,
           authService: _authService,
           storageService: _storageService,

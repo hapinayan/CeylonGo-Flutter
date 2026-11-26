@@ -8,6 +8,7 @@ import '../../auth/models/user_model.dart';
 import '../../auth/services/auth_service.dart';
 import '../widgets/home_bottom_navigation_bar.dart';
 import '../widgets/home_category_filters.dart';
+import '../widgets/home_category_showcase.dart';
 import '../widgets/home_featured_homestays.dart';
 import '../widgets/home_header.dart';
 import '../widgets/home_popular_destinations.dart';
@@ -25,12 +26,14 @@ class HomeScreen extends StatefulWidget {
   final UserModel? initialUser;
   final AuthService? authService;
   final SecureStorageService? storageService;
+  final bool showBottomNav;
 
   const HomeScreen({
     super.key,
     this.initialUser,
     this.authService,
     this.storageService,
+    this.showBottomNav = true,
   });
 
   @override
@@ -45,7 +48,6 @@ class _HomeScreenState extends State<HomeScreen>
 
   UserModel? _user;
   bool _isLoading = true;
-  int _currentNavIndex = 0;
   String _selectedCategoryId = 'all';
 
   @override
@@ -217,26 +219,15 @@ class _HomeScreenState extends State<HomeScreen>
   }
 
   void _onBottomNavSelected(int index) {
-    setState(() {
-      _currentNavIndex = index;
-    });
-
     if (index == 0) {
       // Already on Home
+      return;
     } else if (index == 1) {
       // Explore -> Navigate to Artisan Discovery
       Navigator.pushNamed(context, '/artisan');
     } else if (index == 2) {
       // AI Planner
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text(
-            'AI Trip Planner will be available in the upcoming release.',
-          ),
-          backgroundColor: Color(0xFF2563EB),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      Navigator.pushNamed(context, '/ai-planner');
     } else if (index == 3) {
       // Community -> Navigate to Community Feed
       Navigator.pushNamed(context, '/community');
@@ -288,9 +279,16 @@ class _HomeScreenState extends State<HomeScreen>
                     animation: _entranceController,
                     selectedCategoryId: _selectedCategoryId,
                     onCategorySelected: (category) {
-                      setState(() {
-                        _selectedCategoryId = category.id;
-                      });
+                      if (category.id == 'all') {
+                        setState(() {
+                          _selectedCategoryId = 'all';
+                        });
+                        return;
+                      }
+                      Navigator.pushNamed(
+                        context,
+                        '/category/${category.id}',
+                      );
                     },
                   ),
 
@@ -312,7 +310,18 @@ class _HomeScreenState extends State<HomeScreen>
                           const SizedBox(height: 14),
 
                           // E. Featured Homestays
-                          HomeFeaturedHomestays(animation: _entranceController),
+                          HomeFeaturedHomestays(
+                            animation: _entranceController,
+                            onViewAllTap: () => Navigator.pushNamed(
+                              context,
+                              '/category/homestays',
+                            ),
+                          ),
+
+                          if (_selectedCategoryId == 'all') ...[
+                            const SizedBox(height: 14),
+                            const HomeCategoryShowcase(),
+                          ],
                         ],
                       ),
                     ),
@@ -320,10 +329,12 @@ class _HomeScreenState extends State<HomeScreen>
                 ],
               ),
         // H. Floating Bottom Navigation Bar
-        bottomNavigationBar: HomeBottomNavigationBar(
-          currentIndex: _currentNavIndex,
-          onTabSelected: _onBottomNavSelected,
-        ),
+        bottomNavigationBar: widget.showBottomNav
+            ? HomeBottomNavigationBar(
+                currentIndex: 0,
+                onTabSelected: _onBottomNavSelected,
+              )
+            : null,
       ),
     );
   }

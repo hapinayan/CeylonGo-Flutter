@@ -24,12 +24,14 @@ class ProfileScreen extends StatefulWidget {
   final UserModel? initialUser;
   final AuthService? authService;
   final SecureStorageService? storageService;
+  final bool showBottomNav;
 
   const ProfileScreen({
     super.key,
     this.initialUser,
     this.authService,
     this.storageService,
+    this.showBottomNav = true,
   });
 
   @override
@@ -356,19 +358,13 @@ class _ProfileScreenState extends State<ProfileScreen>
       }
     } else if (index == 1) {
       // Explore -> /artisan
-      Navigator.pushNamed(context, '/artisan');
+      Navigator.pushReplacementNamed(context, '/artisan');
     } else if (index == 2) {
-      // AI Planner
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('CeylonGo AI Trip Planner is opening...'),
-          backgroundColor: Color(0xFF073B91),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      // AI Planner -> /ai-planner
+      Navigator.pushReplacementNamed(context, '/ai-planner');
     } else if (index == 3) {
       // Community -> /community
-      Navigator.pushNamed(context, '/community');
+      Navigator.pushReplacementNamed(context, '/community');
     }
   }
 
@@ -491,10 +487,12 @@ class _ProfileScreenState extends State<ProfileScreen>
                   ),
                 ),
         ),
-        bottomNavigationBar: HomeBottomNavigationBar(
-          currentIndex: 4,
-          onTabSelected: _onBottomNavSelected,
-        ),
+        bottomNavigationBar: widget.showBottomNav
+            ? HomeBottomNavigationBar(
+                currentIndex: 4,
+                onTabSelected: _onBottomNavSelected,
+              )
+            : null,
       ),
     );
   }

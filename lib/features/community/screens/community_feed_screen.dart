@@ -27,11 +27,13 @@ import 'community_search_screen.dart';
 class CommunityFeedScreen extends StatefulWidget {
   final AuthService? authService;
   final SecureStorageService? storageService;
+  final bool showBottomNav;
 
   const CommunityFeedScreen({
     super.key,
     this.authService,
     this.storageService,
+    this.showBottomNav = true,
   });
 
   @override
@@ -355,19 +357,13 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
       }
     } else if (index == 1) {
       // Explore -> /artisan
-      Navigator.pushNamed(context, '/artisan');
+      Navigator.pushReplacementNamed(context, '/artisan');
     } else if (index == 2) {
-      // AI Planner
-      ScaffoldMessenger.of(context).showSnackBar(
-        const SnackBar(
-          content: Text('CeylonGo AI Trip Planner is opening...'),
-          backgroundColor: Color(0xFF073B91),
-          duration: Duration(seconds: 2),
-        ),
-      );
+      // AI Planner -> /ai-planner
+      Navigator.pushReplacementNamed(context, '/ai-planner');
     } else if (index == 4) {
       // Profile
-      Navigator.pushNamed(context, '/profile');
+      Navigator.pushReplacementNamed(context, '/profile');
     }
   }
 
@@ -485,10 +481,12 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
         ),
 
         // 6. Bottom Navigation Bar with Community tab highlighted (index 3)
-        bottomNavigationBar: HomeBottomNavigationBar(
-          currentIndex: 3,
-          onTabSelected: _onBottomNavSelected,
-        ),
+        bottomNavigationBar: widget.showBottomNav
+            ? HomeBottomNavigationBar(
+                currentIndex: 3,
+                onTabSelected: _onBottomNavSelected,
+              )
+            : null,
       ),
     );
   }

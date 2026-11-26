@@ -42,6 +42,7 @@ class _LoginScreenState extends State<LoginScreen> {
 
   bool _obscurePassword = true;
   bool _isLoading = false;
+  bool _isSuccessPopupShowing = false;
   String? _errorMessage;
   String? _emailServerError;
   String? _passwordServerError;
@@ -94,7 +95,118 @@ class _LoginScreenState extends State<LoginScreen> {
     _onSubmit();
   }
 
+  Future<void> _showLoginSuccessPopupAndNavigate() async {
+    if (!mounted || _isSuccessPopupShowing) return;
+    _isSuccessPopupShowing = true;
+
+    showGeneralDialog<void>(
+      context: context,
+      barrierDismissible: false,
+      barrierLabel: 'Login Successful',
+      barrierColor: Colors.black.withAlpha(90),
+      transitionDuration: const Duration(milliseconds: 240),
+      pageBuilder: (dialogContext, animation, secondaryAnimation) {
+        return Center(
+          child: Material(
+            color: Colors.transparent,
+            child: Container(
+              key: const Key('login_success_popup'),
+              margin: const EdgeInsets.symmetric(horizontal: 32),
+              padding: const EdgeInsets.symmetric(horizontal: 28, vertical: 28),
+              constraints: const BoxConstraints(maxWidth: 320),
+              decoration: BoxDecoration(
+                color: AppTheme.backgroundWhite,
+                borderRadius: BorderRadius.circular(20),
+                border: Border.all(
+                  color: const Color(0xFFDBEAFE),
+                  width: 1.2,
+                ),
+                boxShadow: [
+                  BoxShadow(
+                    color: AppTheme.primaryNavy.withAlpha(30),
+                    blurRadius: 24,
+                    offset: const Offset(0, 10),
+                  ),
+                ],
+              ),
+              child: Column(
+                mainAxisSize: MainAxisSize.min,
+                children: [
+                  Container(
+                    width: 68,
+                    height: 68,
+                    decoration: BoxDecoration(
+                      color: AppTheme.successGreen.withAlpha(25),
+                      shape: BoxShape.circle,
+                      border: Border.all(
+                        color: AppTheme.successGreen.withAlpha(80),
+                        width: 2,
+                      ),
+                    ),
+                    child: const Icon(
+                      Icons.check_circle_rounded,
+                      key: Key('login_success_popup_icon'),
+                      color: AppTheme.successGreen,
+                      size: 42,
+                    ),
+                  ),
+                  const SizedBox(height: 16),
+                  const Text(
+                    'Login Successful!',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 20,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryNavy,
+                      letterSpacing: -0.3,
+                    ),
+                  ),
+                  const SizedBox(height: 6),
+                  const Text(
+                    'Welcome to CeylonGo',
+                    textAlign: TextAlign.center,
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 14,
+                      fontWeight: FontWeight.w500,
+                      color: AppTheme.textSecondary,
+                    ),
+                  ),
+                ],
+              ),
+            ),
+          ),
+        );
+      },
+      transitionBuilder: (dialogContext, animation, secondaryAnimation, child) {
+        final curved = CurvedAnimation(
+          parent: animation,
+          curve: Curves.easeOutBack,
+          reverseCurve: Curves.easeIn,
+        );
+        return FadeTransition(
+          opacity: animation,
+          child: ScaleTransition(
+            scale: Tween<double>(begin: 0.88, end: 1.0).animate(curved),
+            child: child,
+          ),
+        );
+      },
+    );
+
+    await Future.delayed(const Duration(milliseconds: 1500));
+    if (!mounted) return;
+
+    Navigator.of(context).pushNamedAndRemoveUntil(
+      '/home',
+      (route) => false,
+    );
+  }
+
   Future<void> _onSubmit() async {
+    if (_isLoading || _isSuccessPopupShowing) return;
+
     setState(() {
       _errorMessage = null;
       _emailServerError = null;
@@ -135,11 +247,7 @@ class _LoginScreenState extends State<LoginScreen> {
           _isLoading = false;
         });
 
-        Navigator.pushReplacementNamed(
-          context,
-          '/login-success',
-          arguments: {'user': demoUser},
-        );
+        await _showLoginSuccessPopupAndNavigate();
       }
       return;
     }
@@ -169,12 +277,7 @@ class _LoginScreenState extends State<LoginScreen> {
           _isLoading = false;
         });
 
-        // Navigate to Screen 5: Login Successful
-        Navigator.pushReplacementNamed(
-          context,
-          '/login-success',
-          arguments: {'user': response.user},
-        );
+        await _showLoginSuccessPopupAndNavigate();
       }
     } on ApiError catch (e) {
       if (mounted) {

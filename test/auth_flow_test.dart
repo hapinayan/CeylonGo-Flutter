@@ -51,6 +51,7 @@ class MockFlowAuthService extends AuthService {
   String? registeredPassword;
   String? loggedInEmail;
   String? loggedInPassword;
+  bool shouldFailLogin = false;
 
   @override
   Future<RegisterResponse> register({
@@ -78,6 +79,13 @@ class MockFlowAuthService extends AuthService {
     required String email,
     required String password,
   }) async {
+    if (shouldFailLogin) {
+      throw const ApiError(
+        statusCode: 401,
+        code: 'INVALID_CREDENTIALS',
+        message: 'Invalid email or password.',
+      );
+    }
     loggedInEmail = email;
     loggedInPassword = password;
 
@@ -342,9 +350,10 @@ void main() {
   });
 
   group('Screen 4: Welcome Back (LoginScreen) Tests', () {
-    testWidgets('Renders Welcome Back, prefilled email, and signs in',
+    testWidgets(
+        'Renders Welcome Back, shows success popup, and auto-navigates to Home',
         (WidgetTester tester) async {
-      bool loginSuccessNavigated = false;
+      bool homeNavigated = false;
 
       await tester.pumpWidget(wrapWithTheme(
         LoginScreen(
@@ -353,9 +362,9 @@ void main() {
           initialEmail: 'traveler@ceylongo.com',
         ),
         routes: {
-          '/login-success': (context) {
-            loginSuccessNavigated = true;
-            return const Scaffold(body: Text('Login Success Page'));
+          '/home': (context) {
+            homeNavigated = true;
+            return const Scaffold(body: Text('Home Page'));
           },
         },
       ));
@@ -373,11 +382,25 @@ void main() {
       // Submit
       final submitBtn = find.byKey(const Key('login_submit_button'));
       await tester.tap(submitBtn);
-      await tester.pumpAndSettle();
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
 
       expect(mockAuthService.loggedInEmail, 'traveler@ceylongo.com');
       expect(mockAuthService.loggedInPassword, 'SecurePass1');
-      expect(loginSuccessNavigated, isTrue);
+
+      // Success popup is shown before automatic navigation
+      expect(find.byKey(const Key('login_success_popup')), findsOneWidget);
+      expect(find.byKey(const Key('login_success_popup_icon')), findsOneWidget);
+      expect(find.text('Login Successful!'), findsOneWidget);
+      expect(find.text('Welcome to CeylonGo'), findsOneWidget);
+      expect(homeNavigated, isFalse);
+
+      // After ~1.5s, automatically navigates to Home
+      await tester.pump(const Duration(milliseconds: 1300));
+      await tester.pumpAndSettle();
+
+      expect(homeNavigated, isTrue);
+      expect(find.text('Home Page'), findsOneWidget);
     });
 
     testWidgets('Responsive at 320px, 375px, and 430px widths',
@@ -430,7 +453,7 @@ void main() {
 
     testWidgets('Toggles password visibility and supports Offline Demo Flow',
         (WidgetTester tester) async {
-      bool demoNavigated = false;
+      bool homeNavigated = false;
 
       await tester.pumpWidget(wrapWithTheme(
         LoginScreen(
@@ -438,9 +461,9 @@ void main() {
           storageService: fakeStorageService,
         ),
         routes: {
-          '/login-success': (_) {
-            demoNavigated = true;
-            return const Scaffold(body: Text('Demo Login Success'));
+          '/home': (_) {
+            homeNavigated = true;
+            return const Scaffold(body: Text('Home Page'));
           },
         },
       ));
@@ -471,10 +494,55 @@ void main() {
       expect(demoBtn, findsOneWidget);
       await tester.ensureVisible(demoBtn);
       await tester.tap(demoBtn);
+      await tester.pump();
+      await tester.pump(const Duration(milliseconds: 300));
+
+      // Success popup appears first
+      expect(find.byKey(const Key('login_success_popup')), findsOneWidget);
+      expect(find.text('Login Successful!'), findsOneWidget);
+      expect(find.text('Welcome to CeylonGo'), findsOneWidget);
+      expect(homeNavigated, isFalse);
+
+      // Auto-navigates to Home after 1.5s
+      await tester.pump(const Duration(milliseconds: 1300));
       await tester.pumpAndSettle();
 
-      expect(demoNavigated, isTrue);
-      expect(find.text('Demo Login Success'), findsOneWidget);
+      expect(homeNavigated, isTrue);
+      expect(find.text('Home Page'), findsOneWidget);
+    });
+
+    testWidgets(
+        'Remains on LoginScreen with error message and no popup on failed login',
+        (WidgetTester tester) async {
+      mockAuthService.shouldFailLogin = true;
+      bool homeNavigated = false;
+
+      await tester.pumpWidget(wrapWithTheme(
+        LoginScreen(
+          authService: mockAuthService,
+          storageService: fakeStorageService,
+          initialEmail: 'traveler@ceylongo.com',
+        ),
+        routes: {
+          '/home': (_) {
+            homeNavigated = true;
+            return const Scaffold(body: Text('Home Page'));
+          },
+        },
+      ));
+
+      await tester.enterText(
+        find.byKey(const Key('login_password_field')),
+        'WrongPass1',
+      );
+      await tester.tap(find.byKey(const Key('login_submit_button')));
+      await tester.pumpAndSettle();
+
+      expect(find.byKey(const Key('login_success_popup')), findsNothing);
+      expect(find.text('Login Successful!'), findsNothing);
+      expect(find.text('Invalid email or password.'), findsOneWidget);
+      expect(find.text('Welcome Back'), findsOneWidget);
+      expect(homeNavigated, isFalse);
     });
   });
 
