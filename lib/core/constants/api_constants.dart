@@ -67,6 +67,18 @@ class ApiConstants {
   static String communityPostMediaItemEndpoint(int postId, int mediaId) =>
       '$apiV1/community/posts/$postId/media/$mediaId';
 
+  // Provider Financial & Settlement Endpoints (Read-Only FastAPI contracts)
+  static String get providerEarningsSummaryEndpoint =>
+      '$apiV1/providers/me/earnings/summary';
+  static String get providerSettlementsEndpoint =>
+      '$apiV1/providers/me/settlements';
+  static String get paymentsProviderEarningsEndpoint =>
+      '$apiV1/payments/provider/earnings';
+  static String get paymentsProviderSettlementsEndpoint =>
+      '$apiV1/payments/provider/settlements';
+  static String get tourGuideProviderEarningsEndpoint =>
+      '$apiV1/provider/tour-guides/earnings';
+
   // Standard JSON Headers
   static const Map<String, String> defaultHeaders = {
     'Content-Type': 'application/json',
