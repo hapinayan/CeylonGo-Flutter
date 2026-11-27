@@ -337,6 +337,31 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                           ),
                         ),
                       ),
+                      const SizedBox(height: 10),
+                      OutlinedButton.icon(
+                        key: const Key('vendor_reg_identity_btn'),
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          '/vendor/register/identity',
+                        ),
+                        icon: const Icon(
+                          Icons.verified_user_outlined,
+                          size: 18,
+                        ),
+                        label: const Text(
+                          'Real Onboarding: Verify Identity (OTP + NIC)',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: AppTheme.primaryNavy,
+                          side: const BorderSide(color: Color(0xFFBFDBFE)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
                       const SizedBox(height: 14),
 
                       Wrap(

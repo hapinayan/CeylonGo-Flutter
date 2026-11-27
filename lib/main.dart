@@ -30,6 +30,7 @@ import 'features/vendor/screens/vendor_availability_screen.dart';
 import 'features/vendor/screens/vendor_bookings_screen.dart';
 import 'features/vendor/screens/vendor_dashboard_screen.dart';
 import 'features/vendor/screens/vendor_earnings_screen.dart';
+import 'features/vendor/screens/vendor_identity_upload_screen.dart';
 import 'features/vendor/screens/vendor_listings_screen.dart';
 import 'features/vendor/screens/vendor_login_screen.dart';
 import 'features/vendor/screens/vendor_more_screen.dart';
@@ -170,6 +171,8 @@ class CeylonGoApp extends StatefulWidget {
       '/vendor/register': (context) => VendorRegisterScreen(
             storageService: storageService,
           ),
+      '/vendor/register/identity': (context) =>
+          const VendorIdentityUploadScreen(),
       '/vendor/dashboard': (context) => const VendorDashboardScreen(),
       '/vendor/listings': (context) => const VendorListingsScreen(),
       '/vendor/bookings': (context) => const VendorBookingsScreen(),

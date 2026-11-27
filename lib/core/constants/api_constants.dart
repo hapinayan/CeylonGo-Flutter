@@ -32,6 +32,12 @@ class ApiConstants {
   static String get providerMeEndpoint => '$apiV1/providers/me';
   static String get providerChangePasswordEndpoint =>
       '$apiV1/providers/me/change-password';
+  static String get providerOtpSendEndpoint => '$apiV1/providers/otp/send';
+  static String get providerOtpVerifyEndpoint => '$apiV1/providers/otp/verify';
+  static String get providerIdentityUploadEndpoint =>
+      '$apiV1/providers/registration/identity';
+  static String get providerDraftEndpoint =>
+      '$apiV1/providers/registration/draft';
 
   // Standard JSON Headers
   static const Map<String, String> defaultHeaders = {
