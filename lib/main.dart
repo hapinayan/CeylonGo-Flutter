@@ -45,6 +45,9 @@ import 'features/vendor/services/provider_api_service.dart';
 import 'features/vendor/services/vendor_demo_service.dart';
 import 'features/map/screens/interactive_map_screen.dart';
 import 'features/map/services/map_api_service.dart';
+import 'features/recommendations/screens/recommendations_screen.dart';
+import 'features/recommendations/services/recommendation_api_service.dart';
+import 'features/recommendations/services/recommendation_preferences_service.dart';
 import 'features/weather/screens/live_weather_screen.dart';
 import 'features/weather/services/weather_api_service.dart';
 
@@ -60,6 +63,8 @@ class CeylonGoApp extends StatefulWidget {
   final SecureStorageService? storageService;
   final WeatherApiService? weatherService;
   final MapApiService? mapService;
+  final RecommendationApiService? recommendationService;
+  final RecommendationPreferencesStore? preferencesStore;
   final String? initialRoute;
   final GlobalKey<NavigatorState>? navigatorKey;
 
@@ -70,6 +75,8 @@ class CeylonGoApp extends StatefulWidget {
     this.storageService,
     this.weatherService,
     this.mapService,
+    this.recommendationService,
+    this.preferencesStore,
     this.initialRoute,
     this.navigatorKey,
   });
@@ -121,6 +128,8 @@ class CeylonGoApp extends StatefulWidget {
     SecureStorageService? storageService,
     WeatherApiService? weatherService,
     MapApiService? mapService,
+    RecommendationApiService? recommendationService,
+    RecommendationPreferencesStore? preferencesStore,
   }) {
     return {
       '/auth': (context) => const AuthLandingScreen(),
@@ -211,6 +220,10 @@ class CeylonGoApp extends StatefulWidget {
           ),
       '/map': (context) => InteractiveMapScreen(
             mapService: mapService,
+          ),
+      '/recommendations': (context) => RecommendationsScreen(
+            recommendationService: recommendationService,
+            preferencesStore: preferencesStore,
           ),
       '/profile': (context) => MainNavigationShell(
             initialIndex: 4,
@@ -392,6 +405,8 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
       storageService: widget.storageService,
       weatherService: widget.weatherService,
       mapService: widget.mapService,
+      recommendationService: widget.recommendationService,
+      preferencesStore: widget.preferencesStore,
     );
 
     return MaterialApp(
