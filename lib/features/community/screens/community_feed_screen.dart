@@ -2,10 +2,15 @@ import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
 import '../../../core/services/secure_storage_service.dart';
+import '../../auth/models/api_error.dart';
 import '../../auth/services/auth_service.dart';
 import '../../home/widgets/home_bottom_navigation_bar.dart';
+import '../models/community_api_models.dart';
+import '../models/community_author_model.dart';
 import '../models/community_post_model.dart';
+import '../services/community_api_service.dart';
 import '../services/community_demo_service.dart';
+import '../services/community_photo_picker.dart';
 import '../widgets/community_comments_sheet.dart';
 import '../widgets/community_notifications_sheet.dart';
 import '../widgets/community_post_card.dart';
@@ -27,12 +32,18 @@ import 'community_search_screen.dart';
 class CommunityFeedScreen extends StatefulWidget {
   final AuthService? authService;
   final SecureStorageService? storageService;
+  final CommunityApiService? apiService;
+  final CommunityPhotoPicker? photoPicker;
+  final String? realAuthToken;
   final bool showBottomNav;
 
   const CommunityFeedScreen({
     super.key,
     this.authService,
     this.storageService,
+    this.apiService,
+    this.photoPicker,
+    this.realAuthToken,
     this.showBottomNav = true,
   });
 
@@ -49,13 +60,35 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
   String _selectedHashtag = '#All';
   double _composeScale = 1.0;
 
+  late final CommunityApiService _apiService;
+  String? _activeAuthToken;
+  bool _isLoadingRealFeed = false;
+  String? _realFeedError;
+  List<CommunityPostModel> _realPosts = const [];
+
+  bool get _isRealMode {
+    final t = _activeAuthToken?.trim();
+    return t != null && t.isNotEmpty && !t.startsWith('demo-');
+  }
+
   @override
   void initState() {
     super.initState();
+    _apiService = widget.apiService ?? CommunityApiService();
     _entranceController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
+
+    final initialToken = widget.realAuthToken?.trim();
+    if (initialToken != null &&
+        initialToken.isNotEmpty &&
+        !initialToken.startsWith('demo-')) {
+      _activeAuthToken = initialToken;
+      _loadRealFeed();
+    } else if (widget.storageService != null) {
+      _resolveStoredTravelerSession();
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -74,7 +107,95 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
     super.dispose();
   }
 
+  Future<void> _resolveStoredTravelerSession() async {
+    try {
+      final token = await widget.storageService!.getToken();
+      final user = await widget.storageService!.getUser();
+      if (!mounted) return;
+      if (token != null &&
+          token.trim().isNotEmpty &&
+          !token.startsWith('demo-') &&
+          user?.role != 'provider') {
+        setState(() {
+          _activeAuthToken = token.trim();
+        });
+        await _loadRealFeed();
+      }
+    } catch (_) {
+      // Remain in Demo Community Mode if storage cannot be read.
+    }
+  }
+
+  Future<void> _loadRealFeed() async {
+    if (!_isRealMode) return;
+    setState(() {
+      _isLoadingRealFeed = true;
+      _realFeedError = null;
+    });
+    try {
+      final res = await _apiService.getFeed(
+        authToken: _activeAuthToken,
+        followingOnly: _selectedTabIndex == 1,
+        hashtag: _selectedHashtag,
+      );
+      if (!mounted) return;
+      setState(() {
+        _isLoadingRealFeed = false;
+        _realPosts = res.items.map(_mapApiPost).toList();
+      });
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingRealFeed = false;
+        _realFeedError = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoadingRealFeed = false;
+        _realFeedError = 'Unable to load community feed right now.';
+      });
+    }
+  }
+
+  CommunityPostModel _mapApiPost(CommunityApiPost post) {
+    final name = post.author.fullName;
+    final parts = name.split(' ').where((p) => p.isNotEmpty).toList();
+    final initials = parts.length >= 2
+        ? '${parts.first[0]}${parts.last[0]}'.toUpperCase()
+        : (name.isNotEmpty ? name[0].toUpperCase() : 'T');
+
+    return CommunityPostModel(
+      id: post.id.toString(),
+      author: CommunityAuthorModel(
+        id: post.authorId.toString(),
+        name: name,
+        handle: name.toLowerCase().replaceAll(RegExp(r'\s+'), '_'),
+        initials: initials,
+        isVerifiedProvider: post.author.isVerifiedProvider,
+        providerBadgeLabel: post.author.businessName,
+        bio: '',
+        location: post.district ?? post.locationTag ?? 'Sri Lanka',
+        followersCount: 0,
+        followingCount: 0,
+        postCount: 0,
+      ),
+      caption: post.content,
+      hashtags: post.hashtags,
+      location: post.locationTag ?? post.district ?? 'Sri Lanka',
+      imageUrl: post.media.isNotEmpty ? post.media.first.resolvedUrl : null,
+      createdAt: post.createdAt ?? DateTime.now(),
+      likesCount: post.likesCount,
+      commentsCount: post.commentsCount,
+      isLikedByDemoUser: post.isLiked,
+      isSavedByDemoUser: post.isSaved,
+    );
+  }
+
   List<CommunityPostModel> _getCurrentFeedPosts() {
+    if (_isRealMode) {
+      return _realPosts;
+    }
     switch (_selectedTabIndex) {
       case 0:
         return _demoService.getForYouPosts(hashtagFilter: _selectedHashtag);
@@ -148,11 +269,20 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => CreateCommunityPostSheet(
+        authToken: _activeAuthToken,
+        apiService: _apiService,
+        photoPicker: widget.photoPicker,
+        onRealPostPublished: (_) {
+          _loadRealFeed();
+        },
         onPostPublished: () {
           setState(() {
             _selectedTabIndex = 0; // Switch to For You feed to see new post immediately
             _selectedHashtag = '#All';
           });
+          if (_isRealMode) {
+            _loadRealFeed();
+          }
         },
       ),
     );
@@ -405,12 +535,48 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
 
               // 4. Community Posts Feed
               Expanded(
-                child: posts.isEmpty
-                    ? _buildEmptyState()
-                    : RefreshIndicator(
-                        onRefresh: () async {
-                          setState(() {});
-                        },
+                child: _isRealMode && _isLoadingRealFeed && posts.isEmpty
+                    ? const Center(
+                        key: Key('community_real_loading'),
+                        child: CircularProgressIndicator(
+                          color: Color(0xFF073B91),
+                        ),
+                      )
+                    : _isRealMode && _realFeedError != null && posts.isEmpty
+                        ? Center(
+                            key: const Key('community_real_error'),
+                            child: Padding(
+                              padding: const EdgeInsets.all(24),
+                              child: Column(
+                                mainAxisSize: MainAxisSize.min,
+                                children: [
+                                  Text(
+                                    _realFeedError!,
+                                    textAlign: TextAlign.center,
+                                    style: const TextStyle(
+                                      fontFamily: 'Inter',
+                                      color: Color(0xFF475569),
+                                    ),
+                                  ),
+                                  const SizedBox(height: 12),
+                                  ElevatedButton(
+                                    onPressed: _loadRealFeed,
+                                    child: const Text('Retry'),
+                                  ),
+                                ],
+                              ),
+                            ),
+                          )
+                        : posts.isEmpty
+                            ? _buildEmptyState()
+                            : RefreshIndicator(
+                                onRefresh: () async {
+                                  if (_isRealMode) {
+                                    await _loadRealFeed();
+                                  } else {
+                                    setState(() {});
+                                  }
+                                },
                         color: const Color(0xFF073B91),
                         child: ListView.builder(
                           key: const Key('community_feed_list'),

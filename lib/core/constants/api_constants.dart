@@ -57,6 +57,16 @@ class ApiConstants {
   static String get mapCategoriesEndpoint => '$apiV1/map/categories';
   static String get mapRouteEndpoint => '$apiV1/map/route';
 
+  // Travel Community Endpoints (FastAPI /api/v1/community)
+  static String get communityFeedEndpoint => '$apiV1/community/feed';
+  static String get communityPostsEndpoint => '$apiV1/community/posts';
+  static String communityPostEndpoint(int postId) =>
+      '$apiV1/community/posts/$postId';
+  static String communityPostMediaEndpoint(int postId) =>
+      '$apiV1/community/posts/$postId/media';
+  static String communityPostMediaItemEndpoint(int postId, int mediaId) =>
+      '$apiV1/community/posts/$postId/media/$mediaId';
+
   // Standard JSON Headers
   static const Map<String, String> defaultHeaders = {
     'Content-Type': 'application/json',
