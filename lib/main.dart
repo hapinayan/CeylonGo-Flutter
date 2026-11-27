@@ -25,6 +25,7 @@ import 'features/auth/screens/password_reset_success_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/registration_success_screen.dart';
 import 'features/auth/services/auth_service.dart';
+import 'features/vendor/screens/provider_onboarding_screen.dart';
 import 'features/vendor/screens/vendor_about_screen.dart';
 import 'features/vendor/screens/vendor_availability_screen.dart';
 import 'features/vendor/screens/vendor_bookings_screen.dart';
@@ -171,6 +172,8 @@ class CeylonGoApp extends StatefulWidget {
       '/vendor/register': (context) => VendorRegisterScreen(
             storageService: storageService,
           ),
+      '/vendor/register/onboarding': (context) =>
+          const ProviderOnboardingScreen(),
       '/vendor/register/identity': (context) =>
           const VendorIdentityUploadScreen(),
       '/vendor/dashboard': (context) => const VendorDashboardScreen(),

@@ -208,11 +208,32 @@ class ProviderOtpVerifyResult {
   }
 }
 
-/// Response from `POST /api/v1/providers/registration/identity` and
-/// `GET /api/v1/providers/registration/draft` (`DraftResponse`).
+/// Response from `POST /api/v1/providers/registration/identity`,
+/// `PUT /personal`, `PUT /business`, and `GET /draft` (`DraftResponse`).
 class ProviderDraftStatus {
   final String email;
+  final String? fullName;
+  final String? phone;
   final String identityDocumentType;
+  final String? nicNumber;
+  final String? dateOfBirth;
+  final String? gender;
+  final String? nationality;
+  final String? permanentProvince;
+  final String? permanentDistrict;
+  final String? permanentCity;
+  final String? permanentLandmark;
+  final String? permanentPostalCode;
+  final String? businessName;
+  final String? providerType;
+  final String? secondaryPhone;
+  final String? businessProvince;
+  final String? businessDistrict;
+  final String? businessCity;
+  final String? businessLandmark;
+  final String? businessPostalCode;
+  final String? businessRegistrationNumber;
+  final String? description;
   final bool selfieUploaded;
   final bool nicFrontUploaded;
   final bool nicBackUploaded;
@@ -223,7 +244,28 @@ class ProviderDraftStatus {
 
   const ProviderDraftStatus({
     required this.email,
+    this.fullName,
+    this.phone,
     this.identityDocumentType = 'nic',
+    this.nicNumber,
+    this.dateOfBirth,
+    this.gender,
+    this.nationality,
+    this.permanentProvince,
+    this.permanentDistrict,
+    this.permanentCity,
+    this.permanentLandmark,
+    this.permanentPostalCode,
+    this.businessName,
+    this.providerType,
+    this.secondaryPhone,
+    this.businessProvince,
+    this.businessDistrict,
+    this.businessCity,
+    this.businessLandmark,
+    this.businessPostalCode,
+    this.businessRegistrationNumber,
+    this.description,
     this.selfieUploaded = false,
     this.nicFrontUploaded = false,
     this.nicBackUploaded = false,
@@ -233,11 +275,36 @@ class ProviderDraftStatus {
     this.currentStep = 'personal',
   });
 
+  bool get readyToSubmit =>
+      personalCompleted && businessCompleted && identityCompleted;
+
   factory ProviderDraftStatus.fromJson(Map<String, dynamic> json) {
     return ProviderDraftStatus(
       email: (json['email'] as String?) ?? '',
+      fullName: json['full_name'] as String?,
+      phone: json['phone'] as String?,
       identityDocumentType:
           (json['identity_document_type'] as String?) ?? 'nic',
+      nicNumber: json['nic_number'] as String?,
+      dateOfBirth: json['date_of_birth'] as String?,
+      gender: json['gender'] as String?,
+      nationality: json['nationality'] as String?,
+      permanentProvince: json['permanent_province'] as String?,
+      permanentDistrict: json['permanent_district'] as String?,
+      permanentCity: json['permanent_city'] as String?,
+      permanentLandmark: json['permanent_landmark'] as String?,
+      permanentPostalCode: json['permanent_postal_code'] as String?,
+      businessName: json['business_name'] as String?,
+      providerType: json['provider_type'] as String?,
+      secondaryPhone: json['secondary_phone'] as String?,
+      businessProvince: json['business_province'] as String?,
+      businessDistrict: json['business_district'] as String?,
+      businessCity: json['business_city'] as String?,
+      businessLandmark: json['business_landmark'] as String?,
+      businessPostalCode: json['business_postal_code'] as String?,
+      businessRegistrationNumber:
+          json['business_registration_number'] as String?,
+      description: json['description'] as String?,
       selfieUploaded: json['selfie_uploaded'] as bool? ?? false,
       nicFrontUploaded: json['nic_front_uploaded'] as bool? ?? false,
       nicBackUploaded: json['nic_back_uploaded'] as bool? ?? false,
@@ -246,6 +313,212 @@ class ProviderDraftStatus {
       identityCompleted: json['identity_completed'] as bool? ?? false,
       currentStep: (json['current_step'] as String?) ?? 'personal',
     );
+  }
+}
+
+/// Request payload for `PUT /api/v1/providers/registration/personal`.
+class PersonalDetailsPayload {
+  final String fullName;
+  final String phone;
+  final String dateOfBirth; // YYYY-MM-DD
+  final String gender; // Male | Female | Other
+  final String nationality;
+  final String identityDocumentType; // nic | passport
+  final String nicNumber;
+  final String permanentProvince;
+  final String permanentDistrict;
+  final String permanentCity;
+  final String permanentLandmark;
+  final String permanentPostalCode;
+
+  const PersonalDetailsPayload({
+    required this.fullName,
+    required this.phone,
+    required this.dateOfBirth,
+    required this.gender,
+    required this.nationality,
+    required this.identityDocumentType,
+    required this.nicNumber,
+    required this.permanentProvince,
+    required this.permanentDistrict,
+    required this.permanentCity,
+    required this.permanentLandmark,
+    required this.permanentPostalCode,
+  });
+
+  Map<String, dynamic> toJson() {
+    return {
+      'full_name': fullName.trim(),
+      'phone': phone.trim(),
+      'date_of_birth': dateOfBirth.trim(),
+      'gender': gender.trim(),
+      'nationality': nationality.trim(),
+      'identity_document_type': identityDocumentType.trim().toLowerCase(),
+      'nic_number': nicNumber.trim().toUpperCase(),
+      'permanent_province': permanentProvince.trim(),
+      'permanent_district': permanentDistrict.trim(),
+      'permanent_city': permanentCity.trim(),
+      'permanent_landmark': permanentLandmark.trim(),
+      'permanent_postal_code': permanentPostalCode.trim(),
+    };
+  }
+}
+
+/// Request payload for `PUT /api/v1/providers/registration/business`.
+class BusinessDetailsPayload {
+  final String businessName;
+  final String providerType;
+  final String? secondaryPhone;
+  final String? businessProvince;
+  final String? businessDistrict;
+  final String? businessCity;
+  final String? businessLandmark;
+  final String? businessPostalCode;
+  final String? businessRegistrationNumber;
+  final String description;
+  final bool sameAsPermanent;
+
+  const BusinessDetailsPayload({
+    required this.businessName,
+    required this.providerType,
+    this.secondaryPhone,
+    this.businessProvince,
+    this.businessDistrict,
+    this.businessCity,
+    this.businessLandmark,
+    this.businessPostalCode,
+    this.businessRegistrationNumber,
+    required this.description,
+    this.sameAsPermanent = false,
+  });
+
+  Map<String, dynamic> toJson() {
+    String? cleanOpt(String? v) {
+      final t = v?.trim();
+      return (t == null || t.isEmpty) ? null : t;
+    }
+
+    return {
+      'business_name': businessName.trim(),
+      'provider_type': providerType.trim().toLowerCase(),
+      'secondary_phone': cleanOpt(secondaryPhone),
+      'business_province': cleanOpt(businessProvince),
+      'business_district': cleanOpt(businessDistrict),
+      'business_city': cleanOpt(businessCity),
+      'business_landmark': cleanOpt(businessLandmark),
+      'business_postal_code': cleanOpt(businessPostalCode),
+      'business_registration_number': cleanOpt(businessRegistrationNumber),
+      'description': description.trim(),
+      'same_as_permanent': sameAsPermanent,
+    };
+  }
+}
+
+/// Response from `POST /api/v1/providers/registration/submit`.
+class ProviderRegistrationSubmitResult {
+  final bool submitted;
+  final String approvalStatus;
+  final String nextAction;
+  final String message;
+
+  const ProviderRegistrationSubmitResult({
+    required this.submitted,
+    required this.approvalStatus,
+    required this.nextAction,
+    required this.message,
+  });
+
+  factory ProviderRegistrationSubmitResult.fromJson(
+    Map<String, dynamic> json,
+  ) {
+    return ProviderRegistrationSubmitResult(
+      submitted: json['submitted'] as bool? ?? false,
+      approvalStatus: (json['approval_status'] as String?) ?? 'pending',
+      nextAction: (json['next_action'] as String?) ?? 'await_admin_review',
+      message: (json['message'] as String?) ??
+          'Your application has been submitted for review.',
+    );
+  }
+}
+
+enum BackendProviderType {
+  homestay('homestay', 'Homestay Provider'),
+  tourGuide('tour_guide', 'Local Tour Guide'),
+  activity('activity', 'Activity Provider'),
+  ecoTourism('eco_tourism', 'Eco Tourism Provider'),
+  artisan('artisan', 'Artisan Provider'),
+  rental('rental', 'Rental Provider');
+
+  final String apiValue;
+  final String displayLabel;
+
+  const BackendProviderType(this.apiValue, this.displayLabel);
+}
+
+/// Validators aligned with `PersonalDetailsRequest` and `BusinessDetailsRequest`
+/// in `CeylonGo-Backend/app/schemas/provider_registration.py`.
+class ProviderOnboardingValidators {
+  static final RegExp _oldNicRegex = RegExp(r'^[0-9]{9}[VX]$');
+  static final RegExp _newNicRegex = RegExp(r'^[0-9]{12}$');
+  static final RegExp _passportRegex = RegExp(r'^[A-Z0-9]{6,12}$');
+  static final RegExp _dobRegex = RegExp(r'^\d{4}-\d{2}-\d{2}$');
+
+  static String? validateRequiredLength(
+    String? value, {
+    required String label,
+    required int minLength,
+    required int maxLength,
+  }) {
+    final text = value?.trim() ?? '';
+    if (text.length < minLength) {
+      return '$label must be at least $minLength characters.';
+    }
+    if (text.length > maxLength) {
+      return '$label cannot exceed $maxLength characters.';
+    }
+    return null;
+  }
+
+  static String? validateDateOfBirth(String? value, {DateTime? now}) {
+    final text = value?.trim() ?? '';
+    if (!_dobRegex.hasMatch(text)) {
+      return 'Enter date of birth in YYYY-MM-DD format.';
+    }
+    final parsed = DateTime.tryParse(text);
+    if (parsed == null) {
+      return 'Enter a valid calendar date (YYYY-MM-DD).';
+    }
+    final today = now ?? DateTime.now().toUtc();
+    final todayDate = DateTime.utc(today.year, today.month, today.day);
+    if (!parsed.isBefore(todayDate)) {
+      return 'Date of birth must be in the past.';
+    }
+    var age = todayDate.year - parsed.year;
+    if (todayDate.month < parsed.month ||
+        (todayDate.month == parsed.month && todayDate.day < parsed.day)) {
+      age -= 1;
+    }
+    if (age < 18) {
+      return 'Primary contact must be at least 18 years old.';
+    }
+    return null;
+  }
+
+  static String? validateIdentityNumber(
+    String? value, {
+    required String docType,
+  }) {
+    final cleaned = (value ?? '').trim().toUpperCase();
+    if (docType == 'passport') {
+      if (!_passportRegex.hasMatch(cleaned)) {
+        return 'Passport must be 6–12 alphanumeric characters.';
+      }
+      return null;
+    }
+    if (!(_oldNicRegex.hasMatch(cleaned) || _newNicRegex.hasMatch(cleaned))) {
+      return 'Enter a valid NIC (e.g. 123456789V or 200012345678).';
+    }
+    return null;
   }
 }
 

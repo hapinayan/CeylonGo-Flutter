@@ -339,6 +339,31 @@ class _VendorRegisterScreenState extends State<VendorRegisterScreen> {
                       ),
                       const SizedBox(height: 10),
                       OutlinedButton.icon(
+                        key: const Key('vendor_reg_real_onboarding_btn'),
+                        onPressed: () => Navigator.pushNamed(
+                          context,
+                          '/vendor/register/onboarding',
+                        ),
+                        icon: const Icon(
+                          Icons.app_registration_rounded,
+                          size: 18,
+                        ),
+                        label: const Text(
+                          'Register as a Real Provider (OTP + KYC)',
+                          maxLines: 1,
+                          overflow: TextOverflow.ellipsis,
+                        ),
+                        style: OutlinedButton.styleFrom(
+                          foregroundColor: const Color(0xFF0A4DF5),
+                          side: const BorderSide(color: Color(0xFF0A4DF5)),
+                          shape: RoundedRectangleBorder(
+                            borderRadius: BorderRadius.circular(12),
+                          ),
+                          padding: const EdgeInsets.symmetric(vertical: 12),
+                        ),
+                      ),
+                      const SizedBox(height: 8),
+                      OutlinedButton.icon(
                         key: const Key('vendor_reg_identity_btn'),
                         onPressed: () => Navigator.pushNamed(
                           context,

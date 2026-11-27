@@ -8,8 +8,9 @@ import '../../../core/constants/api_constants.dart';
 import '../../auth/models/api_error.dart';
 import '../models/provider_identity_models.dart';
 
-/// HTTP client for Provider Onboarding OTP, Draft, and Identity Document
-/// Multipart Upload (`POST /api/v1/providers/registration/identity`).
+/// HTTP client for Provider Onboarding OTP, Draft, Personal/Business Details,
+/// Identity Document Multipart Upload (`POST /api/v1/providers/registration/identity`),
+/// and Final Submission (`POST /api/v1/providers/registration/submit`).
 ///
 /// Security: Never logs authorization tokens, NIC numbers, filenames, or image bytes.
 class ProviderIdentityService {
@@ -93,6 +94,97 @@ class ProviderIdentityService {
       final data = _decodeJson(response.body);
       if (response.statusCode == 200) {
         return ProviderDraftStatus.fromJson(data);
+      }
+      throw _parseApiError(response.statusCode, data);
+    } on ApiError {
+      rethrow;
+    } on SocketException {
+      throw ApiError.network();
+    } on TimeoutException {
+      throw ApiError.timeout();
+    } on http.ClientException {
+      throw ApiError.network();
+    }
+  }
+
+  Future<ProviderDraftStatus> savePersonalDetails({
+    required String registrationAuthToken,
+    required PersonalDetailsPayload payload,
+  }) async {
+    _ensureAuthToken(registrationAuthToken);
+    final url = Uri.parse(ApiConstants.providerPersonalEndpoint);
+    try {
+      final response = await _client
+          .put(
+            url,
+            headers: ApiConstants.authHeaders(registrationAuthToken),
+            body: jsonEncode(payload.toJson()),
+          )
+          .timeout(timeoutDuration);
+
+      final data = _decodeJson(response.body);
+      if (response.statusCode == 200) {
+        return ProviderDraftStatus.fromJson(data);
+      }
+      throw _parseApiError(response.statusCode, data);
+    } on ApiError {
+      rethrow;
+    } on SocketException {
+      throw ApiError.network();
+    } on TimeoutException {
+      throw ApiError.timeout();
+    } on http.ClientException {
+      throw ApiError.network();
+    }
+  }
+
+  Future<ProviderDraftStatus> saveBusinessDetails({
+    required String registrationAuthToken,
+    required BusinessDetailsPayload payload,
+  }) async {
+    _ensureAuthToken(registrationAuthToken);
+    final url = Uri.parse(ApiConstants.providerBusinessEndpoint);
+    try {
+      final response = await _client
+          .put(
+            url,
+            headers: ApiConstants.authHeaders(registrationAuthToken),
+            body: jsonEncode(payload.toJson()),
+          )
+          .timeout(timeoutDuration);
+
+      final data = _decodeJson(response.body);
+      if (response.statusCode == 200) {
+        return ProviderDraftStatus.fromJson(data);
+      }
+      throw _parseApiError(response.statusCode, data);
+    } on ApiError {
+      rethrow;
+    } on SocketException {
+      throw ApiError.network();
+    } on TimeoutException {
+      throw ApiError.timeout();
+    } on http.ClientException {
+      throw ApiError.network();
+    }
+  }
+
+  Future<ProviderRegistrationSubmitResult> submitRegistration(
+    String registrationAuthToken,
+  ) async {
+    _ensureAuthToken(registrationAuthToken);
+    final url = Uri.parse(ApiConstants.providerSubmitEndpoint);
+    try {
+      final response = await _client
+          .post(
+            url,
+            headers: ApiConstants.authHeaders(registrationAuthToken),
+          )
+          .timeout(timeoutDuration);
+
+      final data = _decodeJson(response.body);
+      if (response.statusCode == 200) {
+        return ProviderRegistrationSubmitResult.fromJson(data);
       }
       throw _parseApiError(response.statusCode, data);
     } on ApiError {
@@ -229,6 +321,8 @@ class ProviderIdentityService {
         return 'UNAUTHORIZED';
       case 403:
         return 'FORBIDDEN';
+      case 409:
+        return 'CONFLICT';
       case 413:
         return 'PAYLOAD_TOO_LARGE';
       case 415:
@@ -251,6 +345,8 @@ class ProviderIdentityService {
         return 'Registration authorization expired or missing. Please verify your email again.';
       case 403:
         return 'This account is not authorized for provider identity upload.';
+      case 409:
+        return 'This email or identity document is already registered.';
       case 413:
         return 'Uploaded image exceeds the 5 MB server limit.';
       case 415:
@@ -262,4 +358,3 @@ class ProviderIdentityService {
     }
   }
 }
-
