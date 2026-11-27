@@ -9,6 +9,7 @@ import 'package:ceylongo/features/artisan/models/artisan_promotion_model.dart';
 import 'package:ceylongo/features/artisan/models/artisan_review_model.dart';
 import 'package:ceylongo/features/artisan/screens/artisan_business_detail_screen.dart';
 import 'package:ceylongo/features/artisan/screens/artisan_wishlist_screen.dart';
+import 'package:ceylongo/features/artisan/services/artisan_demo_service.dart';
 import 'package:ceylongo/features/artisan/services/artisan_service.dart';
 import 'package:ceylongo/features/artisan/widgets/promotion_banner_card.dart';
 import 'package:ceylongo/features/artisan/widgets/review_breakdown_widget.dart';
@@ -201,7 +202,15 @@ void main() {
   });
 
   group('ArtisanBusinessDetailScreen Phase 2 Integrations', () {
-    testWidgets('renders wishlist toggle, active promotions, and reviews breakdown', (tester) async {
+    setUp(() {
+      ArtisanDemoService.isDemoMode = true;
+    });
+
+    tearDown(() {
+      ArtisanDemoService.isDemoMode = false;
+    });
+
+    testWidgets('renders wishlist toggle, active promotions, and reviews breakdown in demo mode', (tester) async {
       tester.view.physicalSize = const Size(1200, 3000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {

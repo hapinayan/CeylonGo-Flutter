@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ceylongo/core/services/secure_storage_service.dart';
 import 'package:ceylongo/core/theme/app_theme.dart';
+import 'package:ceylongo/features/artisan/services/artisan_demo_service.dart';
 import 'package:ceylongo/features/auth/models/api_error.dart';
 import 'package:ceylongo/features/auth/models/auth_response.dart';
 import 'package:ceylongo/features/auth/models/user_model.dart';
@@ -121,13 +122,25 @@ void main() {
       expect(find.byKey(const Key('login_submit_button')), findsOneWidget);
       expect(find.text('Sign In'), findsOneWidget);
       expect(find.text('Create Account'), findsOneWidget);
+      expect(find.text('Service Provider Portal'), findsOneWidget);
+      expect(find.byKey(const Key('offline_demo_login_button')), findsNothing);
+      expect(find.byType(AuthTrustFooter), findsOneWidget);
+      expect(find.byType(AuthWaveDecoration), findsOneWidget);
+    });
+
+    testWidgets('Shows Offline Demo Flow only when demo mode is enabled', (
+      WidgetTester tester,
+    ) async {
+      ArtisanDemoService.isDemoMode = true;
+      addTearDown(() => ArtisanDemoService.isDemoMode = false);
+
+      await tester.pumpWidget(createWidgetUnderTest());
+
       expect(find.text('Offline Demo Flow'), findsOneWidget);
       expect(
         find.byKey(const Key('offline_demo_login_button')),
         findsOneWidget,
       );
-      expect(find.byType(AuthTrustFooter), findsOneWidget);
-      expect(find.byType(AuthWaveDecoration), findsOneWidget);
     });
 
     testWidgets('Validates empty email and password fields', (

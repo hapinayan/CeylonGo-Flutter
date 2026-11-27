@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ceylongo/core/theme/app_theme.dart';
+import 'package:ceylongo/features/artisan/services/artisan_demo_service.dart';
 import 'package:ceylongo/features/auth/models/user_model.dart';
 import 'package:ceylongo/features/home/screens/home_screen.dart';
 import 'package:ceylongo/features/home/widgets/home_ai_planner_banner.dart';
@@ -22,6 +23,14 @@ void main() {
     email: 'kamal@ceylongo.com',
     role: 'tourist',
   );
+
+  setUp(() {
+    ArtisanDemoService.isDemoMode = true;
+  });
+
+  tearDown(() {
+    ArtisanDemoService.isDemoMode = false;
+  });
 
   Widget createHomeScreen({
     UserModel? user,
@@ -252,10 +261,7 @@ void main() {
 
         expect(find.text('Explore Traditional Artisans'), findsNothing);
         expect(find.text('Artisan Discovery Screen'), findsNothing);
-        expect(
-          find.textContaining('Traditional Villa with garden'),
-          findsWidgets,
-        );
+        expect(find.text('Homestays Page'), findsOneWidget);
       },
     );
 
@@ -313,8 +319,8 @@ void main() {
 
       await tapAndSettle(tester, notifBtn);
 
-      expect(find.text('Notifications'), findsOneWidget);
-      expect(find.text('View Artisan Discoveries'), findsOneWidget);
+      expect(find.text('Notifications (Demo)'), findsOneWidget);
+      expect(find.text('Demo preview mode is active.'), findsOneWidget);
     });
 
     testWidgets('Bottom navigation Explore tab navigates to /artisan', (

@@ -1,6 +1,6 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_theme.dart';
+import '../../categories/screens/homestays_category_screen.dart';
 
 class DestinationItem {
   final String name;
@@ -99,17 +99,10 @@ class HomePopularDestinations extends StatelessWidget {
                   const SizedBox(width: 8),
                   InkWell(
                     onTap: onViewAllTap ??
-                        () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Exploring all 25 Sri Lankan travel districts!'),
-                              backgroundColor: AppTheme.primaryNavy,
-                            ),
-                          );
-                        },
-                    child: Row(
+                        () => Navigator.pushNamed(context, '/category/homestays'),
+                    child: const Row(
                       mainAxisSize: MainAxisSize.min,
-                      children: const [
+                      children: [
                         Text(
                           'View all',
                           style: TextStyle(
@@ -147,7 +140,14 @@ class HomePopularDestinations extends StatelessWidget {
                     destination: destination,
                     onTap: () => onDestinationTap != null
                         ? onDestinationTap!(destination)
-                        : Navigator.pushNamed(context, '/artisan'),
+                        : Navigator.push(
+                            context,
+                            MaterialPageRoute(
+                              builder: (_) => HomestaysCategoryScreen(
+                                initialDestination: destination.name,
+                              ),
+                            ),
+                          ),
                   );
                 },
               ),

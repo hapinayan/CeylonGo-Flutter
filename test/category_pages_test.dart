@@ -28,6 +28,10 @@ void main() {
     ArtisanDemoService.instance.resetToDefaults();
   });
 
+  tearDown(() {
+    ArtisanDemoService.isDemoMode = false;
+  });
+
   Widget createRoutedApp() {
     return MaterialApp(
       theme: AppTheme.lightTheme,
@@ -65,7 +69,7 @@ void main() {
           ('category_filter_eco', 'Eco Tourism'),
           ('category_filter_activities', 'Activities'),
           ('category_filter_guides', 'Local Guides'),
-          ('category_filter_rentals', 'Rentals'),
+          ('category_filter_rentals', 'Bike & Bicycle Rentals'),
         ];
 
         for (final (keyName, pageTitle) in cases) {
@@ -210,7 +214,7 @@ void main() {
       await tester.tap(
         find.descendant(
           of: find.byType(CategoryChipFilterRow),
-          matching: find.text('Scooters'),
+          matching: find.text('Bikes'),
         ),
       );
       await tester.pumpAndSettle();

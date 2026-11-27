@@ -1,7 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_theme.dart';
-
 /// Section E: Quick Actions Card
 /// Displays 4 action shortcuts: My Bookings, Saved, Promotions, Community
 /// in a clean white rounded card matching the approved reference screenshot.
@@ -66,7 +64,7 @@ class HomeQuickActions extends StatelessWidget {
                     icon: Icons.event_note_outlined,
                     label: 'My Bookings',
                     onTap: onBookingsTap ??
-                        () => Navigator.pushNamed(context, '/artisan/reservations'),
+                        () => Navigator.pushNamed(context, '/bookings'),
                   ),
                 ),
                 Container(
@@ -80,7 +78,7 @@ class HomeQuickActions extends StatelessWidget {
                     icon: Icons.favorite_border_rounded,
                     label: 'Saved',
                     onTap: onSavedTap ??
-                        () => Navigator.pushNamed(context, '/artisan/wishlist'),
+                        () => Navigator.pushNamed(context, '/wishlist'),
                   ),
                 ),
                 Container(
@@ -91,17 +89,10 @@ class HomeQuickActions extends StatelessWidget {
                 Expanded(
                   child: _QuickActionButton(
                     keyName: 'quick_action_promotions',
-                    icon: Icons.percent_rounded,
-                    label: 'Promotions',
+                    icon: Icons.storefront_outlined,
+                    label: 'Artisans',
                     onTap: onPromotionsTap ??
-                        () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Special promotions and seasonal offers are coming soon!'),
-                              backgroundColor: AppTheme.primaryNavy,
-                            ),
-                          );
-                        },
+                        () => Navigator.pushNamed(context, '/artisan'),
                   ),
                 ),
                 Container(
@@ -115,14 +106,7 @@ class HomeQuickActions extends StatelessWidget {
                     icon: Icons.people_outline_rounded,
                     label: 'Community',
                     onTap: onCommunityTap ??
-                        () {
-                          ScaffoldMessenger.of(context).showSnackBar(
-                            const SnackBar(
-                              content: Text('Traveler community stories & tips are coming soon!'),
-                              backgroundColor: AppTheme.primaryNavy,
-                            ),
-                          );
-                        },
+                        () => Navigator.pushNamed(context, '/community'),
                   ),
                 ),
               ],

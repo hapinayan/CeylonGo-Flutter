@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/services/secure_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
+import '../models/artisan_listing_model.dart';
 import '../models/showcase_item_model.dart';
 import '../services/artisan_demo_service.dart';
 import '../services/artisan_launcher_service.dart';
@@ -12,11 +14,13 @@ import 'artisan_reservation_form_screen.dart';
 class ArtisanProductDetailScreen extends StatefulWidget {
   final int productId;
   final ArtisanService? artisanService;
+  final SecureStorageService? storageService;
 
   const ArtisanProductDetailScreen({
     super.key,
     required this.productId,
     this.artisanService,
+    this.storageService,
   });
 
   @override
@@ -27,8 +31,11 @@ class ArtisanProductDetailScreen extends StatefulWidget {
 class _ArtisanProductDetailScreenState
     extends State<ArtisanProductDetailScreen> {
   late final ArtisanService _artisanService;
+  late final SecureStorageService _storageService;
 
   ShowcaseItemResponse? _product;
+  ArtisanListingResponse? _parentListing;
+  bool _isWorkshopSaved = false;
   bool _isLoading = true;
   String? _errorMessage;
   int _selectedImageIndex = 0;
@@ -36,10 +43,11 @@ class _ArtisanProductDetailScreenState
   @override
   void initState() {
     super.initState();
+    _storageService = widget.storageService ?? SecureStorageService();
     _artisanService = widget.artisanService ??
         (ArtisanDemoService.isDemoMode
             ? ArtisanDemoService.instance
-            : ArtisanService());
+            : ArtisanService(storageService: _storageService));
     _loadProduct();
   }
 
@@ -51,9 +59,24 @@ class _ArtisanProductDetailScreenState
 
     try {
       final res = await _artisanService.getShowcaseItemDetails(widget.productId);
+      ArtisanListingResponse? parent;
+      bool saved = false;
+      try {
+        parent = await _artisanService.getListingDetails(res.artisanListingId);
+      } catch (_) {}
+      try {
+        if (await _storageService.hasToken()) {
+          final check =
+              await _artisanService.checkWishlistStatus(res.artisanListingId);
+          saved = check.isSaved;
+        }
+      } catch (_) {}
+
       if (mounted) {
         setState(() {
           _product = res;
+          _parentListing = parent;
+          _isWorkshopSaved = saved;
           _isLoading = false;
         });
       }
@@ -64,6 +87,46 @@ class _ArtisanProductDetailScreenState
           _isLoading = false;
         });
       }
+    }
+  }
+
+  Future<void> _toggleWorkshopWishlist() async {
+    final prod = _product;
+    if (prod == null) return;
+    if (ArtisanDemoService.isDemoMode) {
+      setState(() => _isWorkshopSaved = !_isWorkshopSaved);
+      return;
+    }
+    final hasToken = await _storageService.hasToken();
+    if (!hasToken) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Please sign in to save this artisan workshop.')),
+      );
+      return;
+    }
+    try {
+      if (_isWorkshopSaved) {
+        await _artisanService.removeFromWishlist(prod.artisanListingId);
+      } else {
+        await _artisanService.addToWishlist(prod.artisanListingId);
+      }
+      if (!mounted) return;
+      setState(() => _isWorkshopSaved = !_isWorkshopSaved);
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(
+          content: Text(
+            _isWorkshopSaved
+                ? 'Workshop added to your wishlist.'
+                : 'Workshop removed from your wishlist.',
+          ),
+        ),
+      );
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Failed to update wishlist: $e')),
+      );
     }
   }
 
@@ -130,16 +193,14 @@ class _ArtisanProductDetailScreenState
         actions: [
           IconButton(
             key: const Key('product_favorite_btn'),
-            icon: const Icon(Icons.favorite_border),
-            tooltip: 'Product favorites coming soon (Pending schema approval)',
-            onPressed: () {
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(
-                  content: Text('Product favorites are coming soon pending system schema update.'),
-                  duration: Duration(seconds: 2),
-                ),
-              );
-            },
+            icon: Icon(
+              _isWorkshopSaved ? Icons.favorite : Icons.favorite_border,
+              color: _isWorkshopSaved ? AppTheme.errorRed : null,
+            ),
+            tooltip: _isWorkshopSaved
+                ? 'Remove artisan workshop from wishlist'
+                : 'Save artisan workshop to wishlist',
+            onPressed: _toggleWorkshopWishlist,
           ),
           IconButton(
             icon: const Icon(Icons.share),
@@ -422,7 +483,10 @@ class _ArtisanProductDetailScreenState
                   ),
                   const SizedBox(height: 24),
 
-                  if (product.isProduct && product.stockQuantity > 0 && product.isAvailable) ...[
+                  if (ArtisanDemoService.isDemoMode &&
+                      product.isProduct &&
+                      product.stockQuantity > 0 &&
+                      product.isAvailable) ...[
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -448,7 +512,9 @@ class _ArtisanProductDetailScreenState
                       ),
                     ),
                     const SizedBox(height: 12),
-                  ] else if (product.isProduct && (!product.isAvailable || product.stockQuantity == 0)) ...[
+                  ] else if (ArtisanDemoService.isDemoMode &&
+                      product.isProduct &&
+                      (!product.isAvailable || product.stockQuantity == 0)) ...[
                     SizedBox(
                       width: double.infinity,
                       height: 48,
@@ -477,6 +543,9 @@ class _ArtisanProductDetailScreenState
                         ArtisanLauncherService.showContactModal(
                           context,
                           title: product.title,
+                          phone: _parentListing?.whatsappNumber ??
+                              _parentListing?.phone,
+                          email: _parentListing?.email,
                         );
                       },
                       icon: const Icon(Icons.chat_bubble_outline, size: 18),

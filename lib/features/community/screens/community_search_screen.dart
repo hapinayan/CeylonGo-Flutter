@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 
+import '../../artisan/services/artisan_demo_service.dart';
+import '../../auth/models/api_error.dart';
 import '../models/community_post_model.dart';
 import '../services/community_demo_service.dart';
+import '../services/community_service.dart';
 import '../widgets/community_comments_sheet.dart';
 import '../widgets/community_post_card.dart';
 import '../widgets/community_share_dialog.dart';
 import 'community_author_profile_screen.dart';
 
 /// Community Search Screen
-/// Local offline search across community posts, captions, locations, and hashtags.
 class CommunitySearchScreen extends StatefulWidget {
-  const CommunitySearchScreen({super.key});
+  final CommunityService? communityService;
+
+  const CommunitySearchScreen({super.key, this.communityService});
 
   @override
   State<CommunitySearchScreen> createState() => _CommunitySearchScreenState();
@@ -19,8 +23,11 @@ class CommunitySearchScreen extends StatefulWidget {
 class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
   final _searchController = TextEditingController();
   final _demoService = CommunityDemoService();
+  late final CommunityService _service;
   List<CommunityPostModel> _searchResults = [];
   String _activeQuery = '';
+  bool _isLoading = false;
+  String? _error;
 
   static const List<String> _suggestedChips = [
     'Ella',
@@ -34,6 +41,7 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
   @override
   void initState() {
     super.initState();
+    _service = widget.communityService ?? CommunityService();
     _performSearch('');
   }
 
@@ -43,11 +51,39 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
     super.dispose();
   }
 
-  void _performSearch(String query) {
+  Future<void> _performSearch(String query) async {
+    _activeQuery = query;
+    if (ArtisanDemoService.isDemoMode) {
+      setState(() {
+        _searchResults = _demoService.getForYouPosts(searchQuery: query);
+      });
+      return;
+    }
+
     setState(() {
-      _activeQuery = query;
-      _searchResults = _demoService.getForYouPosts(searchQuery: query);
+      _isLoading = true;
+      _error = null;
     });
+    try {
+      final list = await _service.getFeed(search: query.trim());
+      if (!mounted) return;
+      setState(() {
+        _searchResults = list;
+        _isLoading = false;
+      });
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = 'Search failed. Please try again.';
+      });
+    }
   }
 
   void _onOpenComments(CommunityPostModel post) {
@@ -58,18 +94,76 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
       builder: (_) => CommunityCommentsSheet(
         postId: post.id,
         initialComments: post.comments,
-        onCommentsCountChanged: (_) => _performSearch(_activeQuery),
+        communityService: _service,
+        onCommentsCountChanged: (count) {
+          setState(() {
+            _searchResults = _searchResults
+                .map((p) => p.id == post.id ? p.copyWith(commentsCount: count) : p)
+                .toList();
+          });
+        },
       ),
     );
   }
 
-  void _onOpenAuthorProfile(String authorId) {
+  void _onOpenAuthorProfile(CommunityPostModel post) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => CommunityAuthorProfileScreen(authorId: authorId),
+        builder: (_) => CommunityAuthorProfileScreen(
+          authorId: post.author.id,
+          initialAuthor: post.author,
+          communityService: _service,
+        ),
       ),
     ).then((_) => _performSearch(_activeQuery));
+  }
+
+  Future<void> _toggleLike(CommunityPostModel post) async {
+    if (ArtisanDemoService.isDemoMode) {
+      _demoService.toggleLike(post.id);
+      _performSearch(_activeQuery);
+      return;
+    }
+    final idInt = int.tryParse(post.id);
+    if (idInt == null) return;
+    try {
+      final res = await _service.toggleLike(idInt);
+      if (!mounted) return;
+      setState(() {
+        _searchResults = _searchResults
+            .map(
+              (p) => p.id == post.id
+                  ? p.copyWith(
+                      isLikedByDemoUser: res.liked,
+                      likesCount: res.likesCount,
+                    )
+                  : p,
+            )
+            .toList();
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _toggleSave(CommunityPostModel post) async {
+    if (ArtisanDemoService.isDemoMode) {
+      _demoService.toggleSave(post.id);
+      _performSearch(_activeQuery);
+      return;
+    }
+    final idInt = int.tryParse(post.id);
+    if (idInt == null) return;
+    try {
+      final next = await _service.setSaved(idInt, save: !post.isSavedByDemoUser);
+      if (!mounted) return;
+      setState(() {
+        _searchResults = _searchResults
+            .map(
+              (p) => p.id == post.id ? p.copyWith(isSavedByDemoUser: next) : p,
+            )
+            .toList();
+      });
+    } catch (_) {}
   }
 
   @override
@@ -145,53 +239,63 @@ class _CommunitySearchScreenState extends State<CommunitySearchScreen> {
 
           // Search results
           Expanded(
-            child: _searchResults.isEmpty
-                ? Center(
-                    child: Column(
-                      mainAxisAlignment: MainAxisAlignment.center,
-                      children: [
-                        const Icon(Icons.search_off_rounded, size: 48, color: Color(0xFF94A3B8)),
-                        const SizedBox(height: 12),
-                        Text(
-                          'No results found for "$_activeQuery"',
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontSize: 14,
-                            fontWeight: FontWeight.w600,
-                            color: Color(0xFF64748B),
+            child: _isLoading
+                ? const Center(child: CircularProgressIndicator())
+                : _error != null
+                    ? Center(
+                        child: Column(
+                          mainAxisSize: MainAxisSize.min,
+                          children: [
+                            Text(_error!, textAlign: TextAlign.center),
+                            const SizedBox(height: 10),
+                            ElevatedButton(
+                              onPressed: () => _performSearch(_activeQuery),
+                              child: const Text('Retry'),
+                            ),
+                          ],
+                        ),
+                      )
+                    : _searchResults.isEmpty
+                        ? Center(
+                            child: Column(
+                              mainAxisAlignment: MainAxisAlignment.center,
+                              children: [
+                                const Icon(Icons.search_off_rounded, size: 48, color: Color(0xFF94A3B8)),
+                                const SizedBox(height: 12),
+                                Text(
+                                  'No results found for "$_activeQuery"',
+                                  style: const TextStyle(
+                                    fontFamily: 'Inter',
+                                    fontSize: 14,
+                                    fontWeight: FontWeight.w600,
+                                    color: Color(0xFF64748B),
+                                  ),
+                                ),
+                                const SizedBox(height: 4),
+                                const Text(
+                                  'Try searching for Ella, Galle, Sigiriya, or #Artisan',
+                                  style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
+                                ),
+                              ],
+                            ),
+                          )
+                        : ListView.builder(
+                            physics: const BouncingScrollPhysics(),
+                            itemCount: _searchResults.length,
+                            itemBuilder: (context, index) {
+                              final post = _searchResults[index];
+                              return CommunityPostCard(
+                                post: post,
+                                onLike: () => _toggleLike(post),
+                                onSave: () => _toggleSave(post),
+                                onComment: () => _onOpenComments(post),
+                                onShare: () => CommunityShareDialog.show(context, post),
+                                onAuthorTap: () => _onOpenAuthorProfile(post),
+                                onMoreOptions: () {},
+                                onWorkshopTap: () => Navigator.pushNamed(context, '/artisan'),
+                              );
+                            },
                           ),
-                        ),
-                        const SizedBox(height: 4),
-                        const Text(
-                          'Try searching for Ella, Galle, Sigiriya, or #Artisan',
-                          style: TextStyle(fontFamily: 'Inter', fontSize: 12, color: Color(0xFF94A3B8)),
-                        ),
-                      ],
-                    ),
-                  )
-                : ListView.builder(
-                    physics: const BouncingScrollPhysics(),
-                    itemCount: _searchResults.length,
-                    itemBuilder: (context, index) {
-                      final post = _searchResults[index];
-                      return CommunityPostCard(
-                        post: post,
-                        onLike: () {
-                          _demoService.toggleLike(post.id);
-                          _performSearch(_activeQuery);
-                        },
-                        onSave: () {
-                          _demoService.toggleSave(post.id);
-                          _performSearch(_activeQuery);
-                        },
-                        onComment: () => _onOpenComments(post),
-                        onShare: () => CommunityShareDialog.show(context, post),
-                        onAuthorTap: () => _onOpenAuthorProfile(post.author.id),
-                        onMoreOptions: () {},
-                        onWorkshopTap: () => Navigator.pushNamed(context, '/artisan'),
-                      );
-                    },
-                  ),
           ),
         ],
       ),

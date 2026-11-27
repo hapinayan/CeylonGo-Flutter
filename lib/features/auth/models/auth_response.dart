@@ -1,14 +1,90 @@
 import 'user_model.dart';
 
+/// CeylonGo Email OTP Challenge Response
+/// POST /api/v1/auth/register (202 Accepted) & /api/v1/auth/resend-email-otp
+class TravelerChallengeResponse {
+  final String message;
+  final String email;
+  final String registrationId;
+  final int expiresIn;
+  final int resendAfter;
+
+  const TravelerChallengeResponse({
+    required this.message,
+    required this.email,
+    required this.registrationId,
+    required this.expiresIn,
+    required this.resendAfter,
+  });
+
+  factory TravelerChallengeResponse.fromJson(Map<String, dynamic> json) {
+    final regId = json['registration_id'] as String?;
+    if (regId == null || regId.trim().isEmpty) {
+      throw const FormatException(
+        'Invalid registration challenge: missing registration_id.',
+      );
+    }
+
+    return TravelerChallengeResponse(
+      message: json['message'] as String? ?? 'Verification code sent.',
+      email: json['email'] as String? ?? '',
+      registrationId: regId,
+      expiresIn: json['expires_in'] is int
+          ? json['expires_in'] as int
+          : int.tryParse('${json['expires_in']}') ?? 300,
+      resendAfter: json['resend_after'] is int
+          ? json['resend_after'] as int
+          : int.tryParse('${json['resend_after']}') ?? 60,
+    );
+  }
+
+  Map<String, dynamic> toJson() => {
+    'message': message,
+    'email': email,
+    'registration_id': registrationId,
+    'expires_in': expiresIn,
+    'resend_after': resendAfter,
+  };
+}
+
 /// CeylonGo Registration Response
-/// Section 4.1: POST /api/v1/auth/register 201 Created
+/// Supports both 202 OTP Challenge flow (current MVP) and 201 immediate user response.
 class RegisterResponse {
   final String message;
   final UserModel user;
+  final TravelerChallengeResponse? challenge;
 
-  const RegisterResponse({required this.message, required this.user});
+  const RegisterResponse({
+    required this.message,
+    required this.user,
+    this.challenge,
+  });
+
+  bool get requiresOtpVerification => challenge != null;
+
+  factory RegisterResponse.fromChallenge(
+    TravelerChallengeResponse challenge, {
+    String fullName = '',
+  }) {
+    return RegisterResponse(
+      message: challenge.message,
+      user: UserModel(
+        id: '',
+        fullName: fullName,
+        email: challenge.email,
+        role: 'traveler',
+      ),
+      challenge: challenge,
+    );
+  }
 
   factory RegisterResponse.fromJson(Map<String, dynamic> json) {
+    if (json.containsKey('registration_id')) {
+      return RegisterResponse.fromChallenge(
+        TravelerChallengeResponse.fromJson(json),
+      );
+    }
+
     if (!json.containsKey('user') || json['user'] is! Map<String, dynamic>) {
       throw const FormatException(
         'Invalid registration response: missing user object.',
@@ -24,12 +100,16 @@ class RegisterResponse {
   }
 
   Map<String, dynamic> toJson() {
-    return {'message': message, 'user': user.toJson()};
+    return {
+      'message': message,
+      'user': user.toJson(),
+      if (challenge != null) 'challenge': challenge!.toJson(),
+    };
   }
 }
 
 /// CeylonGo Login Response
-/// Section 4.2: POST /api/v1/auth/login 200 OK
+/// POST /api/v1/auth/login 200 OK
 class LoginResponse {
   final String accessToken;
   final String tokenType;
