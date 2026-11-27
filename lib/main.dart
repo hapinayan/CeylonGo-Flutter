@@ -39,6 +39,7 @@ import 'features/vendor/screens/vendor_register_screen.dart';
 import 'features/vendor/screens/vendor_reviews_screen.dart';
 import 'features/vendor/screens/vendor_settings_screen.dart';
 import 'features/vendor/screens/vendor_support_screen.dart';
+import 'features/vendor/services/provider_api_service.dart';
 import 'features/vendor/services/vendor_demo_service.dart';
 
 void main() {
@@ -49,6 +50,7 @@ void main() {
 /// Supports dependency injection for testing authentication and storage
 class CeylonGoApp extends StatefulWidget {
   final AuthService? authService;
+  final ProviderApiService? providerService;
   final SecureStorageService? storageService;
   final String? initialRoute;
   final GlobalKey<NavigatorState>? navigatorKey;
@@ -56,6 +58,7 @@ class CeylonGoApp extends StatefulWidget {
   const CeylonGoApp({
     super.key,
     this.authService,
+    this.providerService,
     this.storageService,
     this.initialRoute,
     this.navigatorKey,
@@ -104,6 +107,7 @@ class CeylonGoApp extends StatefulWidget {
   /// Static routes table for constant-named routes without parameters
   static Map<String, WidgetBuilder> getRoutes({
     AuthService? authService,
+    ProviderApiService? providerService,
     SecureStorageService? storageService,
   }) {
     return {
@@ -160,6 +164,7 @@ class CeylonGoApp extends StatefulWidget {
       '/category/rentals': (context) => const RentalsCategoryScreen(),
       '/vendor/login': (context) => VendorLoginScreen(
             authService: authService,
+            providerService: providerService,
             storageService: storageService,
           ),
       '/vendor/register': (context) => VendorRegisterScreen(
@@ -176,11 +181,13 @@ class CeylonGoApp extends StatefulWidget {
       '/vendor/reviews': (context) => const VendorReviewsScreen(),
       '/vendor/notifications': (context) => const VendorNotificationsScreen(),
       '/vendor/settings': (context) => VendorSettingsScreen(
+            providerService: providerService,
             storageService: storageService,
           ),
       '/vendor/support': (context) => const VendorSupportScreen(),
       '/vendor/about': (context) => const VendorAboutScreen(),
       '/vendor/profile': (context) => VendorProfileScreen(
+            providerService: providerService,
             storageService: storageService,
           ),
       '/profile': (context) => MainNavigationShell(
@@ -359,6 +366,7 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final staticRoutes = CeylonGoApp.getRoutes(
       authService: widget.authService,
+      providerService: widget.providerService,
       storageService: widget.storageService,
     );
 
@@ -406,6 +414,7 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
             settings: const RouteSettings(name: '/'),
             builder: (context) => AuthGate(
               authService: widget.authService,
+              providerService: widget.providerService,
               storageService: widget.storageService,
             ),
           ),
@@ -426,12 +435,19 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
 /// Handles Vendor-only app startup session restoration and JWT + role validation.
 class AuthGate extends StatefulWidget {
   final AuthService? authService;
+  final ProviderApiService? providerService;
   final SecureStorageService? storageService;
 
-  const AuthGate({super.key, this.authService, this.storageService});
+  const AuthGate({
+    super.key,
+    this.authService,
+    this.providerService,
+    this.storageService,
+  });
 
   static bool isVerifiedVendorRole(String? role) {
-    return role != null && role.trim().toLowerCase() == 'vendor';
+    final normalized = role?.trim().toLowerCase();
+    return normalized == 'provider' || normalized == 'vendor';
   }
 
   @override
@@ -442,6 +458,7 @@ enum AuthStatus { checking, authenticated, unauthenticated, networkError }
 
 class _AuthGateState extends State<AuthGate> {
   late final AuthService _authService;
+  late final ProviderApiService _providerService;
   late final SecureStorageService _storageService;
 
   AuthStatus _status = AuthStatus.checking;
@@ -451,6 +468,7 @@ class _AuthGateState extends State<AuthGate> {
   void initState() {
     super.initState();
     _authService = widget.authService ?? AuthService();
+    _providerService = widget.providerService ?? ProviderApiService();
     _storageService = widget.storageService ?? SecureStorageService();
     _checkSession();
   }
@@ -476,26 +494,48 @@ class _AuthGateState extends State<AuthGate> {
           return;
         }
 
-        // Validate real JWT using GET /api/v1/auth/me and verify Vendor role.
-        final user = await _authService.getMe(token);
-        if (!AuthGate.isVerifiedVendorRole(user.role)) {
-          // Fail safely: non-vendor (e.g., traveler/tourist) sessions cannot
-          // access the Vendor app or open Traveler Home.
-          await _storageService.clear();
-          if (mounted) {
-            setState(() {
-              _status = AuthStatus.unauthenticated;
-            });
+        // Validate real JWT using GET /api/v1/providers/me (or injected AuthService in tests).
+        if (widget.authService != null && widget.providerService == null) {
+          final user = await _authService.getMe(token);
+          if (!AuthGate.isVerifiedVendorRole(user.role)) {
+            await _storageService.clear();
+            if (mounted) {
+              setState(() {
+                _status = AuthStatus.unauthenticated;
+              });
+            }
+            return;
           }
-          return;
-        }
 
-        await _storageService.saveUser(user);
-        VendorDemoService.instance.setAuthenticatedVendor(
-          id: user.id,
-          businessName: user.fullName,
-          email: user.email,
-        );
+          await _storageService.saveUser(user);
+          VendorDemoService.instance.setAuthenticatedVendor(
+            id: user.id,
+            businessName: user.fullName,
+            email: user.email,
+          );
+        } else {
+          final profile = await _providerService.getProfile(token);
+          if (!AuthGate.isVerifiedVendorRole(profile.role) ||
+              profile.approvalStatus.toLowerCase() != 'approved' ||
+              !profile.isActive) {
+            await _storageService.clear();
+            if (mounted) {
+              setState(() {
+                _status = AuthStatus.unauthenticated;
+              });
+            }
+            return;
+          }
+
+          await _storageService.saveUser(profile.toUserModel());
+          VendorDemoService.instance.setAuthenticatedVendor(
+            id: profile.userId.toString(),
+            businessName: profile.businessName.isNotEmpty
+                ? profile.businessName
+                : profile.fullName,
+            email: profile.email,
+          );
+        }
 
         if (mounted) {
           setState(() {
@@ -575,7 +615,8 @@ class _AuthGateState extends State<AuthGate> {
 
       case AuthStatus.unauthenticated:
         return VendorLoginScreen(
-          authService: _authService,
+          authService: widget.authService,
+          providerService: widget.providerService,
           storageService: _storageService,
         );
 

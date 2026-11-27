@@ -27,6 +27,12 @@ class ApiConstants {
   static String get forgotPasswordEndpoint => '$apiV1/auth/forgot-password';
   static String get resetPasswordEndpoint => '$apiV1/auth/reset-password';
 
+  // Provider Endpoints (FastAPI /api/v1/providers)
+  static String get providerLoginEndpoint => '$apiV1/providers/login';
+  static String get providerMeEndpoint => '$apiV1/providers/me';
+  static String get providerChangePasswordEndpoint =>
+      '$apiV1/providers/me/change-password';
+
   // Standard JSON Headers
   static const Map<String, String> defaultHeaders = {
     'Content-Type': 'application/json',

@@ -10,18 +10,21 @@ import '../../auth/widgets/auth_header.dart';
 import '../../auth/widgets/auth_heading.dart';
 import '../../auth/widgets/auth_trust_footer.dart';
 import '../../auth/widgets/auth_wave_decoration.dart';
+import '../services/provider_api_service.dart';
 import '../services/vendor_demo_service.dart';
 
 /// Vendor Login Screen
-/// Supports backend AuthService sign-in (without inventing fake production success)
+/// Supports backend ProviderApiService sign-in (`POST /api/v1/providers/login`)
 /// and a clearly labeled Offline Demo Vendor flow.
 class VendorLoginScreen extends StatefulWidget {
   final AuthService? authService;
+  final ProviderApiService? providerService;
   final SecureStorageService? storageService;
 
   const VendorLoginScreen({
     super.key,
     this.authService,
+    this.providerService,
     this.storageService,
   });
 
@@ -34,7 +37,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
   final _emailController = TextEditingController();
   final _passwordController = TextEditingController();
 
-  late final AuthService _authService;
+  late final ProviderApiService _providerService;
   late final SecureStorageService _storageService;
 
   bool _obscurePassword = true;
@@ -48,7 +51,7 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
   @override
   void initState() {
     super.initState();
-    _authService = widget.authService ?? AuthService();
+    _providerService = widget.providerService ?? ProviderApiService();
     _storageService = widget.storageService ?? SecureStorageService();
   }
 
@@ -95,33 +98,69 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
     setState(() => _isLoading = true);
 
     try {
-      final response = await _authService.login(
-        email: email,
-        password: password,
-      );
-      if (!mounted) return;
+      if (widget.authService != null && widget.providerService == null) {
+        final response = await widget.authService!.login(
+          email: email,
+          password: password,
+        );
+        if (!mounted) return;
 
-      if (response.user.role.trim().toLowerCase() != 'vendor') {
-        setState(() {
-          _isLoading = false;
-          _errorMessage =
-              'This account does not have Vendor access. Please sign in with a Vendor account.';
-        });
-        return;
+        final role = response.user.role.trim().toLowerCase();
+        if (role != 'vendor' && role != 'provider') {
+          setState(() {
+            _isLoading = false;
+            _errorMessage =
+                'This account does not have Vendor access. Please sign in with a Vendor account.';
+          });
+          return;
+        }
+
+        await _storageService.clearVendorDemoSession();
+        await _storageService.saveToken(response.accessToken);
+        await _storageService.saveUser(response.user);
+
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        VendorDemoService.instance.setAuthenticatedVendor(
+          id: response.user.id,
+          businessName: response.user.fullName,
+          email: response.user.email,
+        );
+      } else {
+        final result = await _providerService.login(
+          email: email,
+          password: password,
+        );
+        if (!mounted) return;
+
+        final role = result.user.role.trim().toLowerCase();
+        if ((role != 'provider' && role != 'vendor') ||
+            result.user.approvalStatus.toLowerCase() != 'approved' ||
+            !result.user.isActive) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage =
+                'Access restricted to approved, active provider accounts.';
+          });
+          return;
+        }
+
+        await _storageService.clearVendorDemoSession();
+        await _storageService.saveToken(result.accessToken);
+        await _storageService.saveUser(result.user.toUserModel());
+
+        if (!mounted) return;
+        setState(() => _isLoading = false);
+
+        VendorDemoService.instance.setAuthenticatedVendor(
+          id: result.user.id.toString(),
+          businessName: result.user.businessName.isNotEmpty
+              ? result.user.businessName
+              : result.user.fullName,
+          email: result.user.email,
+        );
       }
-
-      await _storageService.clearVendorDemoSession();
-      await _storageService.saveToken(response.accessToken);
-      await _storageService.saveUser(response.user);
-
-      if (!mounted) return;
-      setState(() => _isLoading = false);
-
-      VendorDemoService.instance.setAuthenticatedVendor(
-        id: response.user.id,
-        businessName: response.user.fullName,
-        email: response.user.email,
-      );
 
       Navigator.pushNamedAndRemoveUntil(
         context,
