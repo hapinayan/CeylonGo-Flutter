@@ -1436,7 +1436,10 @@ void main() {
       await tester.pumpAndSettle();
       expect(find.byKey(const Key('earnings_demo_banner')), findsOneWidget);
       expect(find.textContaining('LKR '), findsWidgets);
-      await tester.tap(find.byKey(const Key('earnings_filter_Completed')));
+      final completedChip = find.byKey(const Key('earnings_filter_Completed'));
+      await tester.ensureVisible(completedChip);
+      await tester.pumpAndSettle();
+      await tester.tap(completedChip);
       await tester.pumpAndSettle();
       expect(find.text('Honda Dio 110cc Scooter'), findsOneWidget);
 
