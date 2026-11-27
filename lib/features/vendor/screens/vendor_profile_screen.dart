@@ -242,7 +242,7 @@ class _VendorProfileScreenState extends State<VendorProfileScreen> {
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(
       context,
-      '/vendor/login',
+      '/role-selection',
       (route) => false,
     );
   }

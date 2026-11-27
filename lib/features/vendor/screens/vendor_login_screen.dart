@@ -429,7 +429,36 @@ class _VendorLoginScreenState extends State<VendorLoginScreen> {
                           ),
                         ],
                       ),
-                      const SizedBox(height: 18),
+                      const SizedBox(height: 10),
+                      Center(
+                        child: TextButton.icon(
+                          key: const Key('vendor_change_role_btn'),
+                          onPressed: _isLoading
+                              ? null
+                              : () {
+                                  Navigator.pushNamedAndRemoveUntil(
+                                    context,
+                                    '/role-selection',
+                                    (route) => false,
+                                  );
+                                },
+                          icon: const Icon(
+                            Icons.swap_horiz_rounded,
+                            size: 18,
+                            color: AppTheme.primaryNavy,
+                          ),
+                          label: const Text(
+                            'Change Role',
+                            style: TextStyle(
+                              fontFamily: 'Inter',
+                              fontSize: 13.5,
+                              fontWeight: FontWeight.w600,
+                              color: AppTheme.primaryNavy,
+                            ),
+                          ),
+                        ),
+                      ),
+                      const SizedBox(height: 12),
 
                       // Offline Demo Vendor Panel
                       Container(

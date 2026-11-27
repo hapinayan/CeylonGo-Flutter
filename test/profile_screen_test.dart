@@ -46,6 +46,8 @@ void main() {
             '/artisan': (_) => const Scaffold(body: Text('Artisan Discovery Screen')),
             '/community': (_) => const Scaffold(body: Text('Community Screen')),
             '/login': (_) => const Scaffold(body: Text('Login Screen')),
+            '/role-selection': (_) =>
+                const Scaffold(body: Text('Role Selection Screen')),
           },
       home: ProfileScreen(
         initialUser: user ?? testUser,
@@ -193,7 +195,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await settleScreen(tester);
 
-      expect(find.text('Login Screen'), findsOneWidget);
+      expect(find.text('Role Selection Screen'), findsOneWidget);
     });
 
     testWidgets('Bottom navigation tab switching navigates to /home and /artisan',

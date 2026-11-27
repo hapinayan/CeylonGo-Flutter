@@ -213,7 +213,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     ArtisanDemoService.isDemoMode = false;
 
     if (mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/role-selection',
+        (route) => false,
+      );
     }
   }
 

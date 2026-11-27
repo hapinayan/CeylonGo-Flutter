@@ -14,7 +14,9 @@ import 'features/artisan/screens/artisan_product_detail_screen.dart';
 import 'features/artisan/screens/artisan_reservation_form_screen.dart';
 import 'features/artisan/screens/artisan_reservation_history_screen.dart';
 import 'features/artisan/screens/artisan_wishlist_screen.dart';
+import 'features/artisan/services/artisan_demo_service.dart';
 import 'features/auth/models/api_error.dart';
+import 'features/auth/models/user_model.dart';
 import 'features/auth/screens/auth_landing_screen.dart';
 import 'features/auth/screens/check_email_screen.dart';
 import 'features/auth/screens/create_new_password_screen.dart';
@@ -24,6 +26,7 @@ import 'features/auth/screens/login_success_screen.dart';
 import 'features/auth/screens/password_reset_success_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/registration_success_screen.dart';
+import 'features/auth/screens/role_selection_screen.dart';
 import 'features/auth/services/auth_service.dart';
 import 'features/vendor/screens/provider_onboarding_screen.dart';
 import 'features/vendor/screens/vendor_about_screen.dart';
@@ -132,6 +135,7 @@ class CeylonGoApp extends StatefulWidget {
     RecommendationPreferencesStore? preferencesStore,
   }) {
     return {
+      '/role-selection': (context) => const RoleSelectionScreen(),
       '/auth': (context) => const AuthLandingScreen(),
       '/login': (context) => LoginScreen(
             authService: authService,
@@ -386,6 +390,7 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
       nav.pushNamedAndRemoveUntil(
         '/create-new-password',
         (route) =>
+            route.settings.name == '/role-selection' ||
             route.settings.name == '/vendor/login' ||
             route.settings.name == '/login' ||
             route.settings.name == '/auth' ||
@@ -471,7 +476,7 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
 }
 
 /// Authentication Gate Widget
-/// Handles Vendor-only app startup session restoration and JWT + role validation.
+/// Handles dual-role (Traveler & Vendor) startup session restoration and JWT + role validation.
 class AuthGate extends StatefulWidget {
   final AuthService? authService;
   final ProviderApiService? providerService;
@@ -489,11 +494,22 @@ class AuthGate extends StatefulWidget {
     return normalized == 'provider' || normalized == 'vendor';
   }
 
+  static bool isVerifiedTravelerRole(String? role) {
+    final normalized = role?.trim().toLowerCase();
+    return normalized == 'traveler' || normalized == 'tourist';
+  }
+
   @override
   State<AuthGate> createState() => _AuthGateState();
 }
 
-enum AuthStatus { checking, authenticated, unauthenticated, networkError }
+enum AuthStatus {
+  checking,
+  authenticatedTraveler,
+  authenticatedVendor,
+  unauthenticated,
+  networkError,
+}
 
 class _AuthGateState extends State<AuthGate> {
   late final AuthService _authService;
@@ -512,6 +528,47 @@ class _AuthGateState extends State<AuthGate> {
     _checkSession();
   }
 
+  Future<void> _setUnauthenticated({bool clearStorage = false}) async {
+    if (clearStorage) {
+      await _storageService.clear();
+      VendorDemoService.instance.signOutVendor();
+      ArtisanDemoService.isDemoMode = false;
+    }
+    if (mounted) {
+      setState(() {
+        _status = AuthStatus.unauthenticated;
+      });
+    }
+  }
+
+  Future<void> _activateVendorSession(UserModel user, {String? businessName}) async {
+    await _storageService.saveUser(user);
+    ArtisanDemoService.isDemoMode = false;
+    VendorDemoService.instance.setAuthenticatedVendor(
+      id: user.id,
+      businessName: (businessName != null && businessName.isNotEmpty)
+          ? businessName
+          : user.fullName,
+      email: user.email,
+    );
+    if (mounted) {
+      setState(() {
+        _status = AuthStatus.authenticatedVendor;
+      });
+    }
+  }
+
+  Future<void> _activateTravelerSession(UserModel user, {required bool isDemo}) async {
+    await _storageService.saveUser(user);
+    VendorDemoService.instance.signOutVendor();
+    ArtisanDemoService.isDemoMode = isDemo;
+    if (mounted) {
+      setState(() {
+        _status = AuthStatus.authenticatedTraveler;
+      });
+    }
+  }
+
   Future<void> _checkSession() async {
     setState(() {
       _status = AuthStatus.checking;
@@ -520,67 +577,84 @@ class _AuthGateState extends State<AuthGate> {
 
     try {
       final token = await _storageService.getToken();
+      final cachedUser = await _storageService.getUser();
 
       if (token != null && token.trim().isNotEmpty) {
-        // Legacy Traveler demo tokens must never authenticate the Vendor app.
+        // Offline Traveler demo token: only valid when paired with a Traveler profile.
         if (token.startsWith('demo-')) {
-          await _storageService.clear();
-          if (mounted) {
-            setState(() {
-              _status = AuthStatus.unauthenticated;
-            });
+          if (cachedUser != null &&
+              AuthGate.isVerifiedTravelerRole(cachedUser.role)) {
+            await _activateTravelerSession(cachedUser, isDemo: true);
+          } else {
+            await _setUnauthenticated(clearStorage: true);
           }
           return;
         }
 
-        // Validate real JWT using GET /api/v1/providers/me (or injected AuthService in tests).
+        // Injected AuthService-only test path (mocking getMe for either role).
         if (widget.authService != null && widget.providerService == null) {
           final user = await _authService.getMe(token);
-          if (!AuthGate.isVerifiedVendorRole(user.role)) {
-            await _storageService.clear();
-            if (mounted) {
-              setState(() {
-                _status = AuthStatus.unauthenticated;
-              });
-            }
-            return;
+          if (AuthGate.isVerifiedVendorRole(user.role)) {
+            await _activateVendorSession(user);
+          } else if (AuthGate.isVerifiedTravelerRole(user.role)) {
+            await _activateTravelerSession(user, isDemo: false);
+          } else {
+            await _setUnauthenticated(clearStorage: true);
           }
+          return;
+        }
 
-          await _storageService.saveUser(user);
-          VendorDemoService.instance.setAuthenticatedVendor(
-            id: user.id,
-            businessName: user.fullName,
-            email: user.email,
-          );
-        } else {
+        // Route JWT to the matching role verification endpoint so a Traveler JWT
+        // is never sent to /api/v1/providers/me and vice versa.
+        if (cachedUser != null &&
+            AuthGate.isVerifiedVendorRole(cachedUser.role)) {
           final profile = await _providerService.getProfile(token);
           if (!AuthGate.isVerifiedVendorRole(profile.role) ||
               profile.approvalStatus.toLowerCase() != 'approved' ||
               !profile.isActive) {
-            await _storageService.clear();
-            if (mounted) {
-              setState(() {
-                _status = AuthStatus.unauthenticated;
-              });
-            }
+            await _setUnauthenticated(clearStorage: true);
             return;
           }
-
-          await _storageService.saveUser(profile.toUserModel());
-          VendorDemoService.instance.setAuthenticatedVendor(
-            id: profile.userId.toString(),
-            businessName: profile.businessName.isNotEmpty
-                ? profile.businessName
-                : profile.fullName,
-            email: profile.email,
+          await _activateVendorSession(
+            profile.toUserModel(),
+            businessName: profile.businessName,
           );
+          return;
         }
 
-        if (mounted) {
-          setState(() {
-            _status = AuthStatus.authenticated;
-          });
+        if (cachedUser != null &&
+            AuthGate.isVerifiedTravelerRole(cachedUser.role)) {
+          final user = await _authService.getMe(token);
+          if (!AuthGate.isVerifiedTravelerRole(user.role)) {
+            await _setUnauthenticated(clearStorage: true);
+            return;
+          }
+          await _activateTravelerSession(user, isDemo: false);
+          return;
         }
+
+        // Unknown cached role: validate via /api/v1/auth/me first (supports any active user).
+        final user = await _authService.getMe(token);
+        if (AuthGate.isVerifiedVendorRole(user.role)) {
+          final profile = await _providerService.getProfile(token);
+          if (!AuthGate.isVerifiedVendorRole(profile.role) ||
+              profile.approvalStatus.toLowerCase() != 'approved' ||
+              !profile.isActive) {
+            await _setUnauthenticated(clearStorage: true);
+            return;
+          }
+          await _activateVendorSession(
+            profile.toUserModel(),
+            businessName: profile.businessName,
+          );
+          return;
+        }
+        if (AuthGate.isVerifiedTravelerRole(user.role)) {
+          await _activateTravelerSession(user, isDemo: false);
+          return;
+        }
+
+        await _setUnauthenticated(clearStorage: true);
         return;
       }
 
@@ -588,38 +662,19 @@ class _AuthGateState extends State<AuthGate> {
       final demoVendorMap = await _storageService.getVendorDemoSession();
       if (demoVendorMap != null && demoVendorMap['is_demo_session'] == true) {
         VendorDemoService.instance.restoreDemoVendorFromMap(demoVendorMap);
+        ArtisanDemoService.isDemoMode = false;
         if (mounted) {
           setState(() {
-            _status = AuthStatus.authenticated;
+            _status = AuthStatus.authenticatedVendor;
           });
         }
         return;
       }
 
-      if (mounted) {
-        setState(() {
-          _status = AuthStatus.unauthenticated;
-        });
-      }
+      await _setUnauthenticated();
     } on ApiError catch (e) {
       if (e.statusCode == 401 || e.statusCode == 403) {
-        // Invalid, expired, or unauthorized token: clear storage and show VendorLoginScreen.
-        await _storageService.clear();
-        if (mounted) {
-          setState(() {
-            _status = AuthStatus.unauthenticated;
-          });
-        }
-      } else if (e.code == 'NETWORK_ERROR' ||
-          e.code == 'TIMEOUT' ||
-          e.statusCode == 0) {
-        // Network failure / timeout: preserve token and show safe retry state.
-        if (mounted) {
-          setState(() {
-            _status = AuthStatus.networkError;
-            _networkErrorMessage = e.message;
-          });
-        }
+        await _setUnauthenticated(clearStorage: true);
       } else {
         if (mounted) {
           setState(() {
@@ -629,12 +684,7 @@ class _AuthGateState extends State<AuthGate> {
         }
       }
     } catch (_) {
-      await _storageService.clear();
-      if (mounted) {
-        setState(() {
-          _status = AuthStatus.unauthenticated;
-        });
-      }
+      await _setUnauthenticated(clearStorage: true);
     }
   }
 
@@ -649,15 +699,18 @@ class _AuthGateState extends State<AuthGate> {
           ),
         );
 
-      case AuthStatus.authenticated:
+      case AuthStatus.authenticatedTraveler:
+        return MainNavigationShell(
+          initialIndex: 0,
+          authService: widget.authService,
+          storageService: _storageService,
+        );
+
+      case AuthStatus.authenticatedVendor:
         return const VendorDashboardScreen();
 
       case AuthStatus.unauthenticated:
-        return VendorLoginScreen(
-          authService: widget.authService,
-          providerService: widget.providerService,
-          storageService: _storageService,
-        );
+        return const RoleSelectionScreen();
 
       case AuthStatus.networkError:
         return Scaffold(
@@ -697,7 +750,7 @@ class _AuthGateState extends State<AuthGate> {
                           const SizedBox(height: 8),
                           Text(
                             _networkErrorMessage ??
-                                'Unable to connect to CeylonGo server to verify your vendor session.',
+                                'Unable to connect to CeylonGo server to verify your session.',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 14,
@@ -721,7 +774,7 @@ class _AuthGateState extends State<AuthGate> {
                                 _status = AuthStatus.unauthenticated;
                               });
                             },
-                            child: const Text('Go to Vendor Sign In'),
+                            child: const Text('Choose Role & Sign In'),
                           ),
                         ],
                       ),

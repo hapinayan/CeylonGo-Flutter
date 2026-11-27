@@ -10,6 +10,7 @@ import 'package:ceylongo/features/auth/models/api_error.dart';
 import 'package:ceylongo/features/auth/models/auth_response.dart';
 import 'package:ceylongo/features/auth/models/user_model.dart';
 import 'package:ceylongo/features/auth/screens/auth_landing_screen.dart';
+import 'package:ceylongo/features/auth/screens/role_selection_screen.dart';
 import 'package:ceylongo/features/auth/services/auth_service.dart';
 import 'package:ceylongo/features/auth/widgets/auth_wave_decoration.dart';
 import 'package:ceylongo/features/navigation/screens/main_navigation_shell.dart';
@@ -185,6 +186,7 @@ void main() {
     return MaterialApp(
       theme: AppTheme.lightTheme,
       routes: {
+        '/role-selection': (_) => const RoleSelectionScreen(),
         '/vendor/login': (_) => VendorLoginScreen(storageService: storage),
         '/vendor/register': (_) =>
             VendorRegisterScreen(storageService: storage),
@@ -433,7 +435,7 @@ void main() {
   });
 
   group('Vendor App Startup & Session Routing Tests', () {
-    testWidgets('Fresh app launch with no session opens Vendor Login',
+    testWidgets('Fresh app launch with no session opens Role Selection',
         (WidgetTester tester) async {
       final storage = _InMemorySecureStorage();
       final authService = _MockVendorAuthService();
@@ -443,7 +445,7 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(VendorLoginScreen), findsOneWidget);
+      expect(find.byType(RoleSelectionScreen), findsOneWidget);
       expect(find.byType(MainNavigationShell), findsNothing);
       expect(find.byType(AuthLandingScreen), findsNothing);
     });
@@ -473,7 +475,7 @@ void main() {
     });
 
     testWidgets(
-        'Traveler session never opens Traveler Home and fails safely to Vendor Login',
+        'Traveler session opens Traveler Home and never opens Vendor Dashboard',
         (WidgetTester tester) async {
       final storage = _InMemorySecureStorage()
         ..token = 'valid-traveler-jwt';
@@ -490,14 +492,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(VendorLoginScreen), findsOneWidget);
-      expect(find.byType(MainNavigationShell), findsNothing);
+      expect(find.byType(MainNavigationShell), findsOneWidget);
       expect(find.byType(VendorDashboardScreen), findsNothing);
-      expect(storage.token, isNull);
+      expect(storage.token, 'valid-traveler-jwt');
     });
 
     testWidgets(
-        'Legacy demo- traveler token never opens Traveler Home and falls back to Vendor Login',
+        'Legacy demo- traveler token opens Traveler Home and never opens Vendor Dashboard',
         (WidgetTester tester) async {
       final storage = _InMemorySecureStorage()
         ..token = 'demo-traveler-token'
@@ -514,13 +515,13 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(VendorLoginScreen), findsOneWidget);
-      expect(find.byType(MainNavigationShell), findsNothing);
-      expect(storage.token, isNull);
+      expect(find.byType(MainNavigationShell), findsOneWidget);
+      expect(find.byType(VendorDashboardScreen), findsNothing);
+      expect(storage.token, 'demo-traveler-token');
     });
 
     testWidgets(
-        'Invalid or expired session (401) clears storage and opens Vendor Login',
+        'Invalid or expired session (401) clears storage and opens Role Selection',
         (WidgetTester tester) async {
       final storage = _InMemorySecureStorage()..token = 'expired-jwt';
       final authService = _MockVendorAuthService()
@@ -535,20 +536,26 @@ void main() {
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(VendorLoginScreen), findsOneWidget);
+      expect(find.byType(RoleSelectionScreen), findsOneWidget);
       expect(storage.token, isNull);
     });
 
     testWidgets(
-        'Demo Vendor Login -> Vendor Dashboard -> App Restart restores Demo Mode -> Logout -> Vendor Login',
+        'Demo Vendor Login -> Vendor Dashboard -> App Restart restores Demo Mode -> Logout -> Role Selection',
         (WidgetTester tester) async {
       final storage = _InMemorySecureStorage();
       final authService = _MockVendorAuthService();
 
-      // 1. Fresh launch -> Vendor Login
+      // 1. Fresh launch -> Role Selection -> Vendor Login
       await tester.pumpWidget(
         CeylonGoApp(authService: authService, storageService: storage),
       );
+      await tester.pumpAndSettle();
+      expect(find.byType(RoleSelectionScreen), findsOneWidget);
+
+      final vendorCardBtn = find.byKey(const Key('role_continue_vendor_btn'));
+      await tester.ensureVisible(vendorCardBtn);
+      await tester.tap(vendorCardBtn);
       await tester.pumpAndSettle();
       expect(find.byType(VendorLoginScreen), findsOneWidget);
 
@@ -574,7 +581,7 @@ void main() {
       expect(find.byType(VendorDashboardScreen), findsOneWidget);
       expect(find.textContaining('(Demo Mode)'), findsOneWidget);
 
-      // 4. Open Vendor Profile and Log Out -> Vendor Login
+      // 4. Open Vendor Profile and Log Out -> Role Selection
       await tester.tap(find.byKey(const Key('vendor_dashboard_profile_icon')));
       await tester.pumpAndSettle();
       expect(find.byType(VendorProfileScreen), findsOneWidget);
@@ -582,17 +589,17 @@ void main() {
       await tester.tap(find.byKey(const Key('vendor_logout_btn')));
       await tester.pumpAndSettle();
 
-      expect(find.byType(VendorLoginScreen), findsOneWidget);
+      expect(find.byType(RoleSelectionScreen), findsOneWidget);
       expect(storage.vendorDemoSession, isNull);
 
-      // 5. Simulate app restart after logout -> Vendor Login
+      // 5. Simulate app restart after logout -> Role Selection
       await tester.pumpWidget(Container());
       await tester.pumpWidget(
         CeylonGoApp(authService: authService, storageService: storage),
       );
       await tester.pumpAndSettle();
 
-      expect(find.byType(VendorLoginScreen), findsOneWidget);
+      expect(find.byType(RoleSelectionScreen), findsOneWidget);
     });
 
     testWidgets(
@@ -613,7 +620,11 @@ void main() {
         );
 
       await tester.pumpWidget(
-        CeylonGoApp(authService: authService, storageService: storage),
+        CeylonGoApp(
+          authService: authService,
+          storageService: storage,
+          initialRoute: '/vendor/login',
+        ),
       );
       await tester.pumpAndSettle();
 
@@ -1306,7 +1317,7 @@ void main() {
       expect(find.text('Availability Calendar'), findsOneWidget);
       expect(find.text('About CeylonGo'), findsOneWidget);
 
-      // Logout from More -> VendorLoginScreen
+      // Logout from More -> RoleSelectionScreen
       await tester.drag(find.byType(ListView), const Offset(0, -300));
       await tester.pumpAndSettle();
       final logoutBtn = find.byKey(const Key('vendor_more_logout_btn'));
@@ -1314,7 +1325,7 @@ void main() {
       await tester.pumpAndSettle();
       await tester.tap(logoutBtn);
       await tester.pumpAndSettle();
-      expect(find.byType(VendorLoginScreen), findsOneWidget);
+      expect(find.byType(RoleSelectionScreen), findsOneWidget);
       expect(tester.takeException(), isNull);
     });
   });

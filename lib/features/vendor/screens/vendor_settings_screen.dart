@@ -142,7 +142,7 @@ class _VendorSettingsScreenState extends State<VendorSettingsScreen> {
     if (!mounted) return;
     Navigator.pushNamedAndRemoveUntil(
       context,
-      '/vendor/login',
+      '/role-selection',
       (route) => false,
     );
   }

@@ -81,7 +81,7 @@ class VendorMoreScreen extends StatelessWidget {
     if (!context.mounted) return;
     Navigator.pushNamedAndRemoveUntil(
       context,
-      '/vendor/login',
+      '/role-selection',
       (route) => false,
     );
   }

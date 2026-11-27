@@ -515,7 +515,11 @@ void main() {
       );
 
       await tester.pumpWidget(
-        CeylonGoApp(providerService: service, storageService: storage),
+        CeylonGoApp(
+          providerService: service,
+          storageService: storage,
+          initialRoute: '/vendor/login',
+        ),
       );
       await tester.pumpAndSettle();
 
