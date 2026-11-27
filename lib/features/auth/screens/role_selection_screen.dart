@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/services/secure_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../widgets/auth_header.dart';
 import '../widgets/auth_trust_footer.dart';
@@ -9,8 +10,39 @@ import '../widgets/auth_wave_decoration.dart';
 /// Role Selection Screen
 /// Entry point when unauthenticated, allowing users to choose between
 /// the Traveler experience and the Vendor / Provider portal.
-class RoleSelectionScreen extends StatelessWidget {
-  const RoleSelectionScreen({super.key});
+class RoleSelectionScreen extends StatefulWidget {
+  final SecureStorageService? storageService;
+
+  const RoleSelectionScreen({super.key, this.storageService});
+
+  @override
+  State<RoleSelectionScreen> createState() => _RoleSelectionScreenState();
+}
+
+class _RoleSelectionScreenState extends State<RoleSelectionScreen> {
+  late final SecureStorageService _storageService;
+  bool _isNavigating = false;
+
+  @override
+  void initState() {
+    super.initState();
+    _storageService = widget.storageService ?? SecureStorageService();
+  }
+
+  Future<void> _onContinueAsVendor() async {
+    if (_isNavigating) return;
+    _isNavigating = true;
+    try {
+      final completed = await _storageService.isVendorOnboardingCompleted();
+      if (!mounted) return;
+      await Navigator.pushNamed(
+        context,
+        completed ? '/vendor/login' : '/vendor/intro',
+      );
+    } finally {
+      _isNavigating = false;
+    }
+  }
 
   @override
   Widget build(BuildContext context) {
@@ -100,12 +132,7 @@ class RoleSelectionScreen extends StatelessWidget {
                                       'Manage your business onboarding, dashboard, listings, bookings, availability, wallet, and profile.',
                                   buttonLabel: 'Continue as Vendor',
                                   isPrimary: false,
-                                  onPressed: () {
-                                    Navigator.pushNamed(
-                                      context,
-                                      '/vendor/login',
-                                    );
-                                  },
+                                  onPressed: _onContinueAsVendor,
                                 ),
                                 const SizedBox(height: 16),
                               ],

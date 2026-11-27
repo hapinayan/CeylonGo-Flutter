@@ -85,6 +85,15 @@ class _InMemorySecureStorage extends SecureStorageService {
   String? token;
   UserModel? user;
   Map<String, dynamic>? vendorDemoSession;
+  bool vendorOnboardingCompleted = false;
+
+  @override
+  Future<bool> isVendorOnboardingCompleted() async => vendorOnboardingCompleted;
+
+  @override
+  Future<void> setVendorOnboardingCompleted({bool completed = true}) async {
+    vendorOnboardingCompleted = completed;
+  }
 
   @override
   Future<void> saveToken(String token) async {
@@ -557,6 +566,12 @@ void main() {
       await tester.ensureVisible(vendorCardBtn);
       await tester.tap(vendorCardBtn);
       await tester.pumpAndSettle();
+      final skipOnboardingBtn =
+          find.byKey(const Key('vendor_onboarding_skip_btn'));
+      if (skipOnboardingBtn.evaluate().isNotEmpty) {
+        await tester.tap(skipOnboardingBtn);
+        await tester.pumpAndSettle();
+      }
       expect(find.byType(VendorLoginScreen), findsOneWidget);
 
       // 2. Tap Demo Vendor Login -> Vendor Dashboard

@@ -39,6 +39,7 @@ import 'features/vendor/screens/vendor_listings_screen.dart';
 import 'features/vendor/screens/vendor_login_screen.dart';
 import 'features/vendor/screens/vendor_more_screen.dart';
 import 'features/vendor/screens/vendor_notifications_screen.dart';
+import 'features/vendor/screens/vendor_onboarding_screen.dart';
 import 'features/vendor/screens/vendor_profile_screen.dart';
 import 'features/vendor/screens/vendor_register_screen.dart';
 import 'features/vendor/screens/vendor_reviews_screen.dart';
@@ -135,7 +136,9 @@ class CeylonGoApp extends StatefulWidget {
     RecommendationPreferencesStore? preferencesStore,
   }) {
     return {
-      '/role-selection': (context) => const RoleSelectionScreen(),
+      '/role-selection': (context) => RoleSelectionScreen(
+            storageService: storageService,
+          ),
       '/auth': (context) => const AuthLandingScreen(),
       '/login': (context) => LoginScreen(
             authService: authService,
@@ -190,6 +193,9 @@ class CeylonGoApp extends StatefulWidget {
       '/vendor/login': (context) => VendorLoginScreen(
             authService: authService,
             providerService: providerService,
+            storageService: storageService,
+          ),
+      '/vendor/intro': (context) => VendorOnboardingScreen(
             storageService: storageService,
           ),
       '/vendor/register': (context) => VendorRegisterScreen(
@@ -710,7 +716,7 @@ class _AuthGateState extends State<AuthGate> {
         return const VendorDashboardScreen();
 
       case AuthStatus.unauthenticated:
-        return const RoleSelectionScreen();
+        return RoleSelectionScreen(storageService: _storageService);
 
       case AuthStatus.networkError:
         return Scaffold(

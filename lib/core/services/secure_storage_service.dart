@@ -25,6 +25,8 @@ class SecureStorageService {
   static const String _keyAccessToken = 'ceylongo_access_token';
   static const String _keyUserProfile = 'ceylongo_user_profile';
   static const String _keyVendorDemoSession = 'ceylongo_vendor_demo_session';
+  static const String _keyVendorIntroOnboardingCompleted =
+      'ceylongo_vendor_intro_onboarding_completed';
 
   SecureStorageService({FlutterSecureStorage? storage})
     : _storage =
@@ -152,6 +154,30 @@ class SecureStorageService {
       throw const SecureStorageException(
         'Failed to clear demo vendor session.',
       );
+    }
+  }
+
+  /// Whether the Vendor intro swipe onboarding has been completed or skipped.
+  /// Stored separately from authentication tokens so it persists across logouts
+  /// and never overwrites Traveler onboarding preferences.
+  Future<bool> isVendorOnboardingCompleted() async {
+    try {
+      final raw = await _storage.read(key: _keyVendorIntroOnboardingCompleted);
+      return raw == 'true';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Persist whether the Vendor intro swipe onboarding was completed or skipped.
+  Future<void> setVendorOnboardingCompleted({bool completed = true}) async {
+    try {
+      await _storage.write(
+        key: _keyVendorIntroOnboardingCompleted,
+        value: completed ? 'true' : 'false',
+      );
+    } catch (_) {
+      // Non-fatal if secure storage is unavailable in test/demo environments.
     }
   }
 

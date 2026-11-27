@@ -25,6 +25,7 @@ class _InMemoryStorage extends SecureStorageService {
   String? token;
   UserModel? user;
   Map<String, dynamic>? vendorDemoSession;
+  bool vendorOnboardingCompleted = false;
 
   @override
   Future<void> saveToken(String token) async => this.token = token;
@@ -48,6 +49,13 @@ class _InMemoryStorage extends SecureStorageService {
 
   @override
   Future<void> clearVendorDemoSession() async => vendorDemoSession = null;
+
+  @override
+  Future<bool> isVendorOnboardingCompleted() async => vendorOnboardingCompleted;
+
+  @override
+  Future<void> setVendorOnboardingCompleted({bool completed = true}) async =>
+      vendorOnboardingCompleted = completed;
 
   @override
   Future<void> clear() async {
@@ -152,7 +160,7 @@ void main() {
     testWidgets(
         'RoleSelection -> Continue as Vendor -> VendorLoginScreen -> Change Role -> RoleSelection',
         (WidgetTester tester) async {
-      final storage = _InMemoryStorage();
+      final storage = _InMemoryStorage()..vendorOnboardingCompleted = true;
       final authService = _StubAuthService();
 
       await tester.pumpWidget(
