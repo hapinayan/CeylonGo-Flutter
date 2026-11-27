@@ -21,6 +21,12 @@ class VendorMoreScreen extends StatelessWidget {
       route: '/vendor/availability',
     ),
     (
+      key: Key('vendor_more_weather_tile'),
+      title: 'Live Weather',
+      icon: Icons.wb_sunny_outlined,
+      route: '/weather',
+    ),
+    (
       key: Key('vendor_more_earnings_tile'),
       title: 'Earnings & Payments',
       icon: Icons.account_balance_wallet_outlined,

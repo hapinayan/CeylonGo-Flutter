@@ -45,6 +45,11 @@ class ApiConstants {
   static String get providerSubmitEndpoint =>
       '$apiV1/providers/registration/submit';
 
+  // Weather Endpoints (FastAPI /api/v1/weather)
+  static String get weatherLocationsEndpoint => '$apiV1/weather/locations';
+  static String get weatherCurrentEndpoint => '$apiV1/weather/current';
+  static String get weatherForecastEndpoint => '$apiV1/weather/forecast';
+
   // Standard JSON Headers
   static const Map<String, String> defaultHeaders = {
     'Content-Type': 'application/json',
