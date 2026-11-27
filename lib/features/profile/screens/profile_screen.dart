@@ -7,6 +7,10 @@ import '../../artisan/services/artisan_demo_service.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/services/auth_service.dart';
 import '../../home/widgets/home_bottom_navigation_bar.dart';
+import '../models/traveler_profile_photo_models.dart';
+import '../services/traveler_profile_photo_picker.dart';
+import '../services/traveler_profile_photo_storage.dart';
+import '../widgets/traveler_photo_editor_sheet.dart';
 
 /// CeylonGo Traveler Profile Screen
 /// Approved Full White Minimal Profile Page Design.
@@ -24,6 +28,8 @@ class ProfileScreen extends StatefulWidget {
   final UserModel? initialUser;
   final AuthService? authService;
   final SecureStorageService? storageService;
+  final TravelerProfilePhotoStore? photoStore;
+  final TravelerProfilePhotoPicker? photoPicker;
   final bool showBottomNav;
 
   const ProfileScreen({
@@ -31,6 +37,8 @@ class ProfileScreen extends StatefulWidget {
     this.initialUser,
     this.authService,
     this.storageService,
+    this.photoStore,
+    this.photoPicker,
     this.showBottomNav = true,
   });
 
@@ -42,9 +50,12 @@ class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late final AuthService _authService;
   late final SecureStorageService _storageService;
+  late final TravelerProfilePhotoStore _photoStore;
+  late final TravelerProfilePhotoPicker _photoPicker;
   late final AnimationController _entranceController;
 
   UserModel? _user;
+  TravelerProfilePhotoData? _savedPhoto;
   bool _isLoading = true;
   bool _isLoggingOut = false;
 
@@ -59,6 +70,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.initState();
     _authService = widget.authService ?? AuthService();
     _storageService = widget.storageService ?? SecureStorageService();
+    _photoStore = widget.photoStore ?? FileTravelerProfilePhotoStore();
+    _photoPicker = widget.photoPicker ?? TravelerProfilePhotoPicker();
 
     _entranceController = AnimationController(
       duration: const Duration(milliseconds: 600),
@@ -84,6 +97,24 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
 
+  String get _accountKey {
+    final user = _user;
+    if (user == null || user.role == 'provider') return '';
+    if (user.id.trim().isNotEmpty) return user.id.trim();
+    if (user.email.trim().isNotEmpty) return user.email.trim().toLowerCase();
+    return '';
+  }
+
+  Future<void> _loadAvatarForUser() async {
+    final key = _accountKey;
+    if (key.isEmpty) return;
+    final loaded = await _photoStore.loadForAccount(key);
+    if (!mounted || key != _accountKey) return;
+    setState(() {
+      _savedPhoto = loaded;
+    });
+  }
+
   Future<void> _loadUser() async {
     if (widget.initialUser != null) {
       if (mounted) {
@@ -92,6 +123,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           _isLoading = false;
         });
       }
+      await _loadAvatarForUser();
       return;
     }
 
@@ -157,6 +189,7 @@ class _ProfileScreenState extends State<ProfileScreen>
         });
       }
     }
+    await _loadAvatarForUser();
   }
 
   String _getInitials(String name) {
@@ -325,12 +358,30 @@ class _ProfileScreenState extends State<ProfileScreen>
   }
 
   void _onEditProfile() {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('Profile photo and details editor coming soon!'),
-        backgroundColor: Color(0xFF073B91),
-        duration: Duration(seconds: 2),
+    final key = _accountKey;
+    if (key.isEmpty) return;
+    final name = (_user?.fullName.isNotEmpty ?? false)
+        ? _user!.fullName
+        : 'Kamal Perera';
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => TravelerPhotoEditorSheet(
+        accountKey: key,
+        initials: _getInitials(name),
+        currentPhoto: _savedPhoto,
+        photoStore: _photoStore,
+        photoPicker: _photoPicker,
+        onPhotoChanged: (updated) {
+          if (!mounted || key != _accountKey) return;
+          setState(() {
+            _savedPhoto = updated;
+          });
+        },
       ),
     );
   }
@@ -686,18 +737,40 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ],
                 ),
-                child: Center(
-                  child: Text(
-                    _getInitials(name),
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF082B5C),
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ),
+                child: _savedPhoto != null
+                    ? ClipOval(
+                        child: Image.memory(
+                          _savedPhoto!.bytes,
+                          key: const Key('profile_avatar_image'),
+                          width: 92,
+                          height: 92,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Center(
+                            child: Text(
+                              _getInitials(name),
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF082B5C),
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          _getInitials(name),
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF082B5C),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
               ),
               Positioned(
                 bottom: 0,

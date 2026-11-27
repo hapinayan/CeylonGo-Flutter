@@ -156,10 +156,10 @@ void main() {
       ScaffoldMessenger.of(tester.element(find.byType(Scaffold))).hideCurrentSnackBar();
       await tester.pumpAndSettle();
 
-      // Edit avatar button tap
+      // Edit avatar button tap -> opens Traveler Photo Editor Sheet
       final editAvatarBtn = find.byKey(const Key('profile_edit_avatar_btn'));
       await tapAndSettle(tester, editAvatarBtn);
-      expect(find.text('Profile photo and details editor coming soon!'), findsOneWidget);
+      expect(find.byKey(const Key('traveler_photo_editor_sheet')), findsOneWidget);
     });
 
     testWidgets('Menu items trigger informative responses on tap',
