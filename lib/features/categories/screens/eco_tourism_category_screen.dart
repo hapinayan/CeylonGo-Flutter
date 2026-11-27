@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../artisan/services/artisan_demo_service.dart';
 import '../data/category_demo_data.dart';
 import '../widgets/category_page_scaffold.dart';
 
@@ -24,6 +25,9 @@ class _EcoTourismCategoryScreenState extends State<EcoTourismCategoryScreen> {
   }
 
   List<EcoExperienceDemo> get _filteredItems {
+    if (!ArtisanDemoService.isDemoMode) {
+      return const [];
+    }
     final query = _searchController.text.trim().toLowerCase();
     return CategoryDemoData.ecoExperiences.where((item) {
       if (_selectedCategory != 'All' && item.category != _selectedCategory) {
@@ -54,6 +58,13 @@ class _EcoTourismCategoryScreenState extends State<EcoTourismCategoryScreen> {
           _selectedCategory = 'All';
         });
       },
+      isDemoPreview: ArtisanDemoService.isDemoMode,
+      emptyTitle: ArtisanDemoService.isDemoMode
+          ? 'No matching listings found'
+          : 'Eco Tourism is not a separate MVP module',
+      emptySubtitle: ArtisanDemoService.isDemoMode
+          ? 'Try adjusting your search or filter selections.'
+          : 'Explore nature experiences under Adventure Activities or local stays under Homestays.',
       filterBars: [
         CategoryChipFilterRow(
           options: _categories,
@@ -85,4 +96,3 @@ class _EcoTourismCategoryScreenState extends State<EcoTourismCategoryScreen> {
     );
   }
 }
-

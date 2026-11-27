@@ -86,9 +86,10 @@ void main() {
       expect(districts, contains('Kandy'));
     });
 
-    test('getFeaturedListings calls GET /api/v1/artisan-listings/featured', () async {
+    test('getFeaturedListings calls GET /api/v1/artisan-listings?is_featured=true', () async {
       final client = MockClient((request) async {
-        expect(request.url.path, '/api/v1/artisan-listings/featured');
+        expect(request.url.path, '/api/v1/artisan-listings');
+        expect(request.url.queryParameters['is_featured'], 'true');
         return http.Response(
           jsonEncode({
             'items': [
@@ -119,12 +120,9 @@ void main() {
       expect(res.items.first.isFeatured, isTrue);
     });
 
-    test('getNearbyListings calls GET /api/v1/artisan-listings/nearby with coordinate params', () async {
+    test('getNearbyListings computes client-side Haversine distances from /api/v1/artisan-listings', () async {
       final client = MockClient((request) async {
-        expect(request.url.path, '/api/v1/artisan-listings/nearby');
-        expect(request.url.queryParameters['latitude'], '7.2906');
-        expect(request.url.queryParameters['longitude'], '80.6337');
-        expect(request.url.queryParameters['radius_km'], '25.0');
+        expect(request.url.path, '/api/v1/artisan-listings');
         return http.Response(
           jsonEncode({
             'items': [
@@ -135,20 +133,18 @@ void main() {
                 'craft_category': 'Woodcarving',
                 'district': 'Kandy',
                 'city': 'Kandy',
+                'latitude': 7.2950,
+                'longitude': 80.6400,
                 'is_active': true,
                 'is_verified': true,
                 'is_featured': false,
                 'approval_status': 'approved',
-                'distance_km': 1.25,
               }
             ],
             'total': 1,
             'page': 1,
-            'page_size': 12,
+            'page_size': 50,
             'total_pages': 1,
-            'origin_latitude': 7.2906,
-            'origin_longitude': 80.6337,
-            'radius_km': 25.0,
           }),
           200,
           headers: {'content-type': 'application/json'},
@@ -163,7 +159,8 @@ void main() {
       );
       expect(res.items.length, equals(1));
       expect(res.items.first.title, equals('Kandy Nearby Carver'));
-      expect(res.items.first.distanceKm, equals(1.25));
+      expect(res.items.first.distanceKm, isNotNull);
+      expect(res.items.first.distanceKm!, lessThan(2.0));
       expect(res.originLatitude, equals(7.2906));
       expect(res.radiusKm, equals(25.0));
     });

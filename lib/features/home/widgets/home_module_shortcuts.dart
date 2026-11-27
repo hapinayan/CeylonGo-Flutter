@@ -1,6 +1,5 @@
 import 'package:flutter/material.dart';
 
-import '../../../core/theme/app_theme.dart';
 import '../../artisan/services/artisan_demo_service.dart';
 
 class ModuleItem {
@@ -85,22 +84,28 @@ class HomeModuleShortcuts extends StatelessWidget {
   ];
 
   void _onModuleTap(BuildContext context, ModuleItem item) {
-    if (item.id == 'artisan') {
-      if (ArtisanDemoService.isDemoMode) {
-        ArtisanDemoService.instance.resetToDefaults();
-      }
-      Navigator.pushNamed(context, '/artisan');
-    } else {
-      ScaffoldMessenger.of(context).hideCurrentSnackBar();
-      ScaffoldMessenger.of(context).showSnackBar(
-        SnackBar(
-          content: Text(
-            '${item.label.replaceAll('\n', ' ')} module is coming soon!',
-          ),
-          duration: const Duration(seconds: 2),
-          backgroundColor: AppTheme.primaryNavy,
-        ),
-      );
+    switch (item.id) {
+      case 'homestays':
+        Navigator.pushNamed(context, '/category/homestays');
+        return;
+      case 'eco_tourism':
+        Navigator.pushNamed(context, '/category/eco');
+        return;
+      case 'activities':
+        Navigator.pushNamed(context, '/category/activities');
+        return;
+      case 'tour_guides':
+        Navigator.pushNamed(context, '/category/guides');
+        return;
+      case 'rentals':
+        Navigator.pushNamed(context, '/category/rentals');
+        return;
+      case 'artisan':
+        if (ArtisanDemoService.isDemoMode) {
+          ArtisanDemoService.instance.resetToDefaults();
+        }
+        Navigator.pushNamed(context, '/artisan');
+        return;
     }
   }
 

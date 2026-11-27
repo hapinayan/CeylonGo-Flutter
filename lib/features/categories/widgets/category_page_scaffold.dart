@@ -11,10 +11,18 @@ class CategoryPageScaffold extends StatelessWidget {
   final String searchHint;
   final TextEditingController searchController;
   final ValueChanged<String> onSearchChanged;
+  final ValueChanged<String>? onSearchSubmitted;
   final List<Widget> filterBars;
   final int itemCount;
   final Widget Function(BuildContext context, int index) itemBuilder;
   final VoidCallback onClearFilters;
+  final bool isLoading;
+  final String? errorMessage;
+  final VoidCallback? onRetry;
+  final Future<void> Function()? onRefresh;
+  final bool isDemoPreview;
+  final String emptyTitle;
+  final String emptySubtitle;
 
   const CategoryPageScaffold({
     super.key,
@@ -23,10 +31,18 @@ class CategoryPageScaffold extends StatelessWidget {
     required this.searchHint,
     required this.searchController,
     required this.onSearchChanged,
+    this.onSearchSubmitted,
     required this.filterBars,
     required this.itemCount,
     required this.itemBuilder,
     required this.onClearFilters,
+    this.isLoading = false,
+    this.errorMessage,
+    this.onRetry,
+    this.onRefresh,
+    this.isDemoPreview = false,
+    this.emptyTitle = 'No matching listings found',
+    this.emptySubtitle = 'Try adjusting your search or filter selections.',
   });
 
   @override
@@ -89,26 +105,27 @@ class CategoryPageScaffold extends StatelessWidget {
                         ],
                       ),
                     ),
-                    Container(
-                      padding: const EdgeInsets.symmetric(
-                        horizontal: 8,
-                        vertical: 4,
-                      ),
-                      decoration: BoxDecoration(
-                        color: const Color(0xFFEFF6FF),
-                        borderRadius: BorderRadius.circular(10),
-                        border: Border.all(color: const Color(0xFFDBEAFE)),
-                      ),
-                      child: const Text(
-                        'Demo',
-                        style: TextStyle(
-                          fontFamily: 'Inter',
-                          fontSize: 10.5,
-                          fontWeight: FontWeight.w700,
-                          color: Color(0xFF0A4DF5),
+                    if (isDemoPreview)
+                      Container(
+                        padding: const EdgeInsets.symmetric(
+                          horizontal: 8,
+                          vertical: 4,
+                        ),
+                        decoration: BoxDecoration(
+                          color: const Color(0xFFEFF6FF),
+                          borderRadius: BorderRadius.circular(10),
+                          border: Border.all(color: const Color(0xFFDBEAFE)),
+                        ),
+                        child: const Text(
+                          'Demo',
+                          style: TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 10.5,
+                            fontWeight: FontWeight.w700,
+                            color: Color(0xFF0A4DF5),
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
               ),
@@ -136,6 +153,8 @@ class CategoryPageScaffold extends StatelessWidget {
                     key: const Key('category_search_field'),
                     controller: searchController,
                     onChanged: onSearchChanged,
+                    onSubmitted: onSearchSubmitted,
+                    textInputAction: TextInputAction.search,
                     style: const TextStyle(
                       fontFamily: 'Inter',
                       fontSize: 13.5,
@@ -181,20 +200,101 @@ class CategoryPageScaffold extends StatelessWidget {
 
               const SizedBox(height: 6),
 
-              // Listings or Empty State
+              // Listings, Loading, Error, or Empty State
               Expanded(
-                child: itemCount == 0
-                    ? _buildEmptyState()
-                    : ListView.separated(
-                        padding: const EdgeInsets.fromLTRB(16, 6, 16, 24),
-                        physics: const BouncingScrollPhysics(),
-                        itemCount: itemCount,
-                        separatorBuilder: (_, _) => const SizedBox(height: 12),
-                        itemBuilder: itemBuilder,
-                      ),
+                child: isLoading
+                    ? const Center(
+                        child: CircularProgressIndicator(
+                          color: AppTheme.accentOrange,
+                        ),
+                      )
+                    : errorMessage != null
+                        ? _buildErrorState()
+                        : itemCount == 0
+                            ? _buildEmptyState()
+                            : (onRefresh != null
+                                ? RefreshIndicator(
+                                    onRefresh: onRefresh!,
+                                    color: AppTheme.accentOrange,
+                                    child: ListView.separated(
+                                      padding: const EdgeInsets.fromLTRB(
+                                        16,
+                                        6,
+                                        16,
+                                        24,
+                                      ),
+                                      physics:
+                                          const AlwaysScrollableScrollPhysics(
+                                        parent: BouncingScrollPhysics(),
+                                      ),
+                                      itemCount: itemCount,
+                                      separatorBuilder: (_, _) =>
+                                          const SizedBox(height: 12),
+                                      itemBuilder: itemBuilder,
+                                    ),
+                                  )
+                                : ListView.separated(
+                                    padding:
+                                        const EdgeInsets.fromLTRB(16, 6, 16, 24),
+                                    physics: const BouncingScrollPhysics(),
+                                    itemCount: itemCount,
+                                    separatorBuilder: (_, _) =>
+                                        const SizedBox(height: 12),
+                                    itemBuilder: itemBuilder,
+                                  )),
               ),
             ],
           ),
+        ),
+      ),
+    );
+  }
+
+  Widget _buildErrorState() {
+    return Center(
+      child: Padding(
+        padding: const EdgeInsets.all(24),
+        child: Column(
+          mainAxisSize: MainAxisSize.min,
+          children: [
+            const Icon(
+              Icons.cloud_off_rounded,
+              size: 46,
+              color: AppTheme.errorRed,
+            ),
+            const SizedBox(height: 10),
+            const Text(
+              'Unable to load listings',
+              style: TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 16,
+                fontWeight: FontWeight.w700,
+                color: AppTheme.primaryNavy,
+              ),
+            ),
+            const SizedBox(height: 6),
+            Text(
+              errorMessage ?? 'Please check your connection and try again.',
+              textAlign: TextAlign.center,
+              style: const TextStyle(
+                fontFamily: 'Inter',
+                fontSize: 13,
+                color: Color(0xFF64748B),
+              ),
+            ),
+            if (onRetry != null) ...[
+              const SizedBox(height: 14),
+              ElevatedButton.icon(
+                onPressed: onRetry,
+                icon: const Icon(Icons.refresh, size: 18),
+                label: const Text('Retry'),
+                style: ElevatedButton.styleFrom(
+                  backgroundColor: AppTheme.primaryNavy,
+                  foregroundColor: Colors.white,
+                ),
+              ),
+            ],
+          ],
         ),
       ),
     );
@@ -213,9 +313,9 @@ class CategoryPageScaffold extends StatelessWidget {
               color: Color(0xFF94A3B8),
             ),
             const SizedBox(height: 10),
-            const Text(
-              'No matching listings found',
-              style: TextStyle(
+            Text(
+              emptyTitle,
+              style: const TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 16,
                 fontWeight: FontWeight.w700,
@@ -223,10 +323,10 @@ class CategoryPageScaffold extends StatelessWidget {
               ),
             ),
             const SizedBox(height: 6),
-            const Text(
-              'Try adjusting your search or filter selections.',
+            Text(
+              emptySubtitle,
               textAlign: TextAlign.center,
-              style: TextStyle(
+              style: const TextStyle(
                 fontFamily: 'Inter',
                 fontSize: 13,
                 color: Color(0xFF64748B),

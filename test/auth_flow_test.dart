@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
+import 'package:ceylongo/features/artisan/services/artisan_demo_service.dart';
+
 import 'package:ceylongo/core/services/secure_storage_service.dart';
 import 'package:ceylongo/core/theme/app_theme.dart';
 import 'package:ceylongo/features/auth/models/api_error.dart';
@@ -461,6 +463,8 @@ void main() {
 
     testWidgets('Toggles password visibility and supports Offline Demo Flow',
         (WidgetTester tester) async {
+      ArtisanDemoService.isDemoMode = true;
+      addTearDown(() => ArtisanDemoService.isDemoMode = false);
       bool homeNavigated = false;
 
       await tester.pumpWidget(wrapWithTheme(

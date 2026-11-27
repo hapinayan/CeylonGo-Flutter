@@ -153,8 +153,9 @@ class _RegisterScreenState extends State<RegisterScreen> {
     }
 
     final inputEmail = _emailController.text.trim();
-    if (inputEmail.toLowerCase() == 'demo@ceylongo.com' ||
-        inputEmail.toLowerCase() == 'traveler@ceylongo.demo') {
+    if (ArtisanDemoService.isDemoMode &&
+        (inputEmail.toLowerCase() == 'demo@ceylongo.com' ||
+            inputEmail.toLowerCase() == 'traveler@ceylongo.demo')) {
       await _onDemoRegister();
       return;
     }
@@ -164,13 +165,24 @@ class _RegisterScreenState extends State<RegisterScreen> {
     });
 
     try {
-      // Backend Contract: registration payload strictly contains full_name, email, password
-      // Phone number and country code are kept separate on client until backend support is confirmed
-      final response = await _authService.register(
-        fullName: _fullNameController.text.trim(),
-        email: _emailController.text.trim(),
-        password: _passwordController.text, // Passwords must NEVER be trimmed
-      );
+      final dialDigits = _selectedCountryCode.replaceAll(RegExp(r'[^0-9]'), '');
+      final cleanPhone = _phoneController.text.replaceAll(RegExp(r'[\s\-]'), '');
+      final formattedPhone = cleanPhone.isNotEmpty
+          ? (dialDigits.isNotEmpty ? '+$dialDigits$cleanPhone' : cleanPhone)
+          : null;
+
+      final response = widget.authService != null
+          ? await _authService.register(
+              fullName: _fullNameController.text.trim(),
+              email: _emailController.text.trim(),
+              password: _passwordController.text, // Passwords must NEVER be trimmed
+            )
+          : await _authService.registerTraveler(
+              fullName: _fullNameController.text.trim(),
+              email: _emailController.text.trim(),
+              password: _passwordController.text, // Passwords must NEVER be trimmed
+              phone: formattedPhone,
+            );
 
       if (mounted) {
         setState(() {
@@ -187,15 +199,28 @@ class _RegisterScreenState extends State<RegisterScreen> {
           ),
         );
 
-        // Navigate to Registration Successful screen
-        Navigator.pushReplacementNamed(
-          context,
-          '/registration-success',
-          arguments: {
-            'user': response.user,
-            'message': response.message,
-          },
-        );
+        if (response.requiresOtpVerification && response.challenge != null) {
+          Navigator.pushReplacementNamed(
+            context,
+            '/verify-email',
+            arguments: {
+              'email': response.challenge!.email,
+              'registrationId': response.challenge!.registrationId,
+              'resendAfter': response.challenge!.resendAfter,
+              'fullName': _fullNameController.text.trim(),
+            },
+          );
+        } else {
+          // Navigate to Registration Successful screen
+          Navigator.pushReplacementNamed(
+            context,
+            '/registration-success',
+            arguments: {
+              'user': response.user,
+              'message': response.message,
+            },
+          );
+        }
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -884,12 +909,13 @@ class _RegisterScreenState extends State<RegisterScreen> {
                                     ),
                                   ],
                                 ),
-                                if (constraints.maxHeight > 750) ...[
+                                if (ArtisanDemoService.isDemoMode &&
+                                    constraints.maxHeight > 750) ...[
                                   SizedBox(
                                     height: isShort ? 6 : (isCompact ? 8 : 12),
                                   ),
 
-                                  // Offline Demo Mode Button
+                                  // Offline Demo Mode Button (only in explicit Demo Mode)
                                   Center(
                                     child: TextButton.icon(
                                       key: const Key('demo_register_button'),

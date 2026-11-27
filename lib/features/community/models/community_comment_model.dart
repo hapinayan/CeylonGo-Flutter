@@ -1,3 +1,5 @@
+import '../../../core/constants/api_constants.dart';
+
 /// CeylonGo Travel Community Comment Model
 /// Represents comments and replies within community post discussions.
 class CommunityCommentModel {
@@ -73,6 +75,34 @@ class CommunityCommentModel {
       likesCount: likesCount ?? this.likesCount,
       isLikedByDemoUser: isLikedByDemoUser ?? this.isLikedByDemoUser,
       isDemoCreated: isDemoCreated ?? this.isDemoCreated,
+    );
+  }
+
+  factory CommunityCommentModel.fromJson(Map<String, dynamic> json) {
+    final authorMap = json['author'] is Map<String, dynamic>
+        ? json['author'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+    final name = (authorMap['full_name'] ?? json['author_name'] ?? 'Traveler')
+        .toString();
+    final parts = name.trim().split(RegExp(r'\s+'));
+    final initials = parts.isEmpty || parts[0].isEmpty
+        ? 'CG'
+        : parts.length == 1
+            ? parts[0][0].toUpperCase()
+            : '${parts[0][0]}${parts[1][0]}'.toUpperCase();
+    return CommunityCommentModel(
+      id: '${json['id'] ?? ''}',
+      postId: '${json['post_id'] ?? ''}',
+      authorId: '${json['author_id'] ?? authorMap['id'] ?? ''}',
+      authorName: name,
+      authorInitials: initials,
+      authorAvatarUrl: ApiConstants.resolveMediaUrl(
+        authorMap['avatar_url']?.toString(),
+      ),
+      isVerified: authorMap['is_verified_provider'] == true,
+      text: json['body']?.toString() ?? '',
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
     );
   }
 }

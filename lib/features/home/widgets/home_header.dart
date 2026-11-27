@@ -9,6 +9,7 @@ import '../../auth/models/user_model.dart';
 class HomeHeader extends StatefulWidget {
   final Animation<double> animation;
   final UserModel? user;
+  final int unreadNotifications;
   final VoidCallback onNotificationTap;
   final VoidCallback onProfileTap;
 
@@ -16,6 +17,7 @@ class HomeHeader extends StatefulWidget {
     super.key,
     required this.animation,
     this.user,
+    this.unreadNotifications = 0,
     required this.onNotificationTap,
     required this.onProfileTap,
   });
@@ -117,18 +119,19 @@ class _HomeHeaderState extends State<HomeHeader> {
                                   color: AppTheme.primaryNavy,
                                   size: 22,
                                 ),
-                                Positioned(
-                                  top: 9,
-                                  right: 10,
-                                  child: Container(
-                                    width: 7,
-                                    height: 7,
-                                    decoration: const BoxDecoration(
-                                      color: Color(0xFF38BDF8),
-                                      shape: BoxShape.circle,
+                                if (widget.unreadNotifications > 0)
+                                  Positioned(
+                                    top: 9,
+                                    right: 10,
+                                    child: Container(
+                                      width: 7,
+                                      height: 7,
+                                      decoration: const BoxDecoration(
+                                        color: Color(0xFF38BDF8),
+                                        shape: BoxShape.circle,
+                                      ),
                                     ),
                                   ),
-                                ),
                               ],
                             ),
                           ),

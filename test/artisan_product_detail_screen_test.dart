@@ -4,16 +4,54 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'package:ceylongo/core/services/secure_storage_service.dart';
 import 'package:ceylongo/features/artisan/screens/artisan_product_detail_screen.dart';
+import 'package:ceylongo/features/artisan/services/artisan_demo_service.dart';
 import 'package:ceylongo/features/artisan/services/artisan_service.dart';
+
+class _FakeStorageService extends SecureStorageService {
+  final bool loggedIn;
+  _FakeStorageService({this.loggedIn = false});
+
+  @override
+  Future<bool> hasToken() async => loggedIn;
+
+  @override
+  Future<String?> getToken() async => loggedIn ? 'test-token' : null;
+}
 
 void main() {
   group('ArtisanProductDetailScreen Widget Tests', () {
     late http.Client mockClient;
     late ArtisanService artisanService;
+    late _FakeStorageService storageService;
+
+    tearDown(() {
+      ArtisanDemoService.isDemoMode = false;
+    });
 
     setUp(() {
+      ArtisanDemoService.isDemoMode = false;
+      storageService = _FakeStorageService(loggedIn: false);
       mockClient = MockClient((request) async {
+        if (request.url.path == '/api/v1/artisan-listings/1') {
+          return http.Response(
+            jsonEncode({
+              'id': 1,
+              'provider_profile_id': 2,
+              'title': 'Ambalangoda Mask Workshop',
+              'craft_category': 'Woodcarving & Masks',
+              'district': 'Galle',
+              'city': 'Ambalangoda',
+              'phone': '+94912258000',
+              'email': 'masks@ceylongo.lk',
+              'is_active': true,
+              'is_verified': true,
+            }),
+            200,
+            headers: {'content-type': 'application/json'},
+          );
+        }
         if (request.url.path == '/api/v1/showcase-items/50') {
           return http.Response(
             jsonEncode({
@@ -67,7 +105,7 @@ void main() {
         return http.Response('{}', 404);
       });
 
-      artisanService = ArtisanService(client: mockClient);
+      artisanService = ArtisanService(client: mockClient, storageService: storageService);
     });
 
     testWidgets('renders product details, price in LKR, stock, and materials', (tester) async {
@@ -83,6 +121,7 @@ void main() {
           home: ArtisanProductDetailScreen(
             productId: 50,
             artisanService: artisanService,
+            storageService: storageService,
           ),
         ),
       );
@@ -96,6 +135,8 @@ void main() {
       expect(find.textContaining('Kaduru wood'), findsOneWidget);
       expect(find.text('Ambalangoda Mask Workshop'), findsOneWidget);
       expect(find.text('Inquire with Artisan'), findsOneWidget);
+      // Showcase & contact only in normal Academic MVP mode (no reservation button)
+      expect(find.byKey(const Key('reserve_for_pickup_btn')), findsNothing);
     });
 
     testWidgets('opens inquiry contact modal on Inquire button tap', (tester) async {
@@ -111,6 +152,7 @@ void main() {
           home: ArtisanProductDetailScreen(
             productId: 50,
             artisanService: artisanService,
+            storageService: storageService,
           ),
         ),
       );
@@ -136,6 +178,7 @@ void main() {
           home: ArtisanProductDetailScreen(
             productId: 50,
             artisanService: artisanService,
+            storageService: storageService,
           ),
         ),
       );
@@ -148,10 +191,10 @@ void main() {
       await tester.tap(favBtn);
       await tester.pumpAndSettle();
 
-      expect(find.text('Product favorites are coming soon pending system schema update.'), findsOneWidget);
+      expect(find.text('Please sign in to save this artisan workshop.'), findsOneWidget);
     });
 
-    testWidgets('renders disabled reservation button when product is out of stock', (tester) async {
+    testWidgets('does not show reservation button in MVP showcase mode when product is out of stock', (tester) async {
       tester.view.physicalSize = const Size(1200, 3000);
       tester.view.devicePixelRatio = 1.0;
       addTearDown(() {
@@ -164,18 +207,16 @@ void main() {
           home: ArtisanProductDetailScreen(
             productId: 51,
             artisanService: artisanService,
+            storageService: storageService,
           ),
         ),
       );
 
       await tester.pumpAndSettle();
 
-      final outOfStockBtn = find.byKey(const Key('reserve_out_of_stock_btn'));
-      expect(outOfStockBtn, findsOneWidget);
-      expect(find.text('Out of Stock - Reservations Paused'), findsOneWidget);
-
-      // Verify that the active reservation button is NOT rendered
+      expect(find.byKey(const Key('reserve_out_of_stock_btn')), findsNothing);
       expect(find.byKey(const Key('reserve_for_pickup_btn')), findsNothing);
+      expect(find.text('Inquire with Artisan'), findsOneWidget);
     });
   });
 }

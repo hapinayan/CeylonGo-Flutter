@@ -2,6 +2,7 @@ import 'package:flutter/material.dart';
 import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ceylongo/core/theme/app_theme.dart';
+import 'package:ceylongo/features/artisan/services/artisan_demo_service.dart';
 import 'package:ceylongo/features/community/screens/community_feed_screen.dart';
 import 'package:ceylongo/features/community/screens/community_search_screen.dart';
 import 'package:ceylongo/features/community/services/community_demo_service.dart';
@@ -9,7 +10,12 @@ import 'package:ceylongo/features/home/widgets/home_bottom_navigation_bar.dart';
 
 void main() {
   setUp(() {
+    ArtisanDemoService.isDemoMode = true;
     CommunityDemoService().resetToDefaults();
+  });
+
+  tearDown(() {
+    ArtisanDemoService.isDemoMode = false;
   });
 
   Widget createCommunityScreen({

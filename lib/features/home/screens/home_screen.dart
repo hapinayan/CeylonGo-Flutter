@@ -4,8 +4,14 @@ import 'package:flutter/services.dart';
 import '../../../core/services/secure_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../artisan/services/artisan_demo_service.dart';
+import '../../auth/models/api_error.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/services/auth_service.dart';
+import '../../categories/models/discovery_models.dart';
+import '../../categories/screens/homestays_category_screen.dart';
+import '../../categories/services/discovery_service.dart';
+import '../../profile/services/account_service.dart';
+import '../../profile/widgets/notifications_sheet.dart';
 import '../widgets/home_bottom_navigation_bar.dart';
 import '../widgets/home_category_filters.dart';
 import '../widgets/home_category_showcase.dart';
@@ -26,6 +32,8 @@ class HomeScreen extends StatefulWidget {
   final UserModel? initialUser;
   final AuthService? authService;
   final SecureStorageService? storageService;
+  final DiscoveryService? discoveryService;
+  final AccountService? accountService;
   final bool showBottomNav;
 
   const HomeScreen({
@@ -33,6 +41,8 @@ class HomeScreen extends StatefulWidget {
     this.initialUser,
     this.authService,
     this.storageService,
+    this.discoveryService,
+    this.accountService,
     this.showBottomNav = true,
   });
 
@@ -44,17 +54,30 @@ class _HomeScreenState extends State<HomeScreen>
     with SingleTickerProviderStateMixin {
   late final AuthService _authService;
   late final SecureStorageService _storageService;
+  late final DiscoveryService _discoveryService;
+  late final AccountService _accountService;
   late final AnimationController _entranceController;
 
   UserModel? _user;
   bool _isLoading = true;
   String _selectedCategoryId = 'all';
 
+  bool _isHomeDataLoading = false;
+  String? _homeDataError;
+  List<HomestayListingModel> _homestays = [];
+  List<ActivityListingModel> _activities = [];
+  List<TourGuideListingModel> _guides = [];
+  List<RentalVehicleModel> _rentals = [];
+  Set<int> _favoriteHomestayIds = {};
+  int _unreadNotifications = 0;
+
   @override
   void initState() {
     super.initState();
     _authService = widget.authService ?? AuthService();
     _storageService = widget.storageService ?? SecureStorageService();
+    _discoveryService = widget.discoveryService ?? DiscoveryService();
+    _accountService = widget.accountService ?? AccountService(storageService: _storageService);
 
     _entranceController = AnimationController(
       duration: const Duration(milliseconds: 700),
@@ -62,6 +85,9 @@ class _HomeScreenState extends State<HomeScreen>
     );
 
     _loadUser();
+    if (!ArtisanDemoService.isDemoMode) {
+      _loadHomeData();
+    }
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -134,83 +160,161 @@ class _HomeScreenState extends State<HomeScreen>
     }
   }
 
-  void _onNotificationTap() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
-      ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(24.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: const [
-                Icon(
-                  Icons.notifications_active_outlined,
-                  color: Color(0xFF2563EB),
-                ),
-                SizedBox(width: 10),
-                Text(
-                  'Notifications',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: AppTheme.primaryNavy,
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 16),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFF0F7FF),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFBFDBFE)),
-              ),
-              child: Row(
+  Future<void> _loadHomeData() async {
+    if (ArtisanDemoService.isDemoMode) return;
+    if (mounted) {
+      setState(() {
+        _isHomeDataLoading = true;
+        _homeDataError = null;
+      });
+    }
+
+    try {
+      final results = await Future.wait([
+        _discoveryService.searchHomestays(limit: 10),
+        _discoveryService.searchActivities(limit: 8).catchError((_) => <ActivityListingModel>[]),
+        _discoveryService.searchTourGuides(limit: 8).catchError((_) => <TourGuideListingModel>[]),
+        _discoveryService.searchRentals(limit: 8).catchError((_) => <RentalVehicleModel>[]),
+      ]);
+
+      final hasToken = await _storageService.hasToken();
+      Set<int> favIds = _favoriteHomestayIds;
+      int unread = _unreadNotifications;
+      if (hasToken) {
+        try {
+          final wish = await _discoveryService.getHomestayWishlist();
+          favIds = wish.map((e) => e.id).toSet();
+        } catch (_) {}
+        try {
+          unread = await _accountService.getUnreadCount();
+        } catch (_) {}
+      }
+
+      if (!mounted) return;
+      setState(() {
+        _homestays = results[0] as List<HomestayListingModel>;
+        _activities = results[1] as List<ActivityListingModel>;
+        _guides = results[2] as List<TourGuideListingModel>;
+        _rentals = results[3] as List<RentalVehicleModel>;
+        _favoriteHomestayIds = favIds;
+        _unreadNotifications = unread;
+        _isHomeDataLoading = false;
+      });
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isHomeDataLoading = false;
+        _homeDataError = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isHomeDataLoading = false;
+        _homeDataError = 'Unable to load listings from backend.';
+      });
+    }
+  }
+
+  Future<void> _toggleFavoriteHomestay(HomestayListingModel item) async {
+    if (ArtisanDemoService.isDemoMode) return;
+    final hasToken = await _storageService.hasToken();
+    if (!hasToken) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in to save homestays.')),
+        );
+      }
+      return;
+    }
+    final nextSaved = !_favoriteHomestayIds.contains(item.id);
+    try {
+      await _discoveryService.setHomestayWishlist(item.id, save: nextSaved);
+      if (!mounted) return;
+      setState(() {
+        if (nextSaved) {
+          _favoriteHomestayIds = {..._favoriteHomestayIds, item.id};
+        } else {
+          _favoriteHomestayIds =
+              _favoriteHomestayIds.where((id) => id != item.id).toSet();
+        }
+      });
+    } catch (e) {
+      if (!mounted) return;
+      ScaffoldMessenger.of(context).showSnackBar(
+        SnackBar(content: Text('Could not update wishlist: $e')),
+      );
+    }
+  }
+
+  Future<void> _loadUnreadNotifications() async {
+    try {
+      final hasToken = await _storageService.hasToken();
+      if (!hasToken) return;
+      final unread = await _accountService.getUnreadCount();
+      if (mounted) {
+        setState(() => _unreadNotifications = unread);
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _onNotificationTap() async {
+    if (ArtisanDemoService.isDemoMode) {
+      showModalBottomSheet(
+        context: context,
+        shape: const RoundedRectangleBorder(
+          borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+        ),
+        builder: (ctx) => Padding(
+          padding: const EdgeInsets.all(24.0),
+          child: Column(
+            mainAxisSize: MainAxisSize.min,
+            crossAxisAlignment: CrossAxisAlignment.start,
+            children: [
+              Row(
                 children: const [
-                  Icon(Icons.stars, color: Color(0xFF2563EB), size: 20),
+                  Icon(
+                    Icons.notifications_active_outlined,
+                    color: Color(0xFF2563EB),
+                  ),
                   SizedBox(width: 10),
-                  Expanded(
-                    child: Text(
-                      'Welcome to CeylonGo! Explore authentic Sri Lankan artisan craft workshops in Galle & Kandy.',
-                      style: TextStyle(
-                        fontFamily: 'Inter',
-                        fontSize: 13,
-                        color: Color(0xFF334155),
-                      ),
+                  Text(
+                    'Notifications (Demo)',
+                    style: TextStyle(
+                      fontFamily: 'Inter',
+                      fontSize: 18,
+                      fontWeight: FontWeight.bold,
+                      color: AppTheme.primaryNavy,
                     ),
                   ),
                 ],
               ),
-            ),
-            const SizedBox(height: 20),
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: AppTheme.primaryNavy,
-                  foregroundColor: Colors.white,
-                  shape: RoundedRectangleBorder(
-                    borderRadius: BorderRadius.circular(10),
-                  ),
-                ),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.pushNamed(context, '/artisan');
-                },
-                child: const Text('View Artisan Discoveries'),
+              const SizedBox(height: 12),
+              const Text(
+                'Demo preview mode is active.',
+                style: TextStyle(fontSize: 13, color: Color(0xFF334155)),
               ),
-            ),
-          ],
+            ],
+          ),
         ),
-      ),
+      );
+      return;
+    }
+
+    final hasToken = await _storageService.hasToken();
+    if (!hasToken) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Sign in to view notifications.')),
+        );
+      }
+      return;
+    }
+
+    if (!mounted) return;
+    await showNotificationsSheet(
+      context,
+      accountService: _accountService,
+      onUpdated: _loadUnreadNotifications,
     );
   }
 
@@ -260,6 +364,7 @@ class _HomeScreenState extends State<HomeScreen>
                   HomeHeader(
                     animation: _entranceController,
                     user: _user,
+                    unreadNotifications: _unreadNotifications,
                     onNotificationTap: _onNotificationTap,
                     onProfileTap: _onProfileTap,
                   ),
@@ -268,7 +373,16 @@ class _HomeScreenState extends State<HomeScreen>
                   HomeSearchBar(
                     animation: _entranceController,
                     onSearch: (query) {
-                      Navigator.pushNamed(context, '/artisan');
+                      Navigator.push(
+                        context,
+                        MaterialPageRoute(
+                          builder: (_) => HomestaysCategoryScreen(
+                            initialDestination: query.trim().isEmpty
+                                ? null
+                                : query.trim(),
+                          ),
+                        ),
+                      );
                     },
                   ),
 
@@ -296,33 +410,51 @@ class _HomeScreenState extends State<HomeScreen>
 
                   // D-G. Scrollable Home Content
                   Expanded(
-                    child: SingleChildScrollView(
-                      physics: const BouncingScrollPhysics(),
-                      padding: const EdgeInsets.only(bottom: 24.0),
-                      child: Column(
-                        crossAxisAlignment: CrossAxisAlignment.stretch,
-                        children: [
-                          // D. Popular Destinations (Jaffna, Ella, Kandy)
-                          HomePopularDestinations(
-                            animation: _entranceController,
-                          ),
-
-                          const SizedBox(height: 14),
-
-                          // E. Featured Homestays
-                          HomeFeaturedHomestays(
-                            animation: _entranceController,
-                            onViewAllTap: () => Navigator.pushNamed(
-                              context,
-                              '/category/homestays',
+                    child: RefreshIndicator(
+                      onRefresh: _loadHomeData,
+                      child: SingleChildScrollView(
+                        physics: const AlwaysScrollableScrollPhysics(
+                          parent: BouncingScrollPhysics(),
+                        ),
+                        padding: const EdgeInsets.only(bottom: 24.0),
+                        child: Column(
+                          crossAxisAlignment: CrossAxisAlignment.stretch,
+                          children: [
+                            // D. Popular Destinations (Jaffna, Ella, Kandy)
+                            HomePopularDestinations(
+                              animation: _entranceController,
                             ),
-                          ),
 
-                          if (_selectedCategoryId == 'all') ...[
                             const SizedBox(height: 14),
-                            const HomeCategoryShowcase(),
+
+                            // E. Featured Homestays
+                            HomeFeaturedHomestays(
+                              animation: _entranceController,
+                              homestays: ArtisanDemoService.isDemoMode
+                                  ? null
+                                  : _homestays,
+                              favoriteIds: _favoriteHomestayIds,
+                              onFavoriteTap: _toggleFavoriteHomestay,
+                              isLoading: _isHomeDataLoading,
+                              errorMessage: _homeDataError,
+                              onRetry: _loadHomeData,
+                              onViewAllTap: () => Navigator.pushNamed(
+                                context,
+                                '/category/homestays',
+                              ),
+                            ),
+
+                            if (_selectedCategoryId == 'all') ...[
+                              const SizedBox(height: 14),
+                              HomeCategoryShowcase(
+                                activities: _activities,
+                                guides: _guides,
+                                rentals: _rentals,
+                                isLoading: _isHomeDataLoading,
+                              ),
+                            ],
                           ],
-                        ],
+                        ),
                       ),
                     ),
                   ),
