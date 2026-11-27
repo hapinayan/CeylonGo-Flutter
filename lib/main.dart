@@ -14,9 +14,7 @@ import 'features/artisan/screens/artisan_product_detail_screen.dart';
 import 'features/artisan/screens/artisan_reservation_form_screen.dart';
 import 'features/artisan/screens/artisan_reservation_history_screen.dart';
 import 'features/artisan/screens/artisan_wishlist_screen.dart';
-import 'features/artisan/services/artisan_demo_service.dart';
 import 'features/auth/models/api_error.dart';
-import 'features/auth/models/user_model.dart';
 import 'features/auth/screens/auth_landing_screen.dart';
 import 'features/auth/screens/check_email_screen.dart';
 import 'features/auth/screens/create_new_password_screen.dart';
@@ -27,6 +25,21 @@ import 'features/auth/screens/password_reset_success_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/registration_success_screen.dart';
 import 'features/auth/services/auth_service.dart';
+import 'features/vendor/screens/vendor_about_screen.dart';
+import 'features/vendor/screens/vendor_availability_screen.dart';
+import 'features/vendor/screens/vendor_bookings_screen.dart';
+import 'features/vendor/screens/vendor_dashboard_screen.dart';
+import 'features/vendor/screens/vendor_earnings_screen.dart';
+import 'features/vendor/screens/vendor_listings_screen.dart';
+import 'features/vendor/screens/vendor_login_screen.dart';
+import 'features/vendor/screens/vendor_more_screen.dart';
+import 'features/vendor/screens/vendor_notifications_screen.dart';
+import 'features/vendor/screens/vendor_profile_screen.dart';
+import 'features/vendor/screens/vendor_register_screen.dart';
+import 'features/vendor/screens/vendor_reviews_screen.dart';
+import 'features/vendor/screens/vendor_settings_screen.dart';
+import 'features/vendor/screens/vendor_support_screen.dart';
+import 'features/vendor/services/vendor_demo_service.dart';
 
 void main() {
   runApp(const CeylonGoApp());
@@ -145,6 +158,31 @@ class CeylonGoApp extends StatefulWidget {
       '/category/activities': (context) => const ActivitiesCategoryScreen(),
       '/category/guides': (context) => const LocalGuidesCategoryScreen(),
       '/category/rentals': (context) => const RentalsCategoryScreen(),
+      '/vendor/login': (context) => VendorLoginScreen(
+            authService: authService,
+            storageService: storageService,
+          ),
+      '/vendor/register': (context) => VendorRegisterScreen(
+            storageService: storageService,
+          ),
+      '/vendor/dashboard': (context) => const VendorDashboardScreen(),
+      '/vendor/listings': (context) => const VendorListingsScreen(),
+      '/vendor/bookings': (context) => const VendorBookingsScreen(),
+      '/vendor/more': (context) => VendorMoreScreen(
+            storageService: storageService,
+          ),
+      '/vendor/availability': (context) => const VendorAvailabilityScreen(),
+      '/vendor/earnings': (context) => const VendorEarningsScreen(),
+      '/vendor/reviews': (context) => const VendorReviewsScreen(),
+      '/vendor/notifications': (context) => const VendorNotificationsScreen(),
+      '/vendor/settings': (context) => VendorSettingsScreen(
+            storageService: storageService,
+          ),
+      '/vendor/support': (context) => const VendorSupportScreen(),
+      '/vendor/about': (context) => const VendorAboutScreen(),
+      '/vendor/profile': (context) => VendorProfileScreen(
+            storageService: storageService,
+          ),
       '/profile': (context) => MainNavigationShell(
             initialIndex: 4,
             authService: authService,
@@ -306,6 +344,7 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
       nav.pushNamedAndRemoveUntil(
         '/create-new-password',
         (route) =>
+            route.settings.name == '/vendor/login' ||
             route.settings.name == '/login' ||
             route.settings.name == '/auth' ||
             route.isFirst,
@@ -384,12 +423,16 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
 }
 
 /// Authentication Gate Widget
-/// Handles app startup session restoration and JWT validation per Section 7
+/// Handles Vendor-only app startup session restoration and JWT + role validation.
 class AuthGate extends StatefulWidget {
   final AuthService? authService;
   final SecureStorageService? storageService;
 
   const AuthGate({super.key, this.authService, this.storageService});
+
+  static bool isVerifiedVendorRole(String? role) {
+    return role != null && role.trim().toLowerCase() == 'vendor';
+  }
 
   @override
   State<AuthGate> createState() => _AuthGateState();
@@ -402,7 +445,6 @@ class _AuthGateState extends State<AuthGate> {
   late final SecureStorageService _storageService;
 
   AuthStatus _status = AuthStatus.checking;
-  UserModel? _authenticatedUser;
   String? _networkErrorMessage;
 
   @override
@@ -422,44 +464,67 @@ class _AuthGateState extends State<AuthGate> {
     try {
       final token = await _storageService.getToken();
 
-      // If no token exists, immediately show LoginScreen
-      if (token == null || token.trim().isEmpty) {
+      if (token != null && token.trim().isNotEmpty) {
+        // Legacy Traveler demo tokens must never authenticate the Vendor app.
+        if (token.startsWith('demo-')) {
+          await _storageService.clear();
+          if (mounted) {
+            setState(() {
+              _status = AuthStatus.unauthenticated;
+            });
+          }
+          return;
+        }
+
+        // Validate real JWT using GET /api/v1/auth/me and verify Vendor role.
+        final user = await _authService.getMe(token);
+        if (!AuthGate.isVerifiedVendorRole(user.role)) {
+          // Fail safely: non-vendor (e.g., traveler/tourist) sessions cannot
+          // access the Vendor app or open Traveler Home.
+          await _storageService.clear();
+          if (mounted) {
+            setState(() {
+              _status = AuthStatus.unauthenticated;
+            });
+          }
+          return;
+        }
+
+        await _storageService.saveUser(user);
+        VendorDemoService.instance.setAuthenticatedVendor(
+          id: user.id,
+          businessName: user.fullName,
+          email: user.email,
+        );
+
         if (mounted) {
           setState(() {
-            _status = AuthStatus.unauthenticated;
+            _status = AuthStatus.authenticated;
           });
         }
         return;
       }
 
-      // Check if session is an offline demo session
-      if (token.startsWith('demo-') || ArtisanDemoService.isDemoMode) {
-        final cachedUser = await _storageService.getUser();
-        if (cachedUser != null && mounted) {
-          ArtisanDemoService.isDemoMode = true;
+      // Check for a clearly labeled offline Demo Vendor session.
+      final demoVendorMap = await _storageService.getVendorDemoSession();
+      if (demoVendorMap != null && demoVendorMap['is_demo_session'] == true) {
+        VendorDemoService.instance.restoreDemoVendorFromMap(demoVendorMap);
+        if (mounted) {
           setState(() {
-            _authenticatedUser = cachedUser;
             _status = AuthStatus.authenticated;
           });
-          return;
         }
+        return;
       }
-
-      // If token exists, validate it using GET /api/v1/auth/me
-      final user = await _authService.getMe(token);
-
-      // Save verified user profile
-      await _storageService.saveUser(user);
 
       if (mounted) {
         setState(() {
-          _authenticatedUser = user;
-          _status = AuthStatus.authenticated;
+          _status = AuthStatus.unauthenticated;
         });
       }
     } on ApiError catch (e) {
-      if (e.statusCode == 401) {
-        // HTTP 401: Token invalid or expired. Clear storage and show LoginScreen
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        // Invalid, expired, or unauthorized token: clear storage and show VendorLoginScreen.
         await _storageService.clear();
         if (mounted) {
           setState(() {
@@ -469,7 +534,7 @@ class _AuthGateState extends State<AuthGate> {
       } else if (e.code == 'NETWORK_ERROR' ||
           e.code == 'TIMEOUT' ||
           e.statusCode == 0) {
-        // Network failure / timeout: Do NOT delete token. Show safe retry state
+        // Network failure / timeout: preserve token and show safe retry state.
         if (mounted) {
           setState(() {
             _status = AuthStatus.networkError;
@@ -499,22 +564,20 @@ class _AuthGateState extends State<AuthGate> {
     switch (_status) {
       case AuthStatus.checking:
         return const Scaffold(
-          backgroundColor: AppTheme.backgroundLight,
+          backgroundColor: Colors.white,
           body: Center(
-            child: CircularProgressIndicator(color: AppTheme.accentOrange),
+            child: CircularProgressIndicator(color: AppTheme.primaryNavy),
           ),
         );
 
       case AuthStatus.authenticated:
-        return MainNavigationShell(
-          initialIndex: 0,
-          initialUser: _authenticatedUser,
+        return const VendorDashboardScreen();
+
+      case AuthStatus.unauthenticated:
+        return VendorLoginScreen(
           authService: _authService,
           storageService: _storageService,
         );
-
-      case AuthStatus.unauthenticated:
-        return const AuthLandingScreen();
 
       case AuthStatus.networkError:
         return Scaffold(
@@ -553,7 +616,8 @@ class _AuthGateState extends State<AuthGate> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            _networkErrorMessage ?? 'Unable to connect to CeylonGo server to verify your session.',
+                            _networkErrorMessage ??
+                                'Unable to connect to CeylonGo server to verify your vendor session.',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 14,
@@ -566,7 +630,7 @@ class _AuthGateState extends State<AuthGate> {
                             icon: const Icon(Icons.refresh),
                             label: const Text('Retry Connection'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.accentOrange,
+                              backgroundColor: AppTheme.primaryNavy,
                               foregroundColor: AppTheme.backgroundWhite,
                             ),
                           ),
@@ -577,7 +641,7 @@ class _AuthGateState extends State<AuthGate> {
                                 _status = AuthStatus.unauthenticated;
                               });
                             },
-                            child: const Text('Go to Sign In'),
+                            child: const Text('Go to Vendor Sign In'),
                           ),
                         ],
                       ),
