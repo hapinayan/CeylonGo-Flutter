@@ -50,6 +50,13 @@ class ApiConstants {
   static String get weatherCurrentEndpoint => '$apiV1/weather/current';
   static String get weatherForecastEndpoint => '$apiV1/weather/forecast';
 
+  // Interactive Map Endpoints (FastAPI /api/v1/map)
+  static String get mapLocationsEndpoint => '$apiV1/map/locations';
+  static String get mapNearbyEndpoint => '$apiV1/map/nearby';
+  static String get mapSearchEndpoint => '$apiV1/map/search';
+  static String get mapCategoriesEndpoint => '$apiV1/map/categories';
+  static String get mapRouteEndpoint => '$apiV1/map/route';
+
   // Standard JSON Headers
   static const Map<String, String> defaultHeaders = {
     'Content-Type': 'application/json',

@@ -43,6 +43,8 @@ import 'features/vendor/screens/vendor_settings_screen.dart';
 import 'features/vendor/screens/vendor_support_screen.dart';
 import 'features/vendor/services/provider_api_service.dart';
 import 'features/vendor/services/vendor_demo_service.dart';
+import 'features/map/screens/interactive_map_screen.dart';
+import 'features/map/services/map_api_service.dart';
 import 'features/weather/screens/live_weather_screen.dart';
 import 'features/weather/services/weather_api_service.dart';
 
@@ -57,6 +59,7 @@ class CeylonGoApp extends StatefulWidget {
   final ProviderApiService? providerService;
   final SecureStorageService? storageService;
   final WeatherApiService? weatherService;
+  final MapApiService? mapService;
   final String? initialRoute;
   final GlobalKey<NavigatorState>? navigatorKey;
 
@@ -66,6 +69,7 @@ class CeylonGoApp extends StatefulWidget {
     this.providerService,
     this.storageService,
     this.weatherService,
+    this.mapService,
     this.initialRoute,
     this.navigatorKey,
   });
@@ -116,6 +120,7 @@ class CeylonGoApp extends StatefulWidget {
     ProviderApiService? providerService,
     SecureStorageService? storageService,
     WeatherApiService? weatherService,
+    MapApiService? mapService,
   }) {
     return {
       '/auth': (context) => const AuthLandingScreen(),
@@ -203,6 +208,9 @@ class CeylonGoApp extends StatefulWidget {
           ),
       '/weather': (context) => LiveWeatherScreen(
             weatherService: weatherService,
+          ),
+      '/map': (context) => InteractiveMapScreen(
+            mapService: mapService,
           ),
       '/profile': (context) => MainNavigationShell(
             initialIndex: 4,
@@ -383,6 +391,7 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
       providerService: widget.providerService,
       storageService: widget.storageService,
       weatherService: widget.weatherService,
+      mapService: widget.mapService,
     );
 
     return MaterialApp(

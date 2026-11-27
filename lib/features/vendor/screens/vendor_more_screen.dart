@@ -21,12 +21,6 @@ class VendorMoreScreen extends StatelessWidget {
       route: '/vendor/availability',
     ),
     (
-      key: Key('vendor_more_weather_tile'),
-      title: 'Live Weather',
-      icon: Icons.wb_sunny_outlined,
-      route: '/weather',
-    ),
-    (
       key: Key('vendor_more_earnings_tile'),
       title: 'Earnings & Payments',
       icon: Icons.account_balance_wallet_outlined,
@@ -61,6 +55,18 @@ class VendorMoreScreen extends StatelessWidget {
       title: 'About CeylonGo',
       icon: Icons.info_outline_rounded,
       route: '/vendor/about',
+    ),
+    (
+      key: Key('vendor_more_weather_tile'),
+      title: 'Live Weather',
+      icon: Icons.wb_sunny_outlined,
+      route: '/weather',
+    ),
+    (
+      key: Key('vendor_more_map_tile'),
+      title: 'Interactive Map',
+      icon: Icons.map_outlined,
+      route: '/map',
     ),
   ];
 
