@@ -5,9 +5,17 @@ import 'package:ceylongo/core/theme/app_theme.dart';
 import 'package:ceylongo/features/ai_planner/screens/ai_planner_screen.dart';
 import 'package:ceylongo/features/ai_planner/widgets/ai_planner_header.dart';
 import 'package:ceylongo/features/ai_planner/widgets/ai_travel_plan_card.dart';
+import 'package:ceylongo/features/artisan/services/artisan_demo_service.dart';
 import 'package:ceylongo/features/home/widgets/home_bottom_navigation_bar.dart';
 
 void main() {
+  setUp(() {
+    ArtisanDemoService.isDemoMode = true;
+  });
+
+  tearDown(() {
+    ArtisanDemoService.isDemoMode = false;
+  });
   Widget createApp({Map<String, WidgetBuilder>? routes}) {
     return MaterialApp(
       theme: AppTheme.lightTheme,

@@ -12,7 +12,7 @@ import '../models/community_api_models.dart';
 /// - `GET /api/v1/community/feed`
 /// - `POST /api/v1/community/posts`
 /// - `GET /api/v1/community/posts/{post_id}`
-/// - `POST /api/v1/community/posts/{post_id}/media` (`file`, `display_order`)
+/// - `POST /api/v1/community/posts/{post_id}/media` (`file`)
 /// - `DELETE /api/v1/community/posts/{post_id}/media/{media_id}`
 ///
 /// Security: Never logs JWT tokens, image bytes, or local file paths.
@@ -67,19 +67,26 @@ class CommunityApiService {
   }) async {
     _ensureAuthToken(authToken);
     final uri = Uri.parse(ApiConstants.communityPostsEndpoint);
-    final payload = <String, dynamic>{
-      'content': content.trim(),
-      if (locationTag != null && locationTag.trim().isNotEmpty)
-        'location_tag': locationTag.trim(),
-      if (district != null && district.trim().isNotEmpty)
-        'district': district.trim(),
-      if (hashtags != null && hashtags.isNotEmpty)
-        'hashtags': hashtags
-            .map((h) => h.trim().replaceFirst(RegExp(r'^#'), '').toLowerCase())
-            .where((h) => h.isNotEmpty)
-            .toList(),
-      'is_published': true,
-    };
+    final caption = content.trim();
+    final tags = (hashtags ?? const <String>[])
+        .map((tag) => tag.trim().replaceFirst(RegExp(r'^#'), ''))
+        .where((tag) =>
+            tag.isNotEmpty && !caption.toLowerCase().contains('#${tag.toLowerCase()}'))
+        .map((tag) => '#$tag');
+    final location = locationTag?.trim();
+    final body = [
+      caption,
+      if (location != null && location.isNotEmpty) location,
+      if (tags.isNotEmpty) tags.join(' '),
+    ].join('\n');
+    if (body.runes.length > 2000) {
+      throw const ApiError(
+        statusCode: 422,
+        code: 'INVALID_POST_BODY',
+        message: 'Caption, location, and hashtags together cannot exceed 2000 characters.',
+      );
+    }
+    final payload = {'body': body};
 
     final data = await _sendJsonRequest(
       () => _client
@@ -119,15 +126,14 @@ class CommunityApiService {
   }
 
   /// Uploads a single validated photo to `POST /api/v1/community/posts/{post_id}/media`
-  /// using multipart field `file` and optional `display_order`.
+  /// using multipart field `file`.
   Future<CommunityApiMedia> uploadPostMedia({
     required String authToken,
     required int postId,
     required SelectedCommunityPhoto photo,
-    int? displayOrder,
   }) async {
     _ensureAuthToken(authToken);
-    CommunityMediaValidator.validate(
+    final format = CommunityMediaValidator.validate(
       bytes: photo.bytes,
       filename: photo.safeFilename,
       mimeType: photo.mimeType,
@@ -138,15 +144,12 @@ class CommunityApiService {
       ..headers['Authorization'] = 'Bearer ${authToken.trim()}'
       ..headers['Accept'] = 'application/json';
 
-    if (displayOrder != null) {
-      request.fields['display_order'] = displayOrder.toString();
-    }
-
     request.files.add(
       http.MultipartFile.fromBytes(
         'file',
         photo.bytes,
         filename: photo.safeFilename,
+        contentType: http.MediaType.parse(format.mimeType),
       ),
     );
 

@@ -54,6 +54,13 @@ import 'features/recommendations/services/recommendation_api_service.dart';
 import 'features/recommendations/services/recommendation_preferences_service.dart';
 import 'features/weather/screens/live_weather_screen.dart';
 import 'features/weather/services/weather_api_service.dart';
+import 'features/auth/screens/verify_email_otp_screen.dart';
+import 'features/bookings/screens/my_bookings_screen.dart';
+import 'features/profile/screens/traveler_wishlist_screen.dart';
+import 'features/provider/screens/provider_login_screen.dart';
+import 'features/provider/screens/provider_onboarding_screen.dart'
+    as academic_provider;
+import 'features/provider/screens/provider_portal_screen.dart';
 
 void main() {
   runApp(const CeylonGoApp());
@@ -145,6 +152,17 @@ class CeylonGoApp extends StatefulWidget {
             storageService: storageService,
           ),
       '/register': (context) => RegisterScreen(authService: authService),
+      '/verify-email': (context) {
+        final args =
+            ModalRoute.of(context)?.settings.arguments as Map<String, dynamic>?;
+        return VerifyEmailOtpScreen(
+          authService: authService,
+          email: args?['email'] as String?,
+          registrationId: args?['registrationId'] as String?,
+          fullName: args?['fullName'] as String?,
+          initialResendAfter: (args?['resendAfter'] as int?) ?? 60,
+        );
+      },
       '/registration-success': (context) => const RegistrationSuccessScreen(),
       '/login-success': (context) => const LoginSuccessScreen(),
       '/forgot-password': (context) =>
@@ -189,6 +207,7 @@ class CeylonGoApp extends StatefulWidget {
       '/category/eco': (context) => const EcoTourismCategoryScreen(),
       '/category/activities': (context) => const ActivitiesCategoryScreen(),
       '/category/guides': (context) => const LocalGuidesCategoryScreen(),
+      '/category/tour_guides': (context) => const LocalGuidesCategoryScreen(),
       '/category/rentals': (context) => const RentalsCategoryScreen(),
       '/vendor/login': (context) => VendorLoginScreen(
             authService: authService,
@@ -235,6 +254,11 @@ class CeylonGoApp extends StatefulWidget {
             recommendationService: recommendationService,
             preferencesStore: preferencesStore,
           ),
+      '/bookings': (context) => const MyBookingsScreen(),
+      '/wishlist': (context) => const TravelerWishlistScreen(),
+      '/provider/login': (context) => const ProviderLoginScreen(),
+      '/provider/register': (context) => const academic_provider.ProviderOnboardingScreen(),
+      '/provider/dashboard': (context) => const ProviderPortalScreen(),
       '/profile': (context) => MainNavigationShell(
             initialIndex: 4,
             authService: authService,
@@ -285,10 +309,16 @@ class CeylonGoApp extends StatefulWidget {
       );
     }
 
-    if (uri.path == '/artisan/business' || uri.path == 'artisan/business') {
+    if (uri.path == '/artisan/business' ||
+        uri.path == 'artisan/business' ||
+        uri.path == '/artisan/detail' ||
+        uri.path == 'artisan/detail') {
       int? listingId;
       if (uri.queryParameters.containsKey('id')) {
         listingId = int.tryParse(uri.queryParameters['id']!);
+      }
+      if (listingId == null && settings.arguments is int) {
+        listingId = settings.arguments as int;
       }
       if (listingId == null && settings.arguments is Map) {
         final map = settings.arguments as Map;

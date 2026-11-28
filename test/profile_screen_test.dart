@@ -3,6 +3,7 @@ import 'package:flutter_test/flutter_test.dart';
 
 import 'package:ceylongo/core/services/secure_storage_service.dart';
 import 'package:ceylongo/core/theme/app_theme.dart';
+import 'package:ceylongo/features/artisan/services/artisan_demo_service.dart';
 import 'package:ceylongo/features/auth/models/user_model.dart';
 import 'package:ceylongo/features/home/widgets/home_bottom_navigation_bar.dart';
 import 'package:ceylongo/features/profile/screens/profile_screen.dart';
@@ -68,6 +69,14 @@ void main() {
   }
 
   group('ProfileScreen Full White Minimal Design Verification', () {
+    setUp(() {
+      ArtisanDemoService.isDemoMode = true;
+    });
+
+    tearDown(() {
+      ArtisanDemoService.isDemoMode = false;
+    });
+
     testWidgets('Renders pure white background, minimal header, and all required sections without wave or header title',
         (WidgetTester tester) async {
       await tester.pumpWidget(createProfileScreen());
@@ -93,36 +102,34 @@ void main() {
       expect(find.text('kamal@ceylongo.com'), findsOneWidget);
       expect(find.byKey(const Key('profile_edit_avatar_btn')), findsOneWidget);
       expect(find.text('KP'), findsOneWidget); // Initials
-      expect(find.text('TRAVELER'), findsOneWidget);
+      expect(find.text('Demo Traveler'), findsOneWidget);
 
       // Section 5: Profile Statistics Card
       expect(find.text('Bookings'), findsOneWidget);
       expect(find.text('Saved'), findsOneWidget);
-      expect(find.text('Places Visited'), findsOneWidget);
+      expect(find.text('Active/Done'), findsOneWidget);
       expect(find.text('3'), findsOneWidget); // Bookings count
       expect(find.text('5'), findsOneWidget); // Saved count
-      expect(find.text('8'), findsOneWidget); // Places visited count
+      expect(find.text('8'), findsOneWidget); // Active/Done count
 
-      // Section 6: Profile Menu Cards (5 items)
+      // Section 6: Profile Menu Cards
       expect(find.byKey(const Key('menu_personal_details')), findsOneWidget);
       expect(find.text('Personal Details'), findsOneWidget);
-      expect(find.text('Update your name, email and contact info'), findsOneWidget);
 
       expect(find.byKey(const Key('menu_travel_preferences')), findsOneWidget);
       expect(find.text('Travel Preferences'), findsOneWidget);
-      expect(find.text('Set your travel interests and style'), findsOneWidget);
 
       expect(find.byKey(const Key('menu_travel_history')), findsOneWidget);
-      expect(find.text('Travel History'), findsOneWidget);
-      expect(find.text('View your past trips and activities'), findsOneWidget);
+      expect(find.text('My Bookings & History'), findsOneWidget);
+
+      expect(find.byKey(const Key('menu_wishlist')), findsOneWidget);
+      expect(find.text('Saved Wishlist'), findsOneWidget);
 
       expect(find.byKey(const Key('menu_reviews_ratings')), findsOneWidget);
       expect(find.text('Reviews & Ratings'), findsOneWidget);
-      expect(find.text('Your reviews on stays, guides and activities'), findsOneWidget);
 
       expect(find.byKey(const Key('menu_help_support')), findsOneWidget);
       expect(find.text('Help & Support'), findsOneWidget);
-      expect(find.text('Get help or contact our team'), findsOneWidget);
 
       // Section 7: Log Out Button
       expect(find.byKey(const Key('profile_logout_btn')), findsOneWidget);
@@ -140,21 +147,19 @@ void main() {
       await tester.pumpWidget(createProfileScreen());
       await settleScreen(tester);
 
-      // Notification button tap shows notification sheet
+      // Notification button tap shows demo notice in demo mode
       final notifBtn = find.byKey(const Key('profile_notification_btn'));
       await tapAndSettle(tester, notifBtn);
-      expect(find.text('Notifications'), findsOneWidget);
+      expect(find.textContaining('Demo mode'), findsOneWidget);
 
-      // Close notification sheet
-      await tester.tapAt(const Offset(20, 20));
-      await settleScreen(tester);
+      ScaffoldMessenger.of(tester.element(find.byType(Scaffold))).hideCurrentSnackBar();
+      await tester.pumpAndSettle();
 
       // Settings button tap
       final settingsBtn = find.byKey(const Key('profile_settings_btn'));
       await tapAndSettle(tester, settingsBtn);
-      expect(find.text('App settings and preferences coming soon!'), findsOneWidget);
+      expect(find.textContaining('Demo mode'), findsOneWidget);
 
-      // Dismiss snackbar
       ScaffoldMessenger.of(tester.element(find.byType(Scaffold))).hideCurrentSnackBar();
       await tester.pumpAndSettle();
 
@@ -171,7 +176,7 @@ void main() {
 
       final menuPersonal = find.byKey(const Key('menu_personal_details'));
       await tapAndSettle(tester, menuPersonal);
-      expect(find.text('Personal Details is coming soon!'), findsOneWidget);
+      expect(find.text('Demo profile cannot be edited.'), findsOneWidget);
     });
 
     testWidgets('Log out button shows confirmation dialog and navigates to /login on confirm',
@@ -234,6 +239,26 @@ void main() {
       expect(find.text('Demo Traveler'), findsNWidgets(2)); // Name + Badge
       expect(find.text('demo@ceylongo.com'), findsOneWidget);
       expect(find.text('DT'), findsOneWidget);
+    });
+  });
+
+  group('ProfileScreen Live MVP Mode Verification', () {
+    testWidgets('Displays guest prompt instead of hardcoded demo user when unauthenticated in normal mode',
+        (WidgetTester tester) async {
+      ArtisanDemoService.isDemoMode = false;
+      await tester.pumpWidget(
+        MaterialApp(
+          theme: AppTheme.lightTheme,
+          home: ProfileScreen(
+            storageService: FakeSecureStorageService(),
+          ),
+        ),
+      );
+      await settleScreen(tester);
+
+      expect(find.text('Guest Traveler'), findsOneWidget);
+      expect(find.text('Kamal Perera'), findsNothing);
+      expect(find.text('Sign In / Create Account'), findsOneWidget);
     });
   });
 

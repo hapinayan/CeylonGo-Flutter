@@ -1,16 +1,20 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/services/api_client.dart';
 import '../../../core/services/secure_storage_service.dart';
+import '../../artisan/services/artisan_demo_service.dart';
 import '../../auth/models/api_error.dart';
+import '../../auth/models/user_model.dart';
 import '../../auth/services/auth_service.dart';
 import '../../home/widgets/home_bottom_navigation_bar.dart';
-import '../models/community_api_models.dart';
-import '../models/community_author_model.dart';
+import '../../profile/services/account_service.dart';
+import '../../profile/widgets/notifications_sheet.dart';
 import '../models/community_post_model.dart';
 import '../services/community_api_service.dart';
 import '../services/community_demo_service.dart';
 import '../services/community_photo_picker.dart';
+import '../services/community_service.dart';
 import '../widgets/community_comments_sheet.dart';
 import '../widgets/community_notifications_sheet.dart';
 import '../widgets/community_post_card.dart';
@@ -21,29 +25,23 @@ import 'community_author_profile_screen.dart';
 import 'community_search_screen.dart';
 
 /// CeylonGo Travel Community & Social Feed Screen
-/// Primary mobile community interface matching the approved reference design.
-/// Features:
-/// 1. White Header with CeylonGo branding, Community heading, Search, Notifications, Profile avatar
-/// 2. Three Feed Tabs: For You, Following, Saved with royal blue pill selector
-/// 3. Scrollable Trending Hashtags Bar (#Jaffna, #Ella, #TravelSriLanka, etc.)
-/// 4. Rich Community Post Cards with offline likes, comments, bookmarks, and sharing
-/// 5. Floating Royal-Blue Compose Button for creating demo posts
-/// 6. Reused HomeBottomNavigationBar with Community tab (index 3) active
 class CommunityFeedScreen extends StatefulWidget {
   final AuthService? authService;
   final SecureStorageService? storageService;
+  final CommunityService? communityService;
   final CommunityApiService? apiService;
   final CommunityPhotoPicker? photoPicker;
-  final String? realAuthToken;
+  final AccountService? accountService;
   final bool showBottomNav;
 
   const CommunityFeedScreen({
     super.key,
     this.authService,
     this.storageService,
+    this.communityService,
     this.apiService,
     this.photoPicker,
-    this.realAuthToken,
+    this.accountService,
     this.showBottomNav = true,
   });
 
@@ -54,41 +52,34 @@ class CommunityFeedScreen extends StatefulWidget {
 class _CommunityFeedScreenState extends State<CommunityFeedScreen>
     with SingleTickerProviderStateMixin {
   final _demoService = CommunityDemoService();
+  late final SecureStorageService _storageService;
+  late final CommunityService _service;
+  late final AccountService _accountService;
   late final AnimationController _entranceController;
 
-  int _selectedTabIndex = 0; // 0: For You, 1: Following, 2: Saved
+  UserModel? _currentUser;
+  List<CommunityPostModel> _posts = [];
+  bool _isLoading = false;
+  String? _errorMessage;
+  int _unreadNotifications = 0;
+
+  int _selectedTabIndex = 0; // 0: For You, 1: My Posts/Following, 2: Saved
   String _selectedHashtag = '#All';
   double _composeScale = 1.0;
-
-  late final CommunityApiService _apiService;
-  String? _activeAuthToken;
-  bool _isLoadingRealFeed = false;
-  String? _realFeedError;
-  List<CommunityPostModel> _realPosts = const [];
-
-  bool get _isRealMode {
-    final t = _activeAuthToken?.trim();
-    return t != null && t.isNotEmpty && !t.startsWith('demo-');
-  }
 
   @override
   void initState() {
     super.initState();
-    _apiService = widget.apiService ?? CommunityApiService();
+    _storageService = widget.storageService ?? SecureStorageService();
+    _service = widget.communityService ??
+        CommunityService(apiClient: ApiClient(storageService: _storageService));
+    _accountService = widget.accountService ?? AccountService(storageService: _storageService);
     _entranceController = AnimationController(
       duration: const Duration(milliseconds: 600),
       vsync: this,
     );
 
-    final initialToken = widget.realAuthToken?.trim();
-    if (initialToken != null &&
-        initialToken.isNotEmpty &&
-        !initialToken.startsWith('demo-')) {
-      _activeAuthToken = initialToken;
-      _loadRealFeed();
-    } else if (widget.storageService != null) {
-      _resolveStoredTravelerSession();
-    }
+    _loadInitialData();
 
     WidgetsBinding.instance.addPostFrameCallback((_) {
       if (mounted) {
@@ -107,105 +98,89 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
     super.dispose();
   }
 
-  Future<void> _resolveStoredTravelerSession() async {
+  Future<void> _loadInitialData() async {
     try {
-      final token = await widget.storageService!.getToken();
-      final user = await widget.storageService!.getUser();
-      if (!mounted) return;
-      if (token != null &&
-          token.trim().isNotEmpty &&
-          !token.startsWith('demo-') &&
-          user?.role != 'provider') {
-        setState(() {
-          _activeAuthToken = token.trim();
-        });
-        await _loadRealFeed();
+      final user = await _storageService.getUser();
+      if (mounted) {
+        setState(() => _currentUser = user);
       }
-    } catch (_) {
-      // Remain in Demo Community Mode if storage cannot be read.
+    } catch (_) {}
+
+    if (!ArtisanDemoService.isDemoMode) {
+      await Future.wait([
+        _loadPosts(),
+        _loadUnreadNotifications(),
+      ]);
     }
   }
 
-  Future<void> _loadRealFeed() async {
-    if (!_isRealMode) return;
+  Future<void> _loadUnreadNotifications() async {
+    try {
+      final hasToken = await _storageService.hasToken();
+      if (!hasToken) return;
+      final count = await _accountService.getUnreadCount();
+      if (mounted) setState(() => _unreadNotifications = count);
+    } catch (_) {}
+  }
+
+  Future<void> _loadPosts() async {
+    if (ArtisanDemoService.isDemoMode) return;
     setState(() {
-      _isLoadingRealFeed = true;
-      _realFeedError = null;
+      _isLoading = true;
+      _errorMessage = null;
     });
     try {
-      final res = await _apiService.getFeed(
-        authToken: _activeAuthToken,
-        followingOnly: _selectedTabIndex == 1,
-        hashtag: _selectedHashtag,
-      );
+      List<CommunityPostModel> fetched;
+      if (_selectedTabIndex == 1) {
+        fetched = await _service.getMyPosts();
+      } else if (_selectedTabIndex == 2) {
+        fetched = await _service.getSavedPosts();
+      } else {
+        fetched = await _service.getFeed();
+      }
       if (!mounted) return;
       setState(() {
-        _isLoadingRealFeed = false;
-        _realPosts = res.items.map(_mapApiPost).toList();
+        _posts = fetched;
+        _isLoading = false;
       });
     } on ApiError catch (e) {
       if (!mounted) return;
       setState(() {
-        _isLoadingRealFeed = false;
-        _realFeedError = e.message;
+        _isLoading = false;
+        _errorMessage = e.message;
       });
     } catch (_) {
       if (!mounted) return;
       setState(() {
-        _isLoadingRealFeed = false;
-        _realFeedError = 'Unable to load community feed right now.';
+        _isLoading = false;
+        _errorMessage = 'Unable to load community posts. Please try again.';
       });
     }
   }
 
-  CommunityPostModel _mapApiPost(CommunityApiPost post) {
-    final name = post.author.fullName;
-    final parts = name.split(' ').where((p) => p.isNotEmpty).toList();
-    final initials = parts.length >= 2
-        ? '${parts.first[0]}${parts.last[0]}'.toUpperCase()
-        : (name.isNotEmpty ? name[0].toUpperCase() : 'T');
-
-    return CommunityPostModel(
-      id: post.id.toString(),
-      author: CommunityAuthorModel(
-        id: post.authorId.toString(),
-        name: name,
-        handle: name.toLowerCase().replaceAll(RegExp(r'\s+'), '_'),
-        initials: initials,
-        isVerifiedProvider: post.author.isVerifiedProvider,
-        providerBadgeLabel: post.author.businessName,
-        bio: '',
-        location: post.district ?? post.locationTag ?? 'Sri Lanka',
-        followersCount: 0,
-        followingCount: 0,
-        postCount: 0,
-      ),
-      caption: post.content,
-      hashtags: post.hashtags,
-      location: post.locationTag ?? post.district ?? 'Sri Lanka',
-      imageUrl: post.media.isNotEmpty ? post.media.first.resolvedUrl : null,
-      createdAt: post.createdAt ?? DateTime.now(),
-      likesCount: post.likesCount,
-      commentsCount: post.commentsCount,
-      isLikedByDemoUser: post.isLiked,
-      isSavedByDemoUser: post.isSaved,
-    );
-  }
-
   List<CommunityPostModel> _getCurrentFeedPosts() {
-    if (_isRealMode) {
-      return _realPosts;
+    if (ArtisanDemoService.isDemoMode) {
+      switch (_selectedTabIndex) {
+        case 0:
+          return _demoService.getForYouPosts(hashtagFilter: _selectedHashtag);
+        case 1:
+          return _demoService.getFollowingPosts(hashtagFilter: _selectedHashtag);
+        case 2:
+          return _demoService.getSavedPosts(hashtagFilter: _selectedHashtag);
+        default:
+          return _demoService.getForYouPosts();
+      }
     }
-    switch (_selectedTabIndex) {
-      case 0:
-        return _demoService.getForYouPosts(hashtagFilter: _selectedHashtag);
-      case 1:
-        return _demoService.getFollowingPosts(hashtagFilter: _selectedHashtag);
-      case 2:
-        return _demoService.getSavedPosts(hashtagFilter: _selectedHashtag);
-      default:
-        return _demoService.getForYouPosts();
+
+    if (_selectedHashtag == '#All') {
+      return _posts;
     }
+    final q = _selectedHashtag.toLowerCase();
+    return _posts.where((p) {
+      final inTags = p.hashtags.any((t) => t.toLowerCase() == q);
+      final inBody = p.caption.toLowerCase().contains(q);
+      return inTags || inBody;
+    }).toList();
   }
 
   void _onTabSelected(int index) {
@@ -213,6 +188,9 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
     setState(() {
       _selectedTabIndex = index;
     });
+    if (!ArtisanDemoService.isDemoMode) {
+      _loadPosts();
+    }
   }
 
   void _onHashtagSelected(String tag) {
@@ -228,26 +206,63 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
   void _onOpenSearch() {
     Navigator.push(
       context,
-      MaterialPageRoute(builder: (_) => const CommunitySearchScreen()),
-    ).then((_) => setState(() {}));
+      MaterialPageRoute(
+        builder: (_) => CommunitySearchScreen(communityService: _service),
+      ),
+    ).then((_) {
+      if (ArtisanDemoService.isDemoMode) {
+        setState(() {});
+      } else {
+        _loadPosts();
+      }
+    });
   }
 
-  void _onOpenNotifications() {
-    showModalBottomSheet(
-      context: context,
-      isScrollControlled: true,
-      backgroundColor: Colors.transparent,
-      builder: (_) => const CommunityNotificationsSheet(),
+  Future<void> _onOpenNotifications() async {
+    if (ArtisanDemoService.isDemoMode) {
+      showModalBottomSheet(
+        context: context,
+        isScrollControlled: true,
+        backgroundColor: Colors.transparent,
+        builder: (_) => const CommunityNotificationsSheet(),
+      );
+      return;
+    }
+
+    final hasToken = await _storageService.hasToken();
+    if (!hasToken) {
+      if (mounted) {
+        ScaffoldMessenger.of(context).showSnackBar(
+          const SnackBar(content: Text('Please sign in to view notifications.')),
+        );
+      }
+      return;
+    }
+    if (!mounted) return;
+    await showNotificationsSheet(
+      context,
+      accountService: _accountService,
+      onUpdated: _loadUnreadNotifications,
     );
   }
 
-  void _onOpenAuthorProfile(String authorId) {
+  void _onOpenAuthorProfile(CommunityPostModel post) {
     Navigator.push(
       context,
       MaterialPageRoute(
-        builder: (_) => CommunityAuthorProfileScreen(authorId: authorId),
+        builder: (_) => CommunityAuthorProfileScreen(
+          authorId: post.author.id,
+          initialAuthor: post.author,
+          communityService: _service,
+        ),
       ),
-    ).then((_) => setState(() {}));
+    ).then((_) {
+      if (ArtisanDemoService.isDemoMode) {
+        setState(() {});
+      } else {
+        _loadPosts();
+      }
+    });
   }
 
   void _onOpenComments(CommunityPostModel post) {
@@ -258,30 +273,52 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
       builder: (_) => CommunityCommentsSheet(
         postId: post.id,
         initialComments: post.comments,
-        onCommentsCountChanged: (_) => setState(() {}),
+        communityService: _service,
+        currentUserId: _currentUser?.id,
+        onCommentsCountChanged: (count) {
+          setState(() {
+            _posts = _posts
+                .map((p) => p.id == post.id ? p.copyWith(commentsCount: count) : p)
+                .toList();
+          });
+        },
       ),
     );
   }
 
-  void _onOpenCreatePost() {
+  Future<void> _onOpenCreatePost() async {
+    String? token;
+    if (!ArtisanDemoService.isDemoMode) {
+      try {
+        token = (await _storageService.getToken())?.trim();
+      } on SecureStorageException {
+        token = null;
+      }
+      if (token == null || token.isEmpty || token.startsWith('demo-')) {
+        if (mounted) {
+          ScaffoldMessenger.of(context).showSnackBar(
+            const SnackBar(content: Text('Please sign in to publish a post.')),
+          );
+        }
+        return;
+      }
+    }
+    if (!mounted) return;
     showModalBottomSheet(
       context: context,
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => CreateCommunityPostSheet(
-        authToken: _activeAuthToken,
-        apiService: _apiService,
+        authToken: token,
+        apiService: widget.apiService,
         photoPicker: widget.photoPicker,
-        onRealPostPublished: (_) {
-          _loadRealFeed();
-        },
         onPostPublished: () {
           setState(() {
-            _selectedTabIndex = 0; // Switch to For You feed to see new post immediately
+            _selectedTabIndex = 0;
             _selectedHashtag = '#All';
           });
-          if (_isRealMode) {
-            _loadRealFeed();
+          if (!ArtisanDemoService.isDemoMode) {
+            _loadPosts();
           }
         },
       ),
@@ -289,7 +326,9 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
   }
 
   void _onPostMoreOptions(CommunityPostModel post) {
-    final isOwnPost = post.author.id == CommunityDemoService.currentUserId;
+    final isOwnPost = ArtisanDemoService.isDemoMode
+        ? post.author.id == CommunityDemoService.currentUserId
+        : (_currentUser != null && _currentUser!.id == post.author.id);
 
     showModalBottomSheet(
       context: context,
@@ -330,36 +369,27 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
                 },
               ),
             ] else ...[
-              ListTile(
-                key: const Key('menu_toggle_follow'),
-                leading: Icon(
-                  _demoService.isFollowing(post.author.id)
-                      ? Icons.person_remove_outlined
-                      : Icons.person_add_alt_1_outlined,
-                  color: const Color(0xFF073B91),
+              if (ArtisanDemoService.isDemoMode)
+                ListTile(
+                  key: const Key('menu_toggle_follow'),
+                  leading: Icon(
+                    _demoService.isFollowing(post.author.id)
+                        ? Icons.person_remove_outlined
+                        : Icons.person_add_alt_1_outlined,
+                    color: const Color(0xFF073B91),
+                  ),
+                  title: Text(
+                    _demoService.isFollowing(post.author.id)
+                        ? 'Unfollow @${post.author.handle}'
+                        : 'Follow @${post.author.handle}',
+                    style: const TextStyle(fontFamily: 'Inter'),
+                  ),
+                  onTap: () {
+                    Navigator.pop(ctx);
+                    _demoService.toggleFollow(post.author.id);
+                    setState(() {});
+                  },
                 ),
-                title: Text(
-                  _demoService.isFollowing(post.author.id)
-                      ? 'Unfollow @${post.author.handle}'
-                      : 'Follow @${post.author.handle}',
-                  style: const TextStyle(fontFamily: 'Inter'),
-                ),
-                onTap: () {
-                  Navigator.pop(ctx);
-                  _demoService.toggleFollow(post.author.id);
-                  setState(() {});
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    SnackBar(
-                      content: Text(
-                        _demoService.isFollowing(post.author.id)
-                            ? 'Now following ${post.author.name}'
-                            : 'Unfollowed ${post.author.name}',
-                      ),
-                      duration: const Duration(seconds: 2),
-                    ),
-                  );
-                },
-              ),
               ListTile(
                 key: const Key('menu_report_post'),
                 leading: const Icon(Icons.flag_outlined, color: Color(0xFFDC2626)),
@@ -404,13 +434,30 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFF073B91), foregroundColor: Colors.white),
-            onPressed: () {
+            onPressed: () async {
+              final nextBody = controller.text.trim();
               Navigator.pop(ctx);
-              _demoService.editPost(post.id, controller.text);
-              setState(() {});
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Post caption updated!'), duration: Duration(seconds: 2)),
-              );
+              if (nextBody.isEmpty) return;
+              if (ArtisanDemoService.isDemoMode) {
+                _demoService.editPost(post.id, nextBody);
+                setState(() {});
+                return;
+              }
+              final idInt = int.tryParse(post.id);
+              if (idInt == null) return;
+              try {
+                final updated = await _service.updatePost(idInt, body: nextBody);
+                if (!mounted) return;
+                setState(() {
+                  _posts = _posts.map((p) => p.id == post.id ? updated : p).toList();
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Post updated!'), duration: Duration(seconds: 2)),
+                );
+              } on ApiError catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+              }
             },
             child: const Text('Save'),
           ),
@@ -429,13 +476,28 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
           TextButton(onPressed: () => Navigator.pop(ctx), child: const Text('Cancel')),
           ElevatedButton(
             style: ElevatedButton.styleFrom(backgroundColor: const Color(0xFFDC2626), foregroundColor: Colors.white),
-            onPressed: () {
+            onPressed: () async {
               Navigator.pop(ctx);
-              _demoService.deletePost(post.id);
-              setState(() {});
-              ScaffoldMessenger.of(context).showSnackBar(
-                const SnackBar(content: Text('Post deleted from demo feed.'), duration: Duration(seconds: 2)),
-              );
+              if (ArtisanDemoService.isDemoMode) {
+                _demoService.deletePost(post.id);
+                setState(() {});
+                return;
+              }
+              final idInt = int.tryParse(post.id);
+              if (idInt == null) return;
+              try {
+                await _service.deletePost(idInt);
+                if (!mounted) return;
+                setState(() {
+                  _posts.removeWhere((p) => p.id == post.id);
+                });
+                ScaffoldMessenger.of(context).showSnackBar(
+                  const SnackBar(content: Text('Post deleted.'), duration: Duration(seconds: 2)),
+                );
+              } on ApiError catch (e) {
+                if (!mounted) return;
+                ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+              }
             },
             child: const Text('Delete'),
           ),
@@ -453,16 +515,35 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
         children: reasons
             .map(
               (r) => SimpleDialogOption(
-                onPressed: () {
+                onPressed: () async {
                   Navigator.pop(ctx);
-                  _demoService.reportPost(post.id, r);
-                  ScaffoldMessenger.of(context).showSnackBar(
-                    const SnackBar(
-                      content: Text('Thank you. This demo report has been recorded locally.'),
-                      backgroundColor: Color(0xFF073B91),
-                      duration: Duration(seconds: 2),
-                    ),
-                  );
+                  if (ArtisanDemoService.isDemoMode) {
+                    _demoService.reportPost(post.id, r);
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Thank you. This demo report has been recorded locally.'),
+                        backgroundColor: Color(0xFF073B91),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                    return;
+                  }
+                  final idInt = int.tryParse(post.id);
+                  if (idInt == null) return;
+                  try {
+                    await _service.reportPost(postId: idInt, reason: r);
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(
+                      const SnackBar(
+                        content: Text('Report submitted for moderation review.'),
+                        backgroundColor: Color(0xFF073B91),
+                        duration: Duration(seconds: 2),
+                      ),
+                    );
+                  } on ApiError catch (e) {
+                    if (!mounted) return;
+                    ScaffoldMessenger.of(context).showSnackBar(SnackBar(content: Text(e.message)));
+                  }
                 },
                 child: Padding(
                   padding: const EdgeInsets.symmetric(vertical: 4.0),
@@ -535,33 +616,21 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
 
               // 4. Community Posts Feed
               Expanded(
-                child: _isRealMode && _isLoadingRealFeed && posts.isEmpty
-                    ? const Center(
-                        key: Key('community_real_loading'),
-                        child: CircularProgressIndicator(
-                          color: Color(0xFF073B91),
-                        ),
-                      )
-                    : _isRealMode && _realFeedError != null && posts.isEmpty
+                child: _isLoading
+                    ? const Center(child: CircularProgressIndicator())
+                    : _errorMessage != null
                         ? Center(
-                            key: const Key('community_real_error'),
                             child: Padding(
                               padding: const EdgeInsets.all(24),
                               child: Column(
                                 mainAxisSize: MainAxisSize.min,
                                 children: [
-                                  Text(
-                                    _realFeedError!,
-                                    textAlign: TextAlign.center,
-                                    style: const TextStyle(
-                                      fontFamily: 'Inter',
-                                      color: Color(0xFF475569),
-                                    ),
-                                  ),
+                                  Text(_errorMessage!, textAlign: TextAlign.center),
                                   const SizedBox(height: 12),
-                                  ElevatedButton(
-                                    onPressed: _loadRealFeed,
-                                    child: const Text('Retry'),
+                                  ElevatedButton.icon(
+                                    onPressed: _loadPosts,
+                                    icon: const Icon(Icons.refresh, size: 18),
+                                    label: const Text('Retry'),
                                   ),
                                 ],
                               ),
@@ -571,39 +640,95 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
                             ? _buildEmptyState()
                             : RefreshIndicator(
                                 onRefresh: () async {
-                                  if (_isRealMode) {
-                                    await _loadRealFeed();
-                                  } else {
+                                  if (ArtisanDemoService.isDemoMode) {
                                     setState(() {});
+                                  } else {
+                                    await _loadPosts();
                                   }
                                 },
-                        color: const Color(0xFF073B91),
-                        child: ListView.builder(
-                          key: const Key('community_feed_list'),
-                          physics: const BouncingScrollPhysics(),
-                          padding: const EdgeInsets.only(bottom: 80.0),
-                          itemCount: posts.length,
-                          itemBuilder: (context, index) {
-                            final post = posts[index];
-                            return CommunityPostCard(
-                              post: post,
-                              onLike: () {
-                                _demoService.toggleLike(post.id);
-                                setState(() {});
-                              },
-                              onSave: () {
-                                _demoService.toggleSave(post.id);
-                                setState(() {});
-                              },
-                              onComment: () => _onOpenComments(post),
-                              onShare: () => CommunityShareDialog.show(context, post),
-                              onAuthorTap: () => _onOpenAuthorProfile(post.author.id),
-                              onMoreOptions: () => _onPostMoreOptions(post),
-                              onWorkshopTap: () => Navigator.pushNamed(context, '/artisan'),
-                            );
-                          },
-                        ),
-                      ),
+                                color: const Color(0xFF073B91),
+                                child: ListView.builder(
+                                  key: const Key('community_feed_list'),
+                                  physics: const AlwaysScrollableScrollPhysics(
+                                    parent: BouncingScrollPhysics(),
+                                  ),
+                                  padding: const EdgeInsets.only(bottom: 80.0),
+                                  itemCount: posts.length,
+                                  itemBuilder: (context, index) {
+                                    final post = posts[index];
+                                    return CommunityPostCard(
+                                      post: post,
+                                      onLike: () async {
+                                        if (ArtisanDemoService.isDemoMode) {
+                                          _demoService.toggleLike(post.id);
+                                          setState(() {});
+                                          return;
+                                        }
+                                        final idInt = int.tryParse(post.id);
+                                        if (idInt == null) return;
+                                        try {
+                                          final res = await _service.toggleLike(idInt);
+                                          if (!mounted) return;
+                                          setState(() {
+                                            _posts = _posts
+                                                .map((p) => p.id == post.id
+                                                    ? p.copyWith(
+                                                        isLikedByDemoUser: res.liked,
+                                                        likesCount: res.likesCount,
+                                                      )
+                                                    : p)
+                                                .toList();
+                                          });
+                                        } on ApiError catch (e) {
+                                          if (!mounted) return;
+                                          ScaffoldMessenger.of(this.context).showSnackBar(
+                                            SnackBar(content: Text(e.message)),
+                                          );
+                                        }
+                                      },
+                                      onSave: () async {
+                                        if (ArtisanDemoService.isDemoMode) {
+                                          _demoService.toggleSave(post.id);
+                                          setState(() {});
+                                          return;
+                                        }
+                                        final idInt = int.tryParse(post.id);
+                                        if (idInt == null) return;
+                                        try {
+                                          final nextSaved = await _service.setSaved(
+                                            idInt,
+                                            save: !post.isSavedByDemoUser,
+                                          );
+                                          if (!mounted) return;
+                                          setState(() {
+                                            if (_selectedTabIndex == 2 && !nextSaved) {
+                                              _posts.removeWhere((p) => p.id == post.id);
+                                            } else {
+                                              _posts = _posts
+                                                  .map((p) => p.id == post.id
+                                                      ? p.copyWith(
+                                                          isSavedByDemoUser: nextSaved,
+                                                        )
+                                                      : p)
+                                                  .toList();
+                                            }
+                                          });
+                                        } on ApiError catch (e) {
+                                          if (!mounted) return;
+                                          ScaffoldMessenger.of(this.context).showSnackBar(
+                                            SnackBar(content: Text(e.message)),
+                                          );
+                                        }
+                                      },
+                                      onComment: () => _onOpenComments(post),
+                                      onShare: () => CommunityShareDialog.show(context, post),
+                                      onAuthorTap: () => _onOpenAuthorProfile(post),
+                                      onMoreOptions: () => _onPostMoreOptions(post),
+                                      onWorkshopTap: () => Navigator.pushNamed(context, '/artisan'),
+                                    );
+                                  },
+                                ),
+                              ),
               ),
             ],
           ),
@@ -735,18 +860,19 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
                       color: Color(0xFF082B5C),
                       size: 22,
                     ),
-                    Positioned(
-                      top: 4,
-                      right: 4,
-                      child: Container(
-                        width: 7,
-                        height: 7,
-                        decoration: const BoxDecoration(
-                          color: Color(0xFF073B91),
-                          shape: BoxShape.circle,
+                    if (_unreadNotifications > 0 || ArtisanDemoService.isDemoMode)
+                      Positioned(
+                        top: 4,
+                        right: 4,
+                        child: Container(
+                          width: 7,
+                          height: 7,
+                          decoration: const BoxDecoration(
+                            color: Color(0xFF073B91),
+                            shape: BoxShape.circle,
+                          ),
                         ),
                       ),
-                    ),
                   ],
                 ),
                 onPressed: _onOpenNotifications,
@@ -766,10 +892,20 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
                     color: const Color(0xFFEEF4FF),
                     border: Border.all(color: const Color(0xFFBFDBFE), width: 1.5),
                   ),
-                  child: const Center(
+                  child: Center(
                     child: Text(
-                      'DT',
-                      style: TextStyle(
+                      ArtisanDemoService.isDemoMode
+                          ? 'DT'
+                          : (_currentUser != null &&
+                                  _currentUser!.fullName.trim().isNotEmpty
+                              ? _currentUser!.fullName
+                                  .trim()
+                                  .split(RegExp(r'\s+'))
+                                  .take(2)
+                                  .map((p) => p[0].toUpperCase())
+                                  .join()
+                              : 'CG'),
+                      style: const TextStyle(
                         fontFamily: 'Inter',
                         fontSize: 12,
                         fontWeight: FontWeight.bold,
@@ -786,10 +922,11 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
     );
   }
 
-  /// Feed Navigation Tabs: For You, Following, Saved
-  /// Selected tab styled as royal blue pill with white text
+  /// Feed Navigation Tabs: For You, My Posts (Following in Demo), Saved
   Widget _buildFeedTabs() {
-    final tabs = ['For You', 'Following', 'Saved'];
+    final tabs = ArtisanDemoService.isDemoMode
+        ? ['For You', 'Following', 'Saved']
+        : ['For You', 'My Posts', 'Saved'];
 
     return Padding(
       padding: const EdgeInsets.symmetric(horizontal: 16.0),
@@ -856,8 +993,12 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
     IconData icon = Icons.feed_outlined;
 
     if (_selectedTabIndex == 1) {
-      title = 'No posts from followed accounts';
-      description = 'Follow Sri Lankan travelers or verified artisan workshops to see their stories here!';
+      title = ArtisanDemoService.isDemoMode
+          ? 'No posts from followed accounts'
+          : 'You have not published any posts yet';
+      description = ArtisanDemoService.isDemoMode
+          ? 'Follow Sri Lankan travelers or verified artisan workshops to see their stories here!'
+          : 'Tap the compose button below to share your Sri Lankan travel tips with the community!';
       icon = Icons.people_outline_rounded;
     } else if (_selectedTabIndex == 2) {
       title = 'No saved posts yet';

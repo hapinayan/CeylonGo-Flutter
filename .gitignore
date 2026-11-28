@@ -34,3 +34,5 @@ doc/api/
 !.env.example
 
 /android/.kotlin/
+# Widget Preview related
+.widget_preview/

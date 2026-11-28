@@ -6,11 +6,18 @@ import '../../../core/theme/app_theme.dart';
 import '../../artisan/services/artisan_demo_service.dart';
 import '../../auth/models/user_model.dart';
 import '../../auth/services/auth_service.dart';
+import '../../bookings/screens/my_bookings_screen.dart';
+import '../../bookings/services/booking_payment_service.dart';
+import '../../categories/services/discovery_service.dart';
 import '../../home/widgets/home_bottom_navigation_bar.dart';
 import '../models/traveler_profile_photo_models.dart';
 import '../services/traveler_profile_photo_picker.dart';
 import '../services/traveler_profile_photo_storage.dart';
 import '../widgets/traveler_photo_editor_sheet.dart';
+import '../services/account_service.dart';
+import '../widgets/notifications_sheet.dart';
+import 'account_subscreens.dart';
+import 'traveler_wishlist_screen.dart';
 
 /// CeylonGo Traveler Profile Screen
 /// Approved Full White Minimal Profile Page Design.
@@ -30,6 +37,9 @@ class ProfileScreen extends StatefulWidget {
   final SecureStorageService? storageService;
   final TravelerProfilePhotoStore? photoStore;
   final TravelerProfilePhotoPicker? photoPicker;
+  final AccountService? accountService;
+  final BookingPaymentService? bookingService;
+  final DiscoveryService? discoveryService;
   final bool showBottomNav;
 
   const ProfileScreen({
@@ -39,6 +49,9 @@ class ProfileScreen extends StatefulWidget {
     this.storageService,
     this.photoStore,
     this.photoPicker,
+    this.accountService,
+    this.bookingService,
+    this.discoveryService,
     this.showBottomNav = true,
   });
 
@@ -52,12 +65,19 @@ class _ProfileScreenState extends State<ProfileScreen>
   late final SecureStorageService _storageService;
   late final TravelerProfilePhotoStore _photoStore;
   late final TravelerProfilePhotoPicker _photoPicker;
+  late final AccountService _accountService;
+  late final BookingPaymentService _bookingService;
+  late final DiscoveryService _discoveryService;
   late final AnimationController _entranceController;
 
   UserModel? _user;
   TravelerProfilePhotoData? _savedPhoto;
   bool _isLoading = true;
   bool _isLoggingOut = false;
+  int _bookingsCount = 0;
+  int _savedCount = 0;
+  int _visitedCount = 0;
+  int _unreadNotifications = 0;
 
   double _backScale = 1.0;
   double _notifScale = 1.0;
@@ -72,6 +92,9 @@ class _ProfileScreenState extends State<ProfileScreen>
     _storageService = widget.storageService ?? SecureStorageService();
     _photoStore = widget.photoStore ?? FileTravelerProfilePhotoStore();
     _photoPicker = widget.photoPicker ?? TravelerProfilePhotoPicker();
+    _accountService = widget.accountService ?? AccountService(storageService: _storageService);
+    _bookingService = widget.bookingService ?? BookingPaymentService();
+    _discoveryService = widget.discoveryService ?? DiscoveryService();
 
     _entranceController = AnimationController(
       duration: const Duration(milliseconds: 600),
@@ -107,7 +130,7 @@ class _ProfileScreenState extends State<ProfileScreen>
 
   Future<void> _loadAvatarForUser() async {
     final key = _accountKey;
-    if (key.isEmpty) return;
+    if (!mounted || key.isEmpty) return;
     final loaded = await _photoStore.loadForAccount(key);
     if (!mounted || key != _accountKey) return;
     setState(() {
@@ -124,19 +147,13 @@ class _ProfileScreenState extends State<ProfileScreen>
         });
       }
       await _loadAvatarForUser();
+      if (!ArtisanDemoService.isDemoMode) {
+        await _loadAccountStats();
+      }
       return;
     }
 
     try {
-      final cachedUser = await _storageService.getUser();
-      if (cachedUser != null && mounted) {
-        setState(() {
-          _user = cachedUser;
-          _isLoading = false;
-        });
-        return;
-      }
-
       final token = await _storageService.getToken();
       if (token != null && token.isNotEmpty) {
         if (token.startsWith('demo-') || ArtisanDemoService.isDemoMode) {
@@ -148,53 +165,147 @@ class _ProfileScreenState extends State<ProfileScreen>
                 email: 'demo@ceylongo.com',
                 role: 'traveler',
               );
+              _bookingsCount = 3;
+              _savedCount = 5;
+              _visitedCount = 8;
               _isLoading = false;
             });
           }
           return;
         }
 
-        final verifiedUser = await _authService.getMe(token);
-        if (mounted) {
-          setState(() {
-            _user = verifiedUser;
-            _isLoading = false;
-          });
+        try {
+          final verifiedUser = await _accountService.getProfile();
+          if (mounted) {
+            setState(() {
+              _user = verifiedUser;
+              _isLoading = false;
+            });
+          }
+          await _loadAccountStats();
           return;
+        } catch (_) {
+          try {
+            final verifiedUser = await _authService.getMe(token);
+            if (mounted) {
+              setState(() {
+                _user = verifiedUser;
+                _isLoading = false;
+              });
+            }
+            await _loadAccountStats();
+            return;
+          } catch (_) {
+            final cachedUser = await _storageService.getUser();
+            if (cachedUser != null && mounted) {
+              setState(() {
+                _user = cachedUser;
+                _isLoading = false;
+              });
+              return;
+            }
+          }
         }
       }
 
-      // Default demo traveler session
+      if (ArtisanDemoService.isDemoMode) {
+        if (mounted) {
+          setState(() {
+            _user = const UserModel(
+              id: 'demo-user-001',
+              fullName: 'Kamal Perera',
+              email: 'demo@ceylongo.com',
+              role: 'traveler',
+            );
+            _bookingsCount = 3;
+            _savedCount = 5;
+            _visitedCount = 8;
+            _isLoading = false;
+          });
+        }
+        return;
+      }
+
+      final cachedUser = await _storageService.getUser();
       if (mounted) {
         setState(() {
-          _user = const UserModel(
-            id: 'demo-user-001',
-            fullName: 'Kamal Perera',
-            email: 'demo@ceylongo.com',
-            role: 'traveler',
-          );
+          _user = cachedUser;
           _isLoading = false;
         });
       }
     } catch (_) {
       if (mounted) {
         setState(() {
-          _user = const UserModel(
-            id: 'demo-user-001',
-            fullName: 'Kamal Perera',
-            email: 'demo@ceylongo.com',
-            role: 'traveler',
-          );
+          _user = ArtisanDemoService.isDemoMode
+              ? const UserModel(
+                  id: 'demo-user-001',
+                  fullName: 'Kamal Perera',
+                  email: 'demo@ceylongo.com',
+                  role: 'traveler',
+                )
+              : null;
           _isLoading = false;
         });
       }
+    } finally {
+      await _loadAvatarForUser();
     }
-    await _loadAvatarForUser();
+  }
+
+  Future<void> _loadAccountStats() async {
+    try {
+      final token = await _storageService.getToken();
+      if (token == null || token.isEmpty || token.startsWith('demo-')) return;
+
+      int bookingsCount = _bookingsCount;
+      int visitedCount = _visitedCount;
+      try {
+        final bookings = await _bookingService.getMyBookings(limit: 50);
+        bookingsCount = bookings.length;
+        visitedCount = bookings
+            .where((b) => b.status == 'completed' || b.status == 'confirmed')
+            .length;
+      } catch (_) {}
+
+      int savedCount = _savedCount;
+      try {
+        final wishlists = await Future.wait([
+          _discoveryService.getHomestayWishlist(),
+          _discoveryService.getActivityWishlist(),
+          _discoveryService.getTourGuideWishlist(),
+          _discoveryService.getRentalWishlist(),
+        ]);
+        savedCount = wishlists.fold<int>(0, (sum, list) => sum + list.length);
+      } catch (_) {}
+
+      int unread = _unreadNotifications;
+      try {
+        unread = await _accountService.getUnreadCount();
+      } catch (_) {}
+
+      if (mounted) {
+        setState(() {
+          _bookingsCount = bookingsCount;
+          _savedCount = savedCount;
+          _visitedCount = visitedCount;
+          _unreadNotifications = unread;
+        });
+      }
+    } catch (_) {}
+  }
+
+  Future<void> _loadUnreadNotifications() async {
+    try {
+      final unread = await _accountService.getUnreadCount();
+      if (mounted) {
+        setState(() => _unreadNotifications = unread);
+      }
+    } catch (_) {}
   }
 
   String _getInitials(String name) {
     final parts = name.trim().split(RegExp(r'\s+'));
-    if (parts.isEmpty || parts[0].isEmpty) return 'KP';
+    if (parts.isEmpty || parts[0].isEmpty) return 'CG';
     if (parts.length == 1) return parts[0][0].toUpperCase();
     return '${parts[0][0]}${parts[1][0]}'.toUpperCase();
   }
@@ -207,6 +318,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     });
 
     try {
+      final token = await _storageService.getToken();
+      if (token != null &&
+          token.isNotEmpty &&
+          !token.startsWith('demo-') &&
+          !ArtisanDemoService.isDemoMode) {
+        try {
+          await _authService.logout(token);
+        } catch (_) {}
+      }
       await _storageService.clear();
     } catch (_) {}
 
@@ -282,86 +402,103 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  void _onNotificationTap() {
-    showModalBottomSheet(
-      context: context,
-      shape: const RoundedRectangleBorder(
-        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+  Future<void> _onNotificationTap() async {
+    if (ArtisanDemoService.isDemoMode) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(
+          content: Text('Demo mode active — live notifications are disabled.'),
+        ),
+      );
+      return;
+    }
+    if (_user == null) {
+      Navigator.pushNamed(context, '/login');
+      return;
+    }
+    await showNotificationsSheet(
+      context,
+      accountService: _accountService,
+      onUpdated: _loadUnreadNotifications,
+    );
+  }
+
+  Future<void> _onSettingsTap() async {
+    if (ArtisanDemoService.isDemoMode) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Demo mode — notification settings disabled.')),
+      );
+      return;
+    }
+    if (_user == null) {
+      Navigator.pushNamed(context, '/login');
+      return;
+    }
+    await Navigator.push(
+      context,
+      MaterialPageRoute(
+        builder: (_) =>
+            NotificationSettingsScreen(accountService: _accountService),
       ),
-      builder: (ctx) => Padding(
-        padding: const EdgeInsets.all(22.0),
-        child: Column(
-          mainAxisSize: MainAxisSize.min,
-          crossAxisAlignment: CrossAxisAlignment.start,
-          children: [
-            Row(
-              children: const [
-                Icon(Icons.notifications_active_outlined, color: Color(0xFF073B91)),
-                SizedBox(width: 10),
-                Text(
-                  'Notifications',
-                  style: TextStyle(
-                    fontFamily: 'Inter',
-                    fontSize: 18,
-                    fontWeight: FontWeight.bold,
-                    color: Color(0xFF082B5C),
-                  ),
-                ),
-              ],
-            ),
-            const SizedBox(height: 14),
-            Container(
-              padding: const EdgeInsets.all(12),
-              decoration: BoxDecoration(
-                color: const Color(0xFFEEF4FF),
-                borderRadius: BorderRadius.circular(12),
-                border: Border.all(color: const Color(0xFFBFDBFE)),
-              ),
-              child: const Text(
-                'Welcome to CeylonGo! Explore authentic Sri Lankan artisan craft workshops in Galle & Kandy.',
-                style: TextStyle(
-                  fontFamily: 'Inter',
-                  fontSize: 13,
-                  color: Color(0xFF334155),
-                ),
-              ),
-            ),
-            const SizedBox(height: 18),
-            SizedBox(
-              width: double.infinity,
-              height: 44,
-              child: ElevatedButton(
-                style: ElevatedButton.styleFrom(
-                  backgroundColor: const Color(0xFF082B5C),
-                  foregroundColor: Colors.white,
-                  minimumSize: const Size(0, 44),
-                  shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                ),
-                onPressed: () {
-                  Navigator.pop(ctx);
-                  Navigator.pushNamed(context, '/artisan');
-                },
-                child: const Text('View Artisan Discoveries'),
-              ),
-            ),
-          ],
+    );
+  }
+
+  Future<void> _onEditProfile() async {
+    if (ArtisanDemoService.isDemoMode) {
+      ScaffoldMessenger.of(context).showSnackBar(
+        const SnackBar(content: Text('Demo profile cannot be edited.')),
+      );
+      return;
+    }
+    if (_user == null) {
+      Navigator.pushNamed(context, '/login');
+      return;
+    }
+    final updated = await Navigator.push<UserModel>(
+      context,
+      MaterialPageRoute(
+        builder: (_) => EditProfileScreen(
+          initialUser: _user!,
+          accountService: _accountService,
         ),
       ),
     );
+    if (updated != null && mounted) {
+      setState(() => _user = updated);
+    }
   }
 
-  void _onSettingsTap() {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      const SnackBar(
-        content: Text('App settings and preferences coming soon!'),
-        backgroundColor: Color(0xFF082B5C),
-        duration: Duration(seconds: 2),
+  void _onReviewsInfoTap() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Reviews & Ratings'),
+        content: const Text(
+          'Post-trip reviews are not part of the active Academic MVP v1.1 backend. '
+          'You can inspect all confirmed and completed trips in My Bookings.',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('Close'),
+          ),
+          ElevatedButton(
+            onPressed: () {
+              Navigator.pop(ctx);
+              Navigator.push(
+                context,
+                MaterialPageRoute(
+                  builder: (_) => MyBookingsScreen(service: _bookingService),
+                ),
+              );
+            },
+            child: const Text('Open My Bookings'),
+          ),
+        ],
       ),
     );
   }
 
-  void _onEditProfile() {
+  void _onEditAvatar() {
     final key = _accountKey;
     if (key.isEmpty) return;
     final name = (_user?.fullName.isNotEmpty ?? false)
@@ -390,13 +527,22 @@ class _ProfileScreenState extends State<ProfileScreen>
     );
   }
 
-  void _onMenuTap(String title) {
-    ScaffoldMessenger.of(context).hideCurrentSnackBar();
-    ScaffoldMessenger.of(context).showSnackBar(
-      SnackBar(
-        content: Text('$title is coming soon!'),
-        backgroundColor: const Color(0xFF082B5C),
-        duration: const Duration(seconds: 2),
+  void _onHelpSupportTap() {
+    showDialog<void>(
+      context: context,
+      builder: (ctx) => AlertDialog(
+        title: const Text('Help & Support'),
+        content: const Text(
+          'Need help with a booking or provider verification?\n\n'
+          'Email: support@ceylongo.lk\n'
+          'Hours: Daily 8:00 AM - 8:00 PM (IST)',
+        ),
+        actions: [
+          TextButton(
+            onPressed: () => Navigator.pop(ctx),
+            child: const Text('OK'),
+          ),
+        ],
       ),
     );
   }
@@ -481,14 +627,14 @@ class _ProfileScreenState extends State<ProfileScreen>
 
                         const SizedBox(height: 20),
 
-                        // 4. Five Menu Cards with staggered entrance
+                        // 4. Account & Activity Menu Cards
                         _buildAnimatedMenuCard(
                           key: const Key('menu_personal_details'),
                           icon: Icons.person_outline_rounded,
                           title: 'Personal Details',
-                          subtitle: 'Update your name, email and contact info',
+                          subtitle: 'Update your name, phone, country and password',
                           interval: const Interval(0.20, 0.65, curve: Curves.easeOutCubic),
-                          onTap: () => _onMenuTap('Personal Details'),
+                          onTap: _onEditProfile,
                         ),
                         const SizedBox(height: 10),
 
@@ -496,29 +642,92 @@ class _ProfileScreenState extends State<ProfileScreen>
                           key: const Key('menu_travel_preferences'),
                           icon: Icons.tune_rounded,
                           title: 'Travel Preferences',
-                          subtitle: 'Set your travel interests and style',
+                          subtitle: 'Set your travel interests, budget and style',
                           interval: const Interval(0.28, 0.73, curve: Curves.easeOutCubic),
-                          onTap: () => _onMenuTap('Travel Preferences'),
+                          onTap: () {
+                            if (_user == null && !ArtisanDemoService.isDemoMode) {
+                              Navigator.pushNamed(context, '/login');
+                              return;
+                            }
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TravelPreferencesScreen(
+                                  accountService: _accountService,
+                                ),
+                              ),
+                            );
+                          },
                         ),
                         const SizedBox(height: 10),
 
                         _buildAnimatedMenuCard(
                           key: const Key('menu_travel_history'),
-                          icon: Icons.history_rounded,
-                          title: 'Travel History',
-                          subtitle: 'View your past trips and activities',
+                          icon: Icons.luggage_outlined,
+                          title: 'My Bookings & History',
+                          subtitle: 'Track reservations, payments and past trips',
                           interval: const Interval(0.36, 0.81, curve: Curves.easeOutCubic),
-                          onTap: () => _onMenuTap('Travel History'),
+                          onTap: () {
+                            if (_user == null && !ArtisanDemoService.isDemoMode) {
+                              Navigator.pushNamed(context, '/login');
+                              return;
+                            }
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) =>
+                                    MyBookingsScreen(service: _bookingService),
+                              ),
+                            ).then((_) => _loadAccountStats());
+                          },
                         ),
                         const SizedBox(height: 10),
+
+                        _buildAnimatedMenuCard(
+                          key: const Key('menu_wishlist'),
+                          icon: Icons.favorite_border_rounded,
+                          title: 'Saved Wishlist',
+                          subtitle: 'Homestays, activities, guides, rentals & artisans',
+                          interval: const Interval(0.40, 0.85, curve: Curves.easeOutCubic),
+                          onTap: () {
+                            if (_user == null && !ArtisanDemoService.isDemoMode) {
+                              Navigator.pushNamed(context, '/login');
+                              return;
+                            }
+                            Navigator.push(
+                              context,
+                              MaterialPageRoute(
+                                builder: (_) => TravelerWishlistScreen(
+                                  discoveryService: _discoveryService,
+                                ),
+                              ),
+                            ).then((_) => _loadAccountStats());
+                          },
+                        ),
+                        const SizedBox(height: 10),
+
+                        if (_user?.role == 'provider') ...[
+                          _buildAnimatedMenuCard(
+                            key: const Key('menu_provider_portal'),
+                            icon: Icons.storefront_outlined,
+                            title: 'Service Provider Portal',
+                            subtitle: 'Manage listings, verification & bookings',
+                            interval: const Interval(0.42, 0.87, curve: Curves.easeOutCubic),
+                            onTap: () => Navigator.pushNamed(
+                              context,
+                              '/provider/dashboard',
+                            ),
+                          ),
+                          const SizedBox(height: 10),
+                        ],
 
                         _buildAnimatedMenuCard(
                           key: const Key('menu_reviews_ratings'),
                           icon: Icons.star_outline_rounded,
                           title: 'Reviews & Ratings',
-                          subtitle: 'Your reviews on stays, guides and activities',
+                          subtitle: 'View completed trips and MVP status',
                           interval: const Interval(0.44, 0.89, curve: Curves.easeOutCubic),
-                          onTap: () => _onMenuTap('Reviews & Ratings'),
+                          onTap: _onReviewsInfoTap,
                         ),
                         const SizedBox(height: 10),
 
@@ -528,13 +737,32 @@ class _ProfileScreenState extends State<ProfileScreen>
                           title: 'Help & Support',
                           subtitle: 'Get help or contact our team',
                           interval: const Interval(0.52, 0.97, curve: Curves.easeOutCubic),
-                          onTap: () => _onMenuTap('Help & Support'),
+                          onTap: _onHelpSupportTap,
                         ),
 
                         const SizedBox(height: 22),
 
-                        // 5. Full-Width Log Out Button
-                        _buildLogoutButton(),
+                        // 5. Full-Width Log Out or Sign In Button
+                        if (_user != null || ArtisanDemoService.isDemoMode)
+                          _buildLogoutButton()
+                        else
+                          SizedBox(
+                            width: double.infinity,
+                            height: 48,
+                            child: ElevatedButton.icon(
+                              onPressed: () =>
+                                  Navigator.pushNamed(context, '/login'),
+                              icon: const Icon(Icons.login_rounded, size: 19),
+                              label: const Text('Sign In / Create Account'),
+                              style: ElevatedButton.styleFrom(
+                                backgroundColor: AppTheme.primaryNavy,
+                                foregroundColor: Colors.white,
+                                shape: RoundedRectangleBorder(
+                                  borderRadius: BorderRadius.circular(14),
+                                ),
+                              ),
+                            ),
+                          ),
 
                         const SizedBox(height: 16),
                       ],
@@ -640,18 +868,19 @@ class _ProfileScreenState extends State<ProfileScreen>
                         color: Color(0xFF082B5C),
                         size: 20,
                       ),
-                      Positioned(
-                        top: 9,
-                        right: 10,
-                        child: Container(
-                          width: 7,
-                          height: 7,
-                          decoration: const BoxDecoration(
-                            color: Color(0xFF073B91),
-                            shape: BoxShape.circle,
+                      if (_unreadNotifications > 0)
+                        Positioned(
+                          top: 9,
+                          right: 10,
+                          child: Container(
+                            width: 7,
+                            height: 7,
+                            decoration: const BoxDecoration(
+                              color: Color(0xFF073B91),
+                              shape: BoxShape.circle,
+                            ),
                           ),
                         ),
-                      ),
                     ],
                   ),
                 ),
@@ -703,13 +932,13 @@ class _ProfileScreenState extends State<ProfileScreen>
   /// Centered circular avatar with Navy initials, light-blue outline, and royal-blue edit button.
   /// Followed by bold Traveler Name, muted Email, and light-blue Demo Traveler badge.
   Widget _buildAvatarSection() {
-    final name = _user?.fullName.isNotEmpty ?? false
+    final isDemo = ArtisanDemoService.isDemoMode;
+    final name = (_user?.fullName.isNotEmpty ?? false)
         ? _user!.fullName
-        : 'Kamal Perera';
-    final email = _user?.email.isNotEmpty ?? false
+        : (isDemo ? 'Kamal Perera' : 'Guest Traveler');
+    final email = (_user?.email.isNotEmpty ?? false)
         ? _user!.email
-        : 'demo@ceylongo.com';
-    final isDemo = ArtisanDemoService.isDemoMode || email.contains('demo');
+        : (isDemo ? 'demo@ceylongo.com' : 'Sign in to access your bookings');
 
     return Column(
       mainAxisSize: MainAxisSize.min,
@@ -788,7 +1017,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     onTapDown: (_) => setState(() => _editAvatarScale = 0.90),
                     onTapUp: (_) => setState(() => _editAvatarScale = 1.0),
                     onTapCancel: () => setState(() => _editAvatarScale = 1.0),
-                    onTap: _onEditProfile,
+                    onTap: _onEditAvatar,
                     child: Container(
                       width: 28,
                       height: 28,
@@ -901,10 +1130,21 @@ class _ProfileScreenState extends State<ProfileScreen>
           children: [
             // 1. Bookings
             Expanded(
-              child: _buildStatItem(
-                icon: Icons.calendar_today_outlined,
-                value: '3',
-                label: 'Bookings',
+              child: InkWell(
+                onTap: () {
+                  if (_user == null && !ArtisanDemoService.isDemoMode) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => MyBookingsScreen(service: _bookingService),
+                    ),
+                  ).then((_) => _loadAccountStats());
+                },
+                child: _buildStatItem(
+                  icon: Icons.calendar_today_outlined,
+                  value: ArtisanDemoService.isDemoMode ? '3' : '$_bookingsCount',
+                  label: 'Bookings',
+                ),
               ),
             ),
 
@@ -916,10 +1156,23 @@ class _ProfileScreenState extends State<ProfileScreen>
 
             // 2. Saved
             Expanded(
-              child: _buildStatItem(
-                icon: Icons.favorite_outline_rounded,
-                value: '5',
-                label: 'Saved',
+              child: InkWell(
+                onTap: () {
+                  if (_user == null && !ArtisanDemoService.isDemoMode) return;
+                  Navigator.push(
+                    context,
+                    MaterialPageRoute(
+                      builder: (_) => TravelerWishlistScreen(
+                        discoveryService: _discoveryService,
+                      ),
+                    ),
+                  ).then((_) => _loadAccountStats());
+                },
+                child: _buildStatItem(
+                  icon: Icons.favorite_outline_rounded,
+                  value: ArtisanDemoService.isDemoMode ? '5' : '$_savedCount',
+                  label: 'Saved',
+                ),
               ),
             ),
 
@@ -929,12 +1182,12 @@ class _ProfileScreenState extends State<ProfileScreen>
               color: Color(0xFFE2E8F0),
             ),
 
-            // 3. Places Visited
+            // 3. Completed / Confirmed Trips
             Expanded(
               child: _buildStatItem(
                 icon: Icons.location_on_outlined,
-                value: '8',
-                label: 'Places Visited',
+                value: ArtisanDemoService.isDemoMode ? '8' : '$_visitedCount',
+                label: 'Active/Done',
               ),
             ),
           ],

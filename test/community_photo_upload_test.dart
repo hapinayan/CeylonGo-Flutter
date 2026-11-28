@@ -9,8 +9,13 @@ import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
 import 'package:ceylongo/core/constants/api_constants.dart';
+import 'package:ceylongo/core/services/api_client.dart';
+import 'package:ceylongo/core/services/secure_storage_service.dart';
+import 'package:ceylongo/features/artisan/services/artisan_demo_service.dart';
+import 'package:ceylongo/features/community/services/community_service.dart';
 import 'package:ceylongo/core/theme/app_theme.dart';
 import 'package:ceylongo/features/auth/models/api_error.dart';
+import 'package:ceylongo/features/auth/models/user_model.dart';
 import 'package:ceylongo/features/community/models/community_api_models.dart';
 import 'package:ceylongo/features/community/screens/community_feed_screen.dart';
 import 'package:ceylongo/features/community/services/community_api_service.dart';
@@ -76,7 +81,7 @@ Map<String, dynamic> _sampleApiPostJson({
         'role': 'traveler',
         'is_verified_provider': false,
       },
-      'content': 'Sunrise over Ella Rock!',
+      'body': 'Sunrise over Ella Rock!',
       'location_tag': 'Ella, Sri Lanka',
       'district': 'Badulla',
       'likes_count': 0,
@@ -92,7 +97,7 @@ Map<String, dynamic> _sampleApiPostJson({
                 'id': 101,
                 'post_id': id,
                 'media_type': 'image',
-                'media_url': '/api/v1/uploads/community/post_${id}_abc.png',
+                'image_url': '/api/v1/uploads/community/post_${id}_abc.png',
                 'display_order': 0,
                 'created_at': '2026-01-01T10:00:00',
               }
@@ -104,6 +109,14 @@ Map<String, dynamic> _sampleApiPostJson({
       'share_url': '/community/posts/$id',
       'created_at': '2026-01-01T10:00:00',
     };
+
+class _CommunityTestStorage extends SecureStorageService {
+  @override
+  Future<String?> getToken() async => 'real-traveler-jwt';
+
+  @override
+  Future<UserModel?> getUser() async => null;
+}
 
 void main() {
   setUp(() {
@@ -197,11 +210,14 @@ void main() {
 
       expect(captured.url.toString(), ApiConstants.communityPostsEndpoint);
       expect(captured.headers['Authorization'], 'Bearer real-traveler-jwt');
+      expect(jsonDecode(captured.body), {
+        'body': 'Sunrise over Ella Rock!\nElla, Sri Lanka\n#Ella #TravelSriLanka',
+      });
       expect(post.id, 42);
       expect(post.isPublished, isTrue);
     });
 
-    test('uploads media with multipart field "file" and display_order',
+    test('uploads media with multipart field "file"',
         () async {
       late http.BaseRequest captured;
       String? bodyText;
@@ -216,7 +232,7 @@ void main() {
                 'id': 101,
                 'post_id': 42,
                 'media_type': 'image',
-                'media_url': '/api/v1/uploads/community/post_42_abc.png',
+                'image_url': '/api/v1/uploads/community/post_42_abc.png',
                 'display_order': 0,
                 'created_at': '2026-01-01T10:00:00',
               }),
@@ -230,7 +246,6 @@ void main() {
       final media = await service.uploadPostMedia(
         authToken: 'real-traveler-jwt',
         postId: 42,
-        displayOrder: 0,
         photo: SelectedCommunityPhoto(
           bytes: _validPngBytes,
           safeFilename: 'ella.png',
@@ -244,7 +259,7 @@ void main() {
       );
       expect(captured.headers['Authorization'], 'Bearer real-traveler-jwt');
       expect(bodyText, contains('name="file"'));
-      expect(bodyText, contains('name="display_order"'));
+      expect(bodyText, contains('content-type: image/png'));
       expect(media.id, 101);
       expect(media.postId, 42);
       expect(
@@ -351,7 +366,7 @@ void main() {
                 'id': 101,
                 'post_id': 42,
                 'media_type': 'image',
-                'media_url': '/api/v1/uploads/community/post_42_abc.png',
+                'image_url': '/api/v1/uploads/community/post_42_abc.png',
                 'display_order': 0,
                 'created_at': '2026-01-01T10:00:00',
               }),
@@ -367,6 +382,7 @@ void main() {
           return http.Response('{}', 404);
         });
 
+        final storage = _CommunityTestStorage();
         final apiService = CommunityApiService(client: client);
         final picker = _FakeCommunityPhotoPicker(
           nextBatch: [
@@ -392,7 +408,10 @@ void main() {
           MaterialApp(
             theme: AppTheme.lightTheme,
             home: CommunityFeedScreen(
-              realAuthToken: 'real-traveler-jwt',
+              storageService: storage,
+              communityService: CommunityService(
+                apiClient: ApiClient(client: client, storageService: storage),
+              ),
               apiService: apiService,
               photoPicker: picker,
               showBottomNav: false,
@@ -467,6 +486,8 @@ void main() {
 
     testWidgets('Demo Mode isolation: never calls real API when unauthenticated',
         (tester) async {
+      ArtisanDemoService.isDemoMode = true;
+      addTearDown(() => ArtisanDemoService.isDemoMode = false);
       var realApiCalled = false;
       final apiService = CommunityApiService(
         client: MockClient((_) async {

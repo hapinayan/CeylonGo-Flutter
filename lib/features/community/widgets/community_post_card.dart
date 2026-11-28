@@ -1,6 +1,8 @@
 import 'package:flutter/material.dart';
 
+import '../../../core/widgets/ceylongo_network_image.dart';
 import '../models/community_post_model.dart';
+import '../../artisan/services/artisan_demo_service.dart';
 
 /// Community Post Card Widget
 /// Displays a modern, responsive travel post with author info, verified provider badges,
@@ -258,26 +260,24 @@ class _CommunityPostCardState extends State<CommunityPostCard> {
             ),
           ],
 
-          const SizedBox(height: 12),
-
-          // 3. Post Image with Fallback Placeholder
-          if (post.imageUrl != null && post.imageUrl!.isNotEmpty)
+          // 3. Post Image (only show demo fallback landscape in explicit demo mode)
+          if (post.imageUrl != null && post.imageUrl!.isNotEmpty) ...[
+            const SizedBox(height: 12),
             ClipRRect(
               borderRadius: BorderRadius.circular(14),
-              child: Image.network(
-                post.imageUrl!,
+              child: SizedBox(
                 height: 210,
                 width: double.infinity,
-                fit: BoxFit.cover,
-                errorBuilder: (context, error, stackTrace) => _buildImageFallback(),
-                loadingBuilder: (context, child, loadingProgress) {
-                  if (loadingProgress == null) return child;
-                  return _buildImageFallback();
-                },
+                child: CeylonGoNetworkImage(
+                  imageUrl: post.imageUrl!,
+                  fit: BoxFit.cover,
+                ),
               ),
-            )
-          else
+            ),
+          ] else if (ArtisanDemoService.isDemoMode) ...[
+            const SizedBox(height: 12),
             _buildImageFallback(),
+          ],
 
           // 4. Verified Provider Workshop Callout (if linked to Artisan)
           if (post.author.isVerifiedProvider && post.author.artisanListingId != null) ...[

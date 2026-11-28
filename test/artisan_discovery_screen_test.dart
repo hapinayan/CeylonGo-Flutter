@@ -54,7 +54,8 @@ void main() {
           );
         }
 
-        if (path == '/api/v1/artisan-listings/featured') {
+        if (path == '/api/v1/artisan-listings' &&
+            request.url.queryParameters['is_featured'] == 'true') {
           return http.Response(
             jsonEncode({
               'items': [

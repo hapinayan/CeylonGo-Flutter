@@ -185,7 +185,7 @@ class CommunityApiMedia {
       id: (json['id'] as num?)?.toInt() ?? 0,
       postId: (json['post_id'] as num?)?.toInt() ?? 0,
       mediaType: (json['media_type'] as String?) ?? 'image',
-      mediaUrl: (json['media_url'] as String?) ?? '',
+      mediaUrl: (json['image_url'] as String?) ?? (json['media_url'] as String?) ?? '',
       displayOrder: (json['display_order'] as num?)?.toInt() ?? 0,
       createdAt: json['created_at'] is String
           ? DateTime.tryParse(json['created_at'] as String)
@@ -306,7 +306,7 @@ class CommunityApiPost {
       author: CommunityApiAuthor.fromJson(
         rawAuthor is Map ? Map<String, dynamic>.from(rawAuthor) : null,
       ),
-      content: (json['content'] as String?) ?? '',
+      content: (json['body'] as String?) ?? (json['content'] as String?) ?? '',
       locationTag: json['location_tag'] as String?,
       district: json['district'] as String?,
       likesCount: (json['likes_count'] as num?)?.toInt() ?? 0,

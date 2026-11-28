@@ -74,6 +74,7 @@ class _ArtisanBusinessDetailScreenState
       final user = await _storageService.getUser();
       _currentUserId = user != null ? int.tryParse(user.id) : null;
 
+      final isDemo = ArtisanDemoService.isDemoMode;
       final futures = await Future.wait([
         _artisanService.getListingDetails(widget.listingId),
         _artisanService
@@ -93,36 +94,38 @@ class _ArtisanBusinessDetailScreenState
                   listingId: 0,
                   isSaved: false,
                 )),
-        _artisanService
-            .getActivePromotions(listingId: widget.listingId)
-            .catchError((_) => const ArtisanPromotionPaginationModel(
-                  items: [],
-                  total: 0,
-                  page: 1,
-                  pageSize: 10,
-                  totalPages: 0,
-                )),
-        _artisanService
-            .getListingReviewSummary(widget.listingId)
-            .catchError((_) => ArtisanReviewSummaryModel(
-                  listingId: widget.listingId,
-                  listingTitle: '',
-                  averageRating: 0.0,
-                  totalReviews: 0,
-                  ratingBreakdown: {'5': 0, '4': 0, '3': 0, '2': 0, '1': 0},
-                  verifiedReviewsCount: 0,
-                )),
-        _artisanService
-            .getListingReviews(widget.listingId, pageSize: 10)
-            .catchError((_) => const ArtisanReviewPaginationModel(
-                  items: [],
-                  total: 0,
-                  page: 1,
-                  pageSize: 10,
-                  totalPages: 0,
-                  averageRating: 0.0,
-                  totalReviews: 0,
-                )),
+        if (isDemo) ...[
+          _artisanService
+              .getActivePromotions(listingId: widget.listingId)
+              .catchError((_) => const ArtisanPromotionPaginationModel(
+                    items: [],
+                    total: 0,
+                    page: 1,
+                    pageSize: 10,
+                    totalPages: 0,
+                  )),
+          _artisanService
+              .getListingReviewSummary(widget.listingId)
+              .catchError((_) => ArtisanReviewSummaryModel(
+                    listingId: widget.listingId,
+                    listingTitle: '',
+                    averageRating: 0.0,
+                    totalReviews: 0,
+                    ratingBreakdown: {'5': 0, '4': 0, '3': 0, '2': 0, '1': 0},
+                    verifiedReviewsCount: 0,
+                  )),
+          _artisanService
+              .getListingReviews(widget.listingId, pageSize: 10)
+              .catchError((_) => const ArtisanReviewPaginationModel(
+                    items: [],
+                    total: 0,
+                    page: 1,
+                    pageSize: 10,
+                    totalPages: 0,
+                    averageRating: 0.0,
+                    totalReviews: 0,
+                  )),
+        ],
       ]);
 
       if (mounted) {
@@ -132,11 +135,17 @@ class _ArtisanBusinessDetailScreenState
           _products = prodPagination.items;
           final wishlistCheck = futures[2] as ArtisanWishlistCheckModel;
           _isSavedToWishlist = wishlistCheck.isSaved;
-          final promoPagination = futures[3] as ArtisanPromotionPaginationModel;
-          _promotions = promoPagination.items;
-          _reviewSummary = futures[4] as ArtisanReviewSummaryModel;
-          final reviewPagination = futures[5] as ArtisanReviewPaginationModel;
-          _reviews = reviewPagination.items;
+          if (isDemo && futures.length >= 6) {
+            final promoPagination = futures[3] as ArtisanPromotionPaginationModel;
+            _promotions = promoPagination.items;
+            _reviewSummary = futures[4] as ArtisanReviewSummaryModel;
+            final reviewPagination = futures[5] as ArtisanReviewPaginationModel;
+            _reviews = reviewPagination.items;
+          } else {
+            _promotions = [];
+            _reviewSummary = null;
+            _reviews = [];
+          }
           _isLoading = false;
         });
       }
@@ -666,7 +675,7 @@ class _ArtisanBusinessDetailScreenState
                             ArtisanLauncherService.showContactModal(
                               context,
                               title: listing.title,
-                              phone: listing.phone,
+                              phone: listing.whatsappNumber ?? listing.phone,
                               email: listing.email,
                             );
                           },
@@ -950,70 +959,71 @@ class _ArtisanBusinessDetailScreenState
               ),
             ),
 
-          // Reviews & Ratings Section
-          SliverToBoxAdapter(
-            child: Padding(
-              padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
-              child: Column(
-                crossAxisAlignment: CrossAxisAlignment.start,
-                children: [
-                  const Divider(height: 32, color: AppTheme.borderSlate),
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceBetween,
-                    children: [
-                      const Text(
-                        'Traveler Reviews & Ratings',
-                        style: TextStyle(
-                          fontSize: 18,
-                          fontWeight: FontWeight.bold,
-                          color: AppTheme.primaryNavy,
+          // Reviews & Ratings Section (Demo preview only; excluded from Academic MVP)
+          if (ArtisanDemoService.isDemoMode)
+            SliverToBoxAdapter(
+              child: Padding(
+                padding: const EdgeInsets.symmetric(horizontal: 16, vertical: 8),
+                child: Column(
+                  crossAxisAlignment: CrossAxisAlignment.start,
+                  children: [
+                    const Divider(height: 32, color: AppTheme.borderSlate),
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceBetween,
+                      children: [
+                        const Text(
+                          'Traveler Reviews & Ratings',
+                          style: TextStyle(
+                            fontSize: 18,
+                            fontWeight: FontWeight.bold,
+                            color: AppTheme.primaryNavy,
+                          ),
                         ),
-                      ),
-                      ElevatedButton.icon(
-                        key: const Key('write_review_btn'),
-                        onPressed: _handleWriteReview,
-                        icon: const Icon(Icons.rate_review_outlined, size: 16),
-                        label: const Text('Write Review'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: AppTheme.accentOrange,
-                          foregroundColor: Colors.white,
-                          padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
-                          textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                        ElevatedButton.icon(
+                          key: const Key('write_review_btn'),
+                          onPressed: _handleWriteReview,
+                          icon: const Icon(Icons.rate_review_outlined, size: 16),
+                          label: const Text('Write Review'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: AppTheme.accentOrange,
+                            foregroundColor: Colors.white,
+                            padding: const EdgeInsets.symmetric(horizontal: 12, vertical: 8),
+                            textStyle: const TextStyle(fontSize: 12, fontWeight: FontWeight.bold),
+                          ),
                         ),
-                      ),
-                    ],
-                  ),
-                  const SizedBox(height: 12),
+                      ],
+                    ),
+                    const SizedBox(height: 12),
 
-                  // Aggregated Review Metrics
-                  if (_reviewSummary != null)
-                    ReviewBreakdownWidget(summary: _reviewSummary!),
+                    // Aggregated Review Metrics
+                    if (_reviewSummary != null)
+                      ReviewBreakdownWidget(summary: _reviewSummary!),
 
-                  const SizedBox(height: 16),
+                    const SizedBox(height: 16),
 
-                  // Reviews List
-                  if (_reviews.isEmpty)
-                    Container(
-                      padding: const EdgeInsets.all(20),
-                      decoration: BoxDecoration(
-                        color: AppTheme.backgroundWhite,
-                        borderRadius: BorderRadius.circular(12),
-                        border: Border.all(color: AppTheme.borderSlate),
-                      ),
-                      child: const Center(
-                        child: Text(
-                          'No traveler reviews submitted yet. Complete an in-store pickup to be the first to review!',
-                          textAlign: TextAlign.center,
-                          style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                    // Reviews List
+                    if (_reviews.isEmpty)
+                      Container(
+                        padding: const EdgeInsets.all(20),
+                        decoration: BoxDecoration(
+                          color: AppTheme.backgroundWhite,
+                          borderRadius: BorderRadius.circular(12),
+                          border: Border.all(color: AppTheme.borderSlate),
                         ),
-                      ),
-                    )
-                  else
-                    ..._reviews.map((r) => _buildReviewCard(r)),
-                ],
+                        child: const Center(
+                          child: Text(
+                            'No traveler reviews submitted yet. Complete an in-store pickup to be the first to review!',
+                            textAlign: TextAlign.center,
+                            style: TextStyle(fontSize: 12, color: AppTheme.textMuted),
+                          ),
+                        ),
+                      )
+                    else
+                      ..._reviews.map((r) => _buildReviewCard(r)),
+                  ],
+                ),
               ),
             ),
-          ),
 
           const SliverToBoxAdapter(child: SizedBox(height: 40)),
         ],

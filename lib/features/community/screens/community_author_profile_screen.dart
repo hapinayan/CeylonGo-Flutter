@@ -1,19 +1,25 @@
 import 'package:flutter/material.dart';
 
+import '../../artisan/services/artisan_demo_service.dart';
+import '../../auth/models/api_error.dart';
 import '../models/community_author_model.dart';
 import '../models/community_post_model.dart';
 import '../services/community_demo_service.dart';
+import '../services/community_service.dart';
+import '../widgets/community_comments_sheet.dart';
 import '../widgets/community_post_card.dart';
 
 /// Community Author Profile Screen
-/// Displays the public community profile of a traveler or verified provider
-/// with their bio, followers, follow action, and authored travel posts.
 class CommunityAuthorProfileScreen extends StatefulWidget {
   final String authorId;
+  final CommunityAuthorModel? initialAuthor;
+  final CommunityService? communityService;
 
   const CommunityAuthorProfileScreen({
     super.key,
     required this.authorId,
+    this.initialAuthor,
+    this.communityService,
   });
 
   @override
@@ -22,26 +28,102 @@ class CommunityAuthorProfileScreen extends StatefulWidget {
 
 class _CommunityAuthorProfileScreenState extends State<CommunityAuthorProfileScreen> {
   final _demoService = CommunityDemoService();
-  late CommunityAuthorModel? _author;
-  late List<CommunityPostModel> _authorPosts;
+  late final CommunityService _service;
+  CommunityAuthorModel? _author;
+  List<CommunityPostModel> _authorPosts = [];
+  bool _isLoading = false;
+  String? _error;
 
   @override
   void initState() {
     super.initState();
+    _service = widget.communityService ?? CommunityService();
+    _author = widget.initialAuthor;
     _loadAuthorData();
   }
 
-  void _loadAuthorData() {
+  Future<void> _loadAuthorData() async {
+    if (ArtisanDemoService.isDemoMode) {
+      setState(() {
+        _author = _demoService.getAuthor(widget.authorId) ?? widget.initialAuthor;
+        _authorPosts = _demoService.getPostsByAuthor(widget.authorId);
+      });
+      return;
+    }
+
     setState(() {
-      _author = _demoService.getAuthor(widget.authorId);
-      _authorPosts = _demoService.getPostsByAuthor(widget.authorId);
+      _isLoading = true;
+      _error = null;
     });
+    try {
+      final posts = await _service.getFeed(authorId: int.tryParse(widget.authorId));
+      if (!mounted) return;
+      setState(() {
+        _authorPosts = posts;
+        if (_author == null && posts.isNotEmpty) {
+          _author = posts.first.author;
+        }
+        _isLoading = false;
+      });
+    } on ApiError catch (e) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = e.message;
+      });
+    } catch (_) {
+      if (!mounted) return;
+      setState(() {
+        _isLoading = false;
+        _error = 'Unable to load author posts.';
+      });
+    }
   }
 
   void _onToggleFollow() {
-    if (_author == null) return;
+    if (_author == null || !ArtisanDemoService.isDemoMode) return;
     _demoService.toggleFollow(_author!.id);
     _loadAuthorData();
+  }
+
+  Future<void> _toggleLike(CommunityPostModel post) async {
+    if (ArtisanDemoService.isDemoMode) {
+      _demoService.toggleLike(post.id);
+      _loadAuthorData();
+      return;
+    }
+    final idInt = int.tryParse(post.id);
+    if (idInt == null) return;
+    try {
+      final res = await _service.toggleLike(idInt);
+      if (!mounted) return;
+      setState(() {
+        _authorPosts = _authorPosts
+            .map((p) => p.id == post.id
+                ? p.copyWith(isLikedByDemoUser: res.liked, likesCount: res.likesCount)
+                : p)
+            .toList();
+      });
+    } catch (_) {}
+  }
+
+  Future<void> _toggleSave(CommunityPostModel post) async {
+    if (ArtisanDemoService.isDemoMode) {
+      _demoService.toggleSave(post.id);
+      _loadAuthorData();
+      return;
+    }
+    final idInt = int.tryParse(post.id);
+    if (idInt == null) return;
+    try {
+      final next = await _service.setSaved(idInt, save: !post.isSavedByDemoUser);
+      if (!mounted) return;
+      setState(() {
+        _authorPosts = _authorPosts
+            .map((p) => p.id == post.id ? p.copyWith(isSavedByDemoUser: next) : p)
+            .toList();
+      });
+    } catch (_) {}
   }
 
   @override
@@ -176,48 +258,48 @@ class _CommunityAuthorProfileScreenState extends State<CommunityAuthorProfileScr
 
                   const SizedBox(height: 16),
 
-                  // Statistics Row (Posts, Followers, Following)
-                  Row(
-                    mainAxisAlignment: MainAxisAlignment.spaceEvenly,
-                    children: [
-                      _buildStatColumn('Posts', '${_authorPosts.length}'),
-                      Container(height: 28, width: 1, color: const Color(0xFFE2E8F0)),
-                      _buildStatColumn('Followers', '${author.followersCount}'),
-                      Container(height: 28, width: 1, color: const Color(0xFFE2E8F0)),
-                      _buildStatColumn('Following', '${author.followingCount}'),
-                    ],
-                  ),
-
-                  const SizedBox(height: 16),
-
-                  // Follow / Following Action Button
-                  if (!isCurrentUser)
-                    SizedBox(
-                      width: double.infinity,
-                      height: 42,
-                      child: ElevatedButton(
-                        key: const Key('author_follow_toggle_btn'),
-                        style: ElevatedButton.styleFrom(
-                          backgroundColor: author.isFollowedByDemoUser
-                              ? const Color(0xFFF1F5F9)
-                              : const Color(0xFF073B91),
-                          foregroundColor: author.isFollowedByDemoUser
-                              ? const Color(0xFF082B5C)
-                              : Colors.white,
-                          elevation: 0,
-                          shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
-                        ),
-                        onPressed: _onToggleFollow,
-                        child: Text(
-                          author.isFollowedByDemoUser ? 'Following' : 'Follow',
-                          style: const TextStyle(
-                            fontFamily: 'Inter',
-                            fontWeight: FontWeight.bold,
-                            fontSize: 14,
+                  // Statistics Row & Follow button (Follow is demo-only)
+                  if (ArtisanDemoService.isDemoMode) ...[
+                    Row(
+                      mainAxisAlignment: MainAxisAlignment.spaceEvenly,
+                      children: [
+                        _buildStatColumn('Posts', '${_authorPosts.length}'),
+                        Container(height: 28, width: 1, color: const Color(0xFFE2E8F0)),
+                        _buildStatColumn('Followers', '${author.followersCount}'),
+                        Container(height: 28, width: 1, color: const Color(0xFFE2E8F0)),
+                        _buildStatColumn('Following', '${author.followingCount}'),
+                      ],
+                    ),
+                    const SizedBox(height: 16),
+                    if (!isCurrentUser)
+                      SizedBox(
+                        width: double.infinity,
+                        height: 42,
+                        child: ElevatedButton(
+                          key: const Key('author_follow_toggle_btn'),
+                          style: ElevatedButton.styleFrom(
+                            backgroundColor: author.isFollowedByDemoUser
+                                ? const Color(0xFFF1F5F9)
+                                : const Color(0xFF073B91),
+                            foregroundColor: author.isFollowedByDemoUser
+                                ? const Color(0xFF082B5C)
+                                : Colors.white,
+                            elevation: 0,
+                            shape: RoundedRectangleBorder(borderRadius: BorderRadius.circular(10)),
+                          ),
+                          onPressed: _onToggleFollow,
+                          child: Text(
+                            author.isFollowedByDemoUser ? 'Following' : 'Follow',
+                            style: const TextStyle(
+                              fontFamily: 'Inter',
+                              fontWeight: FontWeight.bold,
+                              fontSize: 14,
+                            ),
                           ),
                         ),
                       ),
-                    ),
+                  ] else
+                    _buildStatColumn('Posts', '${_authorPosts.length}'),
                 ],
               ),
             ),
@@ -249,7 +331,23 @@ class _CommunityAuthorProfileScreenState extends State<CommunityAuthorProfileScr
             const SizedBox(height: 8),
 
             // Author Posts List
-            if (_authorPosts.isEmpty)
+            if (_isLoading)
+              const Padding(
+                padding: EdgeInsets.all(32),
+                child: Center(child: CircularProgressIndicator()),
+              )
+            else if (_error != null)
+              Padding(
+                padding: const EdgeInsets.all(32),
+                child: Column(
+                  children: [
+                    Text(_error!, textAlign: TextAlign.center),
+                    const SizedBox(height: 10),
+                    ElevatedButton(onPressed: _loadAuthorData, child: const Text('Retry')),
+                  ],
+                ),
+              )
+            else if (_authorPosts.isEmpty)
               const Padding(
                 padding: EdgeInsets.all(40.0),
                 child: Center(
@@ -268,15 +366,27 @@ class _CommunityAuthorProfileScreenState extends State<CommunityAuthorProfileScr
                   final post = _authorPosts[index];
                   return CommunityPostCard(
                     post: post,
-                    onLike: () {
-                      _demoService.toggleLike(post.id);
-                      _loadAuthorData();
+                    onLike: () => _toggleLike(post),
+                    onSave: () => _toggleSave(post),
+                    onComment: () {
+                      showModalBottomSheet(
+                        context: context,
+                        isScrollControlled: true,
+                        backgroundColor: Colors.transparent,
+                        builder: (_) => CommunityCommentsSheet(
+                          postId: post.id,
+                          initialComments: post.comments,
+                          communityService: _service,
+                          onCommentsCountChanged: (c) {
+                            setState(() {
+                              _authorPosts = _authorPosts
+                                  .map((p) => p.id == post.id ? p.copyWith(commentsCount: c) : p)
+                                  .toList();
+                            });
+                          },
+                        ),
+                      );
                     },
-                    onSave: () {
-                      _demoService.toggleSave(post.id);
-                      _loadAuthorData();
-                    },
-                    onComment: () {},
                     onShare: () {},
                     onAuthorTap: () {},
                     onMoreOptions: () {},

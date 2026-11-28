@@ -1,5 +1,6 @@
 import 'package:flutter/material.dart';
 
+import '../../artisan/services/artisan_demo_service.dart';
 import '../../auth/models/api_error.dart';
 import '../models/community_api_models.dart';
 import '../services/community_api_service.dart';
@@ -39,7 +40,7 @@ class CreateCommunityPostSheet extends StatefulWidget {
 
 class _CreateCommunityPostSheetState extends State<CreateCommunityPostSheet> {
   final _captionController = TextEditingController();
-  final _locationController = TextEditingController(text: 'Ella, Sri Lanka');
+  final _locationController = TextEditingController();
   final _demoService = CommunityDemoService();
 
   static const List<Map<String, String>> _presetPhotos = [
@@ -86,6 +87,7 @@ class _CreateCommunityPostSheetState extends State<CreateCommunityPostSheet> {
   @override
   void initState() {
     super.initState();
+    if (!_isRealMode) _locationController.text = 'Ella, Sri Lanka';
     _selectedImageUrl = _presetPhotos[0]['url']!;
     _apiService = widget.apiService ?? CommunityApiService();
     _photoPicker = widget.photoPicker ?? CommunityPhotoPicker();
@@ -215,6 +217,11 @@ class _CreateCommunityPostSheetState extends State<CreateCommunityPostSheet> {
       return;
     }
 
+    if (!ArtisanDemoService.isDemoMode) {
+      setState(() => _errorMessage = 'Please sign in to publish a post.');
+      return;
+    }
+
     final caption = _captionController.text.trim();
     if (caption.isEmpty) {
       setState(() {
@@ -261,9 +268,9 @@ class _CreateCommunityPostSheetState extends State<CreateCommunityPostSheet> {
       });
       return;
     }
-    if (caption.length > 5000) {
+    if (caption.length > 2000) {
       setState(() {
-        _errorMessage = 'Caption cannot exceed 5000 characters.';
+        _errorMessage = 'Caption cannot exceed 2000 characters.';
       });
       return;
     }
@@ -301,7 +308,6 @@ class _CreateCommunityPostSheetState extends State<CreateCommunityPostSheet> {
             authToken: token,
             postId: _createdPostId!,
             photo: photo,
-            displayOrder: i,
           );
           if (!mounted) return;
           setState(() {
@@ -485,7 +491,7 @@ class _CreateCommunityPostSheetState extends State<CreateCommunityPostSheet> {
                     controller: _captionController,
                     enabled: _createdPostId == null && !_isSubmitting,
                     maxLines: 4,
-                    maxLength: _isRealMode ? 5000 : 500,
+                    maxLength: _isRealMode ? 2000 : 500,
                     decoration: InputDecoration(
                       hintText:
                           'Share your Sri Lankan travel story, tips, or experiences...',

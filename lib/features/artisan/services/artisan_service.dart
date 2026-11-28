@@ -12,6 +12,7 @@ import '../models/artisan_reservation_model.dart';
 import '../models/artisan_review_model.dart';
 import '../models/artisan_wishlist_model.dart';
 import '../models/showcase_item_model.dart';
+import 'artisan_launcher_service.dart';
 
 /// Service connecting directly to CeylonGo Artisan Backend REST APIs.
 /// Grounded in FastAPI routers:
@@ -163,47 +164,26 @@ class ArtisanService {
     }
   }
 
-  /// Discover featured and spotlighted artisan businesses.
+  /// Discover featured and spotlighted artisan businesses via GET /api/v1/artisan-listings?is_featured=true.
   Future<ArtisanListingPagination> getFeaturedListings({
     String? search,
     String? district,
     String? category,
     int page = 1,
     int pageSize = 12,
-  }) async {
-    final queryParams = <String, String>{
-      'page': page.toString(),
-      'page_size': pageSize.toString(),
-    };
-    if (search != null && search.trim().isNotEmpty) {
-      queryParams['search'] = search.trim();
-    }
-    if (district != null && district.trim().isNotEmpty) {
-      queryParams['district'] = district.trim();
-    }
-    if (category != null && category.trim().isNotEmpty) {
-      queryParams['category'] = category.trim();
-    }
-
-    final uri = Uri.parse('${ApiConstants.apiV1}/artisan-listings/featured').replace(
-      queryParameters: queryParams,
+  }) {
+    return getListings(
+      search: search,
+      district: district,
+      category: category,
+      isFeatured: true,
+      page: page,
+      pageSize: pageSize,
     );
-
-    try {
-      final response = await _client.get(uri, headers: ApiConstants.defaultHeaders);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return ArtisanListingPagination.fromJson(data);
-      }
-      throw _parseError(response);
-    } on SocketException {
-      throw ApiError.network();
-    } on http.ClientException {
-      throw ApiError.network();
-    }
   }
 
-  /// Discover nearby artisan listings by coordinate proximity with Haversine distance.
+  /// Discover nearby artisan listings sorted by client-side Haversine distance
+  /// over GET /api/v1/artisan-listings coordinates.
   Future<ArtisanNearbyListingPagination> getNearbyListings({
     required double latitude,
     required double longitude,
@@ -213,36 +193,67 @@ class ArtisanService {
     int page = 1,
     int pageSize = 12,
   }) async {
-    final queryParams = <String, String>{
-      'latitude': latitude.toString(),
-      'longitude': longitude.toString(),
-      'radius_km': radiusKm.toString(),
-      'page': page.toString(),
-      'page_size': pageSize.toString(),
-    };
-    if (category != null && category.trim().isNotEmpty && category.toLowerCase() != 'all') {
-      queryParams['category'] = category.trim();
-    }
-    if (search != null && search.trim().isNotEmpty) {
-      queryParams['search'] = search.trim();
-    }
-
-    final uri = Uri.parse('${ApiConstants.apiV1}/artisan-listings/nearby').replace(
-      queryParameters: queryParams,
+    final res = await getListings(
+      search: search,
+      category: category,
+      page: 1,
+      pageSize: 50,
     );
 
-    try {
-      final response = await _client.get(uri, headers: ApiConstants.defaultHeaders);
-      if (response.statusCode == 200) {
-        final data = jsonDecode(response.body) as Map<String, dynamic>;
-        return ArtisanNearbyListingPagination.fromJson(data);
+    final enriched = <ArtisanListingSummary>[];
+    for (final item in res.items) {
+      if (item.latitude != null && item.longitude != null) {
+        final dist = ArtisanLauncherService.calculateDistanceKm(
+          latitude,
+          longitude,
+          item.latitude!,
+          item.longitude!,
+        );
+        if (dist <= radiusKm) {
+          enriched.add(
+            ArtisanListingSummary(
+              id: item.id,
+              providerProfileId: item.providerProfileId,
+              title: item.title,
+              craftCategory: item.craftCategory,
+              district: item.district,
+              city: item.city,
+              latitude: item.latitude,
+              longitude: item.longitude,
+              coverImageUrl: item.coverImageUrl,
+              isActive: item.isActive,
+              isVerified: item.isVerified,
+              isFeatured: item.isFeatured,
+              approvalStatus: item.approvalStatus,
+              averageRating: item.averageRating,
+              totalReviews: item.totalReviews,
+              distanceKm: dist,
+            ),
+          );
+        }
       }
-      throw _parseError(response);
-    } on SocketException {
-      throw ApiError.network();
-    } on http.ClientException {
-      throw ApiError.network();
     }
+
+    enriched.sort(
+      (a, b) => (a.distanceKm ?? 999999).compareTo(b.distanceKm ?? 999999),
+    );
+
+    final start = (page - 1) * pageSize;
+    final paged = start >= enriched.length
+        ? <ArtisanListingSummary>[]
+        : enriched.skip(start).take(pageSize).toList();
+    final totalPages = enriched.isEmpty ? 0 : (enriched.length / pageSize).ceil();
+
+    return ArtisanNearbyListingPagination(
+      items: paged,
+      total: enriched.length,
+      page: page,
+      pageSize: pageSize,
+      totalPages: totalPages,
+      originLatitude: latitude,
+      originLongitude: longitude,
+      radiusKm: radiusKm,
+    );
   }
 
   /// Get full public details of an active, approved artisan listing.

@@ -5,6 +5,7 @@ import 'package:flutter_test/flutter_test.dart';
 import 'package:http/http.dart' as http;
 import 'package:http/testing.dart';
 
+import 'package:ceylongo/core/services/api_client.dart';
 import 'package:ceylongo/core/services/secure_storage_service.dart';
 import 'package:ceylongo/features/auth/models/api_error.dart';
 import 'package:ceylongo/features/auth/models/auth_response.dart';
@@ -12,8 +13,11 @@ import 'package:ceylongo/features/auth/models/user_model.dart';
 import 'package:ceylongo/features/auth/screens/login_screen.dart';
 import 'package:ceylongo/features/auth/screens/role_selection_screen.dart';
 import 'package:ceylongo/features/auth/services/auth_service.dart';
+import 'package:ceylongo/features/bookings/services/booking_payment_service.dart';
+import 'package:ceylongo/features/categories/services/discovery_service.dart';
 import 'package:ceylongo/features/navigation/screens/main_navigation_shell.dart';
 import 'package:ceylongo/features/profile/screens/profile_screen.dart';
+import 'package:ceylongo/features/profile/services/account_service.dart';
 import 'package:ceylongo/features/vendor/screens/vendor_dashboard_screen.dart';
 import 'package:ceylongo/features/vendor/screens/vendor_login_screen.dart';
 import 'package:ceylongo/features/vendor/screens/vendor_more_screen.dart';
@@ -70,6 +74,9 @@ class _StubAuthService extends AuthService {
   ApiError? meError;
   LoginResponse? loginResponse;
   int getMeCalls = 0;
+
+  @override
+  Future<void> logout(String accessToken) async {}
 
   @override
   Future<UserModel> getMe(String accessToken) async {
@@ -374,6 +381,15 @@ void main() {
           role: 'traveler',
         );
       final authService = _StubAuthService();
+      final apiClient = ApiClient(
+        storageService: storage,
+        client: MockClient((request) async {
+          if (request.url.path.endsWith('/auth/me')) {
+            return http.Response(jsonEncode(storage.user!.toJson()), 200);
+          }
+          return http.Response('{}', 200);
+        }),
+      );
 
       await tester.pumpWidget(
         MaterialApp(
@@ -383,6 +399,12 @@ void main() {
           home: ProfileScreen(
             authService: authService,
             storageService: storage,
+            accountService: AccountService(
+              apiClient: apiClient,
+              storageService: storage,
+            ),
+            bookingService: BookingPaymentService(apiClient: apiClient),
+            discoveryService: DiscoveryService(apiClient: apiClient),
           ),
         ),
       );

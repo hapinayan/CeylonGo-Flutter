@@ -224,6 +224,8 @@ class ArtisanListingResponse extends ArtisanListingSummary {
   final String? description;
   final String? address;
   final String? phone;
+  final String? whatsappNumber;
+  final String? whatsappLink;
   final String? email;
   final String? websiteUrl;
   final String? openingHours;
@@ -254,6 +256,8 @@ class ArtisanListingResponse extends ArtisanListingSummary {
     this.description,
     this.address,
     this.phone,
+    this.whatsappNumber,
+    this.whatsappLink,
     this.email,
     this.websiteUrl,
     this.openingHours,
@@ -310,6 +314,8 @@ class ArtisanListingResponse extends ArtisanListingSummary {
       description: json['description'] as String?,
       address: json['address'] as String?,
       phone: json['phone'] as String?,
+      whatsappNumber: json['whatsapp_number'] as String?,
+      whatsappLink: json['whatsapp_link'] as String?,
       email: json['email'] as String?,
       websiteUrl: json['website_url'] as String?,
       openingHours: json['opening_hours'] as String?,

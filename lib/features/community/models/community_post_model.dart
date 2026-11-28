@@ -1,3 +1,4 @@
+import '../../../core/constants/api_constants.dart';
 import 'community_author_model.dart';
 import 'community_comment_model.dart';
 
@@ -76,6 +77,55 @@ class CommunityPostModel {
       isSavedByDemoUser: isSavedByDemoUser ?? this.isSavedByDemoUser,
       comments: comments ?? this.comments,
       isDemoCreated: isDemoCreated ?? this.isDemoCreated,
+    );
+  }
+
+  factory CommunityPostModel.fromJson(Map<String, dynamic> json) {
+    final authorMap = json['author'] is Map<String, dynamic>
+        ? json['author'] as Map<String, dynamic>
+        : const <String, dynamic>{};
+    final author = CommunityAuthorModel.fromJson(
+      authorMap,
+      fallbackName: json['author_name']?.toString(),
+      fallbackId: json['author_id'] is int
+          ? json['author_id'] as int
+          : int.tryParse('${json['author_id']}'),
+    );
+
+    final body = json['body']?.toString() ?? '';
+    final hashtags = RegExp(r'#[A-Za-z0-9_]+')
+        .allMatches(body)
+        .map((m) => m.group(0)!)
+        .toSet()
+        .toList();
+
+    String? imageUrl;
+    if (json['media'] is List && (json['media'] as List).isNotEmpty) {
+      final first = (json['media'] as List).first;
+      if (first is Map<String, dynamic>) {
+        final resolved =
+            ApiConstants.resolveMediaUrl(first['image_url']?.toString());
+        if (resolved.isNotEmpty) imageUrl = resolved;
+      }
+    }
+
+    return CommunityPostModel(
+      id: '${json['id'] ?? ''}',
+      author: author,
+      caption: body,
+      hashtags: hashtags,
+      location: author.location,
+      imageUrl: imageUrl,
+      createdAt: DateTime.tryParse(json['created_at']?.toString() ?? '') ??
+          DateTime.now(),
+      likesCount: json['likes_count'] is int
+          ? json['likes_count'] as int
+          : int.tryParse('${json['likes_count']}') ?? 0,
+      commentsCount: json['comments_count'] is int
+          ? json['comments_count'] as int
+          : int.tryParse('${json['comments_count']}') ?? 0,
+      isLikedByDemoUser: json['viewer_has_liked'] == true,
+      isSavedByDemoUser: json['viewer_has_saved'] == true,
     );
   }
 }

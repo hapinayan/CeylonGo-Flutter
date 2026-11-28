@@ -96,7 +96,9 @@ class _LoginScreenState extends State<LoginScreen> {
     _onSubmit();
   }
 
-  Future<void> _showLoginSuccessPopupAndNavigate() async {
+  Future<void> _showLoginSuccessPopupAndNavigate({
+    String targetRoute = '/home',
+  }) async {
     if (!mounted || _isSuccessPopupShowing) return;
     _isSuccessPopupShowing = true;
 
@@ -200,7 +202,7 @@ class _LoginScreenState extends State<LoginScreen> {
     if (!mounted) return;
 
     Navigator.of(context).pushNamedAndRemoveUntil(
-      '/home',
+      targetRoute,
       (route) => false,
     );
   }
@@ -225,10 +227,10 @@ class _LoginScreenState extends State<LoginScreen> {
     final inputEmail = _emailController.text.trim();
     final inputPassword = _passwordController.text;
 
-    // Offline Demo Flow: Strictly triggered only by designated demo credentials.
-    // Arbitrary credentials are NEVER accepted as authenticated sessions.
-    if (inputEmail.toLowerCase() == demoEmail && inputPassword == demoPassword) {
-      ArtisanDemoService.isDemoMode = true;
+    // Offline Demo Flow: Only active when explicitly launched in Demo Mode.
+    if (ArtisanDemoService.isDemoMode &&
+        inputEmail.toLowerCase() == demoEmail &&
+        inputPassword == demoPassword) {
       ArtisanDemoService.instance.resetToDefaults();
 
       const demoUser = UserModel(
@@ -773,87 +775,118 @@ class _LoginScreenState extends State<LoginScreen> {
                           ),
                           const SizedBox(height: 12),
 
-                          // Clearly Labeled Offline Demo Flow
-                          Container(
-                            padding: const EdgeInsets.symmetric(
-                              horizontal: 14,
-                              vertical: 12,
-                            ),
-                            decoration: BoxDecoration(
-                              color: AppTheme.primarySubtle,
-                              borderRadius: BorderRadius.circular(12),
-                              border: Border.all(
-                                color: AppTheme.primaryNavy.withAlpha(45),
-                                width: 1,
+                          // Service Provider Portal Link
+                          Center(
+                            child: TextButton.icon(
+                              key: const Key('provider_portal_link'),
+                              onPressed: _isLoading
+                                  ? null
+                                  : () => Navigator.pushNamed(
+                                        context,
+                                        '/provider/login',
+                                      ),
+                              icon: const Icon(
+                                Icons.storefront_outlined,
+                                size: 17,
+                                color: AppTheme.primaryNavy,
+                              ),
+                              label: const Text(
+                                'Service Provider Portal',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.primaryNavy,
+                                ),
                               ),
                             ),
-                            child: Column(
-                              children: [
-                                Row(
-                                  mainAxisAlignment: MainAxisAlignment.center,
-                                  children: const [
-                                    Icon(
-                                      Icons.offline_pin_outlined,
-                                      size: 17,
-                                      color: AppTheme.primaryNavy,
-                                    ),
-                                    SizedBox(width: 6),
-                                    Text(
-                                      'Offline Demo Flow',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 12.5,
-                                        fontWeight: FontWeight.bold,
+                          ),
+
+                          if (ArtisanDemoService.isDemoMode) ...[
+                            const SizedBox(height: 12),
+
+                            // Clearly Labeled Offline Demo Flow (Explicit Demo Mode Only)
+                            Container(
+                              padding: const EdgeInsets.symmetric(
+                                horizontal: 14,
+                                vertical: 12,
+                              ),
+                              decoration: BoxDecoration(
+                                color: AppTheme.primarySubtle,
+                                borderRadius: BorderRadius.circular(12),
+                                border: Border.all(
+                                  color: AppTheme.primaryNavy.withAlpha(45),
+                                  width: 1,
+                                ),
+                              ),
+                              child: Column(
+                                children: [
+                                  const Row(
+                                    mainAxisAlignment: MainAxisAlignment.center,
+                                    children: [
+                                      Icon(
+                                        Icons.offline_pin_outlined,
+                                        size: 17,
                                         color: AppTheme.primaryNavy,
                                       ),
-                                    ),
-                                  ],
-                                ),
-                                const SizedBox(height: 5),
-                                const Text(
-                                  'Explore CeylonGo without a backend server:\ndemo@ceylongo.com • Demo@1234',
-                                  textAlign: TextAlign.center,
-                                  style: TextStyle(
-                                    fontFamily: 'Inter',
-                                    fontSize: 11.5,
-                                    color: AppTheme.textSecondary,
-                                    height: 1.3,
+                                      SizedBox(width: 6),
+                                      Text(
+                                        'Offline Demo Flow',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 12.5,
+                                          fontWeight: FontWeight.bold,
+                                          color: AppTheme.primaryNavy,
+                                        ),
+                                      ),
+                                    ],
                                   ),
-                                ),
-                                const SizedBox(height: 10),
-                                SizedBox(
-                                  width: double.infinity,
-                                  height: 38,
-                                  child: ElevatedButton.icon(
-                                    key: const Key('offline_demo_login_button'),
-                                    onPressed: _isLoading ? null : _onDemoLogin,
-                                    icon: const Icon(
-                                      Icons.play_circle_filled,
-                                      size: 18,
-                                      color: AppTheme.backgroundWhite,
+                                  const SizedBox(height: 5),
+                                  const Text(
+                                    'Explore CeylonGo without a backend server:\ndemo@ceylongo.com • Demo@1234',
+                                    textAlign: TextAlign.center,
+                                    style: TextStyle(
+                                      fontFamily: 'Inter',
+                                      fontSize: 11.5,
+                                      color: AppTheme.textSecondary,
+                                      height: 1.3,
                                     ),
-                                    label: const Text(
-                                      'Sign In as Demo Traveler',
-                                      style: TextStyle(
-                                        fontFamily: 'Inter',
-                                        fontSize: 13,
-                                        fontWeight: FontWeight.w600,
+                                  ),
+                                  const SizedBox(height: 10),
+                                  SizedBox(
+                                    width: double.infinity,
+                                    height: 38,
+                                    child: ElevatedButton.icon(
+                                      key: const Key('offline_demo_login_button'),
+                                      onPressed: _isLoading ? null : _onDemoLogin,
+                                      icon: const Icon(
+                                        Icons.play_circle_filled,
+                                        size: 18,
                                         color: AppTheme.backgroundWhite,
                                       ),
-                                    ),
-                                    style: ElevatedButton.styleFrom(
-                                      backgroundColor: AppTheme.primaryNavy,
-                                      foregroundColor: AppTheme.backgroundWhite,
-                                      elevation: 0,
-                                      shape: RoundedRectangleBorder(
-                                        borderRadius: BorderRadius.circular(8),
+                                      label: const Text(
+                                        'Sign In as Demo Traveler',
+                                        style: TextStyle(
+                                          fontFamily: 'Inter',
+                                          fontSize: 13,
+                                          fontWeight: FontWeight.w600,
+                                          color: AppTheme.backgroundWhite,
+                                        ),
+                                      ),
+                                      style: ElevatedButton.styleFrom(
+                                        backgroundColor: AppTheme.primaryNavy,
+                                        foregroundColor: AppTheme.backgroundWhite,
+                                        elevation: 0,
+                                        shape: RoundedRectangleBorder(
+                                          borderRadius: BorderRadius.circular(8),
+                                        ),
                                       ),
                                     ),
                                   ),
-                                ),
-                              ],
+                                ],
+                              ),
                             ),
-                          ),
+                          ],
                         ],
                       ),
                     ),

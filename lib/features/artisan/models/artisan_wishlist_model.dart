@@ -76,17 +76,18 @@ class ArtisanWishlistItemModel {
   });
 
   factory ArtisanWishlistItemModel.fromJson(Map<String, dynamic> json) {
+    final artisanId = json['artisan_listing_id'] is int
+        ? json['artisan_listing_id'] as int
+        : int.tryParse('${json['artisan_listing_id']}') ?? 0;
     return ArtisanWishlistItemModel(
-      id: json['id'] is int ? json['id'] as int : int.parse('${json['id']}'),
+      id: json['id'] is int ? json['id'] as int : int.tryParse('${json['id']}') ?? 0,
       userId: json['user_id'] is int
           ? json['user_id'] as int
-          : int.parse('${json['user_id']}'),
+          : int.tryParse('${json['user_id']}') ?? 0,
       listingReferenceId: json['listing_reference_id'] is int
           ? json['listing_reference_id'] as int
-          : int.parse('${json['listing_reference_id']}'),
-      artisanListingId: json['artisan_listing_id'] is int
-          ? json['artisan_listing_id'] as int
-          : int.parse('${json['artisan_listing_id']}'),
+          : int.tryParse('${json['listing_reference_id']}') ?? artisanId,
+      artisanListingId: artisanId,
       notes: json['notes']?.toString(),
       createdAt: json['created_at'] != null
           ? DateTime.tryParse(json['created_at'].toString()) ?? DateTime.now()
