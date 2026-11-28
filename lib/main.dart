@@ -26,12 +26,40 @@ import 'features/auth/screens/login_success_screen.dart';
 import 'features/auth/screens/password_reset_success_screen.dart';
 import 'features/auth/screens/register_screen.dart';
 import 'features/auth/screens/registration_success_screen.dart';
-import 'features/auth/screens/verify_email_otp_screen.dart';
+import 'features/auth/screens/role_selection_screen.dart';
 import 'features/auth/services/auth_service.dart';
+import 'features/vendor/screens/provider_onboarding_screen.dart';
+import 'features/vendor/screens/vendor_about_screen.dart';
+import 'features/vendor/screens/vendor_availability_screen.dart';
+import 'features/vendor/screens/vendor_bookings_screen.dart';
+import 'features/vendor/screens/vendor_dashboard_screen.dart';
+import 'features/vendor/screens/vendor_earnings_screen.dart';
+import 'features/vendor/screens/vendor_identity_upload_screen.dart';
+import 'features/vendor/screens/vendor_listings_screen.dart';
+import 'features/vendor/screens/vendor_login_screen.dart';
+import 'features/vendor/screens/vendor_more_screen.dart';
+import 'features/vendor/screens/vendor_notifications_screen.dart';
+import 'features/vendor/screens/vendor_onboarding_screen.dart';
+import 'features/vendor/screens/vendor_profile_screen.dart';
+import 'features/vendor/screens/vendor_register_screen.dart';
+import 'features/vendor/screens/vendor_reviews_screen.dart';
+import 'features/vendor/screens/vendor_settings_screen.dart';
+import 'features/vendor/screens/vendor_support_screen.dart';
+import 'features/vendor/services/provider_api_service.dart';
+import 'features/vendor/services/vendor_demo_service.dart';
+import 'features/map/screens/interactive_map_screen.dart';
+import 'features/map/services/map_api_service.dart';
+import 'features/recommendations/screens/recommendations_screen.dart';
+import 'features/recommendations/services/recommendation_api_service.dart';
+import 'features/recommendations/services/recommendation_preferences_service.dart';
+import 'features/weather/screens/live_weather_screen.dart';
+import 'features/weather/services/weather_api_service.dart';
+import 'features/auth/screens/verify_email_otp_screen.dart';
 import 'features/bookings/screens/my_bookings_screen.dart';
 import 'features/profile/screens/traveler_wishlist_screen.dart';
 import 'features/provider/screens/provider_login_screen.dart';
-import 'features/provider/screens/provider_onboarding_screen.dart';
+import 'features/provider/screens/provider_onboarding_screen.dart'
+    as academic_provider;
 import 'features/provider/screens/provider_portal_screen.dart';
 
 void main() {
@@ -42,14 +70,24 @@ void main() {
 /// Supports dependency injection for testing authentication and storage
 class CeylonGoApp extends StatefulWidget {
   final AuthService? authService;
+  final ProviderApiService? providerService;
   final SecureStorageService? storageService;
+  final WeatherApiService? weatherService;
+  final MapApiService? mapService;
+  final RecommendationApiService? recommendationService;
+  final RecommendationPreferencesStore? preferencesStore;
   final String? initialRoute;
   final GlobalKey<NavigatorState>? navigatorKey;
 
   const CeylonGoApp({
     super.key,
     this.authService,
+    this.providerService,
     this.storageService,
+    this.weatherService,
+    this.mapService,
+    this.recommendationService,
+    this.preferencesStore,
     this.initialRoute,
     this.navigatorKey,
   });
@@ -97,9 +135,17 @@ class CeylonGoApp extends StatefulWidget {
   /// Static routes table for constant-named routes without parameters
   static Map<String, WidgetBuilder> getRoutes({
     AuthService? authService,
+    ProviderApiService? providerService,
     SecureStorageService? storageService,
+    WeatherApiService? weatherService,
+    MapApiService? mapService,
+    RecommendationApiService? recommendationService,
+    RecommendationPreferencesStore? preferencesStore,
   }) {
     return {
+      '/role-selection': (context) => RoleSelectionScreen(
+            storageService: storageService,
+          ),
       '/auth': (context) => const AuthLandingScreen(),
       '/login': (context) => LoginScreen(
             authService: authService,
@@ -163,10 +209,55 @@ class CeylonGoApp extends StatefulWidget {
       '/category/guides': (context) => const LocalGuidesCategoryScreen(),
       '/category/tour_guides': (context) => const LocalGuidesCategoryScreen(),
       '/category/rentals': (context) => const RentalsCategoryScreen(),
+      '/vendor/login': (context) => VendorLoginScreen(
+            authService: authService,
+            providerService: providerService,
+            storageService: storageService,
+          ),
+      '/vendor/intro': (context) => VendorOnboardingScreen(
+            storageService: storageService,
+          ),
+      '/vendor/register': (context) => VendorRegisterScreen(
+            storageService: storageService,
+          ),
+      '/vendor/register/onboarding': (context) =>
+          const ProviderOnboardingScreen(),
+      '/vendor/register/identity': (context) =>
+          const VendorIdentityUploadScreen(),
+      '/vendor/dashboard': (context) => const VendorDashboardScreen(),
+      '/vendor/listings': (context) => const VendorListingsScreen(),
+      '/vendor/bookings': (context) => const VendorBookingsScreen(),
+      '/vendor/more': (context) => VendorMoreScreen(
+            storageService: storageService,
+          ),
+      '/vendor/availability': (context) => const VendorAvailabilityScreen(),
+      '/vendor/earnings': (context) => const VendorEarningsScreen(),
+      '/vendor/reviews': (context) => const VendorReviewsScreen(),
+      '/vendor/notifications': (context) => const VendorNotificationsScreen(),
+      '/vendor/settings': (context) => VendorSettingsScreen(
+            providerService: providerService,
+            storageService: storageService,
+          ),
+      '/vendor/support': (context) => const VendorSupportScreen(),
+      '/vendor/about': (context) => const VendorAboutScreen(),
+      '/vendor/profile': (context) => VendorProfileScreen(
+            providerService: providerService,
+            storageService: storageService,
+          ),
+      '/weather': (context) => LiveWeatherScreen(
+            weatherService: weatherService,
+          ),
+      '/map': (context) => InteractiveMapScreen(
+            mapService: mapService,
+          ),
+      '/recommendations': (context) => RecommendationsScreen(
+            recommendationService: recommendationService,
+            preferencesStore: preferencesStore,
+          ),
       '/bookings': (context) => const MyBookingsScreen(),
       '/wishlist': (context) => const TravelerWishlistScreen(),
       '/provider/login': (context) => const ProviderLoginScreen(),
-      '/provider/register': (context) => const ProviderOnboardingScreen(),
+      '/provider/register': (context) => const academic_provider.ProviderOnboardingScreen(),
       '/provider/dashboard': (context) => const ProviderPortalScreen(),
       '/profile': (context) => MainNavigationShell(
             initialIndex: 4,
@@ -335,6 +426,8 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
       nav.pushNamedAndRemoveUntil(
         '/create-new-password',
         (route) =>
+            route.settings.name == '/role-selection' ||
+            route.settings.name == '/vendor/login' ||
             route.settings.name == '/login' ||
             route.settings.name == '/auth' ||
             route.isFirst,
@@ -349,7 +442,12 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
   Widget build(BuildContext context) {
     final staticRoutes = CeylonGoApp.getRoutes(
       authService: widget.authService,
+      providerService: widget.providerService,
       storageService: widget.storageService,
+      weatherService: widget.weatherService,
+      mapService: widget.mapService,
+      recommendationService: widget.recommendationService,
+      preferencesStore: widget.preferencesStore,
     );
 
     return MaterialApp(
@@ -396,6 +494,7 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
             settings: const RouteSettings(name: '/'),
             builder: (context) => AuthGate(
               authService: widget.authService,
+              providerService: widget.providerService,
               storageService: widget.storageService,
             ),
           ),
@@ -413,33 +512,97 @@ class _CeylonGoAppState extends State<CeylonGoApp> with WidgetsBindingObserver {
 }
 
 /// Authentication Gate Widget
-/// Handles app startup session restoration and JWT validation per Section 7
+/// Handles dual-role (Traveler & Vendor) startup session restoration and JWT + role validation.
 class AuthGate extends StatefulWidget {
   final AuthService? authService;
+  final ProviderApiService? providerService;
   final SecureStorageService? storageService;
 
-  const AuthGate({super.key, this.authService, this.storageService});
+  const AuthGate({
+    super.key,
+    this.authService,
+    this.providerService,
+    this.storageService,
+  });
+
+  static bool isVerifiedVendorRole(String? role) {
+    final normalized = role?.trim().toLowerCase();
+    return normalized == 'provider' || normalized == 'vendor';
+  }
+
+  static bool isVerifiedTravelerRole(String? role) {
+    final normalized = role?.trim().toLowerCase();
+    return normalized == 'traveler' || normalized == 'tourist';
+  }
 
   @override
   State<AuthGate> createState() => _AuthGateState();
 }
 
-enum AuthStatus { checking, authenticated, unauthenticated, networkError }
+enum AuthStatus {
+  checking,
+  authenticatedTraveler,
+  authenticatedVendor,
+  unauthenticated,
+  networkError,
+}
 
 class _AuthGateState extends State<AuthGate> {
   late final AuthService _authService;
+  late final ProviderApiService _providerService;
   late final SecureStorageService _storageService;
 
   AuthStatus _status = AuthStatus.checking;
-  UserModel? _authenticatedUser;
   String? _networkErrorMessage;
 
   @override
   void initState() {
     super.initState();
     _authService = widget.authService ?? AuthService();
+    _providerService = widget.providerService ?? ProviderApiService();
     _storageService = widget.storageService ?? SecureStorageService();
     _checkSession();
+  }
+
+  Future<void> _setUnauthenticated({bool clearStorage = false}) async {
+    if (clearStorage) {
+      await _storageService.clear();
+      VendorDemoService.instance.signOutVendor();
+      ArtisanDemoService.isDemoMode = false;
+    }
+    if (mounted) {
+      setState(() {
+        _status = AuthStatus.unauthenticated;
+      });
+    }
+  }
+
+  Future<void> _activateVendorSession(UserModel user, {String? businessName}) async {
+    await _storageService.saveUser(user);
+    ArtisanDemoService.isDemoMode = false;
+    VendorDemoService.instance.setAuthenticatedVendor(
+      id: user.id,
+      businessName: (businessName != null && businessName.isNotEmpty)
+          ? businessName
+          : user.fullName,
+      email: user.email,
+    );
+    if (mounted) {
+      setState(() {
+        _status = AuthStatus.authenticatedVendor;
+      });
+    }
+  }
+
+  Future<void> _activateTravelerSession(UserModel user, {required bool isDemo}) async {
+    await _storageService.saveUser(user);
+    VendorDemoService.instance.signOutVendor();
+    ArtisanDemoService.isDemoMode = isDemo;
+    if (mounted) {
+      setState(() {
+        _status = AuthStatus.authenticatedTraveler;
+      });
+    }
   }
 
   Future<void> _checkSession() async {
@@ -450,61 +613,104 @@ class _AuthGateState extends State<AuthGate> {
 
     try {
       final token = await _storageService.getToken();
+      final cachedUser = await _storageService.getUser();
 
-      // If no token exists, immediately show LoginScreen
-      if (token == null || token.trim().isEmpty) {
+      if (token != null && token.trim().isNotEmpty) {
+        // Offline Traveler demo token: only valid when paired with a Traveler profile.
+        if (token.startsWith('demo-')) {
+          if (cachedUser != null &&
+              AuthGate.isVerifiedTravelerRole(cachedUser.role)) {
+            await _activateTravelerSession(cachedUser, isDemo: true);
+          } else {
+            await _setUnauthenticated(clearStorage: true);
+          }
+          return;
+        }
+
+        // Injected AuthService-only test path (mocking getMe for either role).
+        if (widget.authService != null && widget.providerService == null) {
+          final user = await _authService.getMe(token);
+          if (AuthGate.isVerifiedVendorRole(user.role)) {
+            await _activateVendorSession(user);
+          } else if (AuthGate.isVerifiedTravelerRole(user.role)) {
+            await _activateTravelerSession(user, isDemo: false);
+          } else {
+            await _setUnauthenticated(clearStorage: true);
+          }
+          return;
+        }
+
+        // Route JWT to the matching role verification endpoint so a Traveler JWT
+        // is never sent to /api/v1/providers/me and vice versa.
+        if (cachedUser != null &&
+            AuthGate.isVerifiedVendorRole(cachedUser.role)) {
+          final profile = await _providerService.getProfile(token);
+          if (!AuthGate.isVerifiedVendorRole(profile.role) ||
+              profile.approvalStatus.toLowerCase() != 'approved' ||
+              !profile.isActive) {
+            await _setUnauthenticated(clearStorage: true);
+            return;
+          }
+          await _activateVendorSession(
+            profile.toUserModel(),
+            businessName: profile.businessName,
+          );
+          return;
+        }
+
+        if (cachedUser != null &&
+            AuthGate.isVerifiedTravelerRole(cachedUser.role)) {
+          final user = await _authService.getMe(token);
+          if (!AuthGate.isVerifiedTravelerRole(user.role)) {
+            await _setUnauthenticated(clearStorage: true);
+            return;
+          }
+          await _activateTravelerSession(user, isDemo: false);
+          return;
+        }
+
+        // Unknown cached role: validate via /api/v1/auth/me first (supports any active user).
+        final user = await _authService.getMe(token);
+        if (AuthGate.isVerifiedVendorRole(user.role)) {
+          final profile = await _providerService.getProfile(token);
+          if (!AuthGate.isVerifiedVendorRole(profile.role) ||
+              profile.approvalStatus.toLowerCase() != 'approved' ||
+              !profile.isActive) {
+            await _setUnauthenticated(clearStorage: true);
+            return;
+          }
+          await _activateVendorSession(
+            profile.toUserModel(),
+            businessName: profile.businessName,
+          );
+          return;
+        }
+        if (AuthGate.isVerifiedTravelerRole(user.role)) {
+          await _activateTravelerSession(user, isDemo: false);
+          return;
+        }
+
+        await _setUnauthenticated(clearStorage: true);
+        return;
+      }
+
+      // Check for a clearly labeled offline Demo Vendor session.
+      final demoVendorMap = await _storageService.getVendorDemoSession();
+      if (demoVendorMap != null && demoVendorMap['is_demo_session'] == true) {
+        VendorDemoService.instance.restoreDemoVendorFromMap(demoVendorMap);
+        ArtisanDemoService.isDemoMode = false;
         if (mounted) {
           setState(() {
-            _status = AuthStatus.unauthenticated;
+            _status = AuthStatus.authenticatedVendor;
           });
         }
         return;
       }
 
-      // Check if session is an offline demo session
-      if (token.startsWith('demo-') || ArtisanDemoService.isDemoMode) {
-        final cachedUser = await _storageService.getUser();
-        if (cachedUser != null && mounted) {
-          ArtisanDemoService.isDemoMode = true;
-          setState(() {
-            _authenticatedUser = cachedUser;
-            _status = AuthStatus.authenticated;
-          });
-          return;
-        }
-      }
-
-      // If token exists, validate it using GET /api/v1/auth/me
-      final user = await _authService.getMe(token);
-
-      // Save verified user profile
-      await _storageService.saveUser(user);
-
-      if (mounted) {
-        setState(() {
-          _authenticatedUser = user;
-          _status = AuthStatus.authenticated;
-        });
-      }
+      await _setUnauthenticated();
     } on ApiError catch (e) {
-      if (e.statusCode == 401) {
-        // HTTP 401: Token invalid or expired. Clear storage and show LoginScreen
-        await _storageService.clear();
-        if (mounted) {
-          setState(() {
-            _status = AuthStatus.unauthenticated;
-          });
-        }
-      } else if (e.code == 'NETWORK_ERROR' ||
-          e.code == 'TIMEOUT' ||
-          e.statusCode == 0) {
-        // Network failure / timeout: Do NOT delete token. Show safe retry state
-        if (mounted) {
-          setState(() {
-            _status = AuthStatus.networkError;
-            _networkErrorMessage = e.message;
-          });
-        }
+      if (e.statusCode == 401 || e.statusCode == 403) {
+        await _setUnauthenticated(clearStorage: true);
       } else {
         if (mounted) {
           setState(() {
@@ -514,12 +720,7 @@ class _AuthGateState extends State<AuthGate> {
         }
       }
     } catch (_) {
-      await _storageService.clear();
-      if (mounted) {
-        setState(() {
-          _status = AuthStatus.unauthenticated;
-        });
-      }
+      await _setUnauthenticated(clearStorage: true);
     }
   }
 
@@ -528,25 +729,24 @@ class _AuthGateState extends State<AuthGate> {
     switch (_status) {
       case AuthStatus.checking:
         return const Scaffold(
-          backgroundColor: AppTheme.backgroundLight,
+          backgroundColor: Colors.white,
           body: Center(
-            child: CircularProgressIndicator(color: AppTheme.accentOrange),
+            child: CircularProgressIndicator(color: AppTheme.primaryNavy),
           ),
         );
 
-      case AuthStatus.authenticated:
-        if (_authenticatedUser?.role == 'provider') {
-          return const ProviderPortalScreen();
-        }
+      case AuthStatus.authenticatedTraveler:
         return MainNavigationShell(
           initialIndex: 0,
-          initialUser: _authenticatedUser,
-          authService: _authService,
+          authService: widget.authService,
           storageService: _storageService,
         );
 
+      case AuthStatus.authenticatedVendor:
+        return const VendorDashboardScreen();
+
       case AuthStatus.unauthenticated:
-        return const AuthLandingScreen();
+        return RoleSelectionScreen(storageService: _storageService);
 
       case AuthStatus.networkError:
         return Scaffold(
@@ -585,7 +785,8 @@ class _AuthGateState extends State<AuthGate> {
                           ),
                           const SizedBox(height: 8),
                           Text(
-                            _networkErrorMessage ?? 'Unable to connect to CeylonGo server to verify your session.',
+                            _networkErrorMessage ??
+                                'Unable to connect to CeylonGo server to verify your session.',
                             textAlign: TextAlign.center,
                             style: const TextStyle(
                               fontSize: 14,
@@ -598,7 +799,7 @@ class _AuthGateState extends State<AuthGate> {
                             icon: const Icon(Icons.refresh),
                             label: const Text('Retry Connection'),
                             style: ElevatedButton.styleFrom(
-                              backgroundColor: AppTheme.accentOrange,
+                              backgroundColor: AppTheme.primaryNavy,
                               foregroundColor: AppTheme.backgroundWhite,
                             ),
                           ),
@@ -609,7 +810,7 @@ class _AuthGateState extends State<AuthGate> {
                                 _status = AuthStatus.unauthenticated;
                               });
                             },
-                            child: const Text('Go to Sign In'),
+                            child: const Text('Choose Role & Sign In'),
                           ),
                         ],
                       ),

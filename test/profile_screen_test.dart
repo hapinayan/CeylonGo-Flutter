@@ -47,6 +47,8 @@ void main() {
             '/artisan': (_) => const Scaffold(body: Text('Artisan Discovery Screen')),
             '/community': (_) => const Scaffold(body: Text('Community Screen')),
             '/login': (_) => const Scaffold(body: Text('Login Screen')),
+            '/role-selection': (_) =>
+                const Scaffold(body: Text('Role Selection Screen')),
           },
       home: ProfileScreen(
         initialUser: user ?? testUser,
@@ -161,10 +163,10 @@ void main() {
       ScaffoldMessenger.of(tester.element(find.byType(Scaffold))).hideCurrentSnackBar();
       await tester.pumpAndSettle();
 
-      // Edit avatar button tap
+      // Edit avatar button tap -> opens Traveler Photo Editor Sheet
       final editAvatarBtn = find.byKey(const Key('profile_edit_avatar_btn'));
       await tapAndSettle(tester, editAvatarBtn);
-      expect(find.text('Demo profile cannot be edited.'), findsOneWidget);
+      expect(find.byKey(const Key('traveler_photo_editor_sheet')), findsOneWidget);
     });
 
     testWidgets('Menu items trigger informative responses on tap',
@@ -198,7 +200,7 @@ void main() {
       await tester.pump(const Duration(milliseconds: 500));
       await settleScreen(tester);
 
-      expect(find.text('Login Screen'), findsOneWidget);
+      expect(find.text('Role Selection Screen'), findsOneWidget);
     });
 
     testWidgets('Bottom navigation tab switching navigates to /home and /artisan',

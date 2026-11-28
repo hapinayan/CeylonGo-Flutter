@@ -24,6 +24,9 @@ class SecureStorageService {
   // Keys used for secure storage
   static const String _keyAccessToken = 'ceylongo_access_token';
   static const String _keyUserProfile = 'ceylongo_user_profile';
+  static const String _keyVendorDemoSession = 'ceylongo_vendor_demo_session';
+  static const String _keyVendorIntroOnboardingCompleted =
+      'ceylongo_vendor_intro_onboarding_completed';
 
   SecureStorageService({FlutterSecureStorage? storage})
     : _storage =
@@ -106,11 +109,84 @@ class SecureStorageService {
     }
   }
 
-  /// Clear all stored authentication data (token and profile) during logout.
+  /// Persist clearly labeled offline demo vendor session metadata.
+  /// Never stored in [_keyAccessToken] or [_keyUserProfile] so it is never
+  /// confused with real backend authentication.
+  Future<void> saveVendorDemoSession(Map<String, dynamic> demoData) async {
+    try {
+      final sanitized = <String, dynamic>{
+        ...demoData,
+        'is_demo_session': true,
+      };
+      await _storage.write(
+        key: _keyVendorDemoSession,
+        value: jsonEncode(sanitized),
+      );
+    } catch (_) {
+      throw const SecureStorageException(
+        'Failed to save demo vendor session.',
+      );
+    }
+  }
+
+  /// Retrieve clearly labeled offline demo vendor session metadata, if present.
+  Future<Map<String, dynamic>?> getVendorDemoSession() async {
+    try {
+      final raw = await _storage.read(key: _keyVendorDemoSession);
+      if (raw == null || raw.isEmpty) {
+        return null;
+      }
+      final Map<String, dynamic> data = jsonDecode(raw);
+      if (data['is_demo_session'] != true) {
+        return null;
+      }
+      return data;
+    } catch (_) {
+      return null;
+    }
+  }
+
+  /// Delete the offline demo vendor session from secure storage.
+  Future<void> clearVendorDemoSession() async {
+    try {
+      await _storage.delete(key: _keyVendorDemoSession);
+    } catch (_) {
+      throw const SecureStorageException(
+        'Failed to clear demo vendor session.',
+      );
+    }
+  }
+
+  /// Whether the Vendor intro swipe onboarding has been completed or skipped.
+  /// Stored separately from authentication tokens so it persists across logouts
+  /// and never overwrites Traveler onboarding preferences.
+  Future<bool> isVendorOnboardingCompleted() async {
+    try {
+      final raw = await _storage.read(key: _keyVendorIntroOnboardingCompleted);
+      return raw == 'true';
+    } catch (_) {
+      return false;
+    }
+  }
+
+  /// Persist whether the Vendor intro swipe onboarding was completed or skipped.
+  Future<void> setVendorOnboardingCompleted({bool completed = true}) async {
+    try {
+      await _storage.write(
+        key: _keyVendorIntroOnboardingCompleted,
+        value: completed ? 'true' : 'false',
+      );
+    } catch (_) {
+      // Non-fatal if secure storage is unavailable in test/demo environments.
+    }
+  }
+
+  /// Clear all stored authentication data (token, profile, and demo session) during logout.
   Future<void> clear() async {
     try {
       await _storage.delete(key: _keyAccessToken);
       await _storage.delete(key: _keyUserProfile);
+      await _storage.delete(key: _keyVendorDemoSession);
     } catch (_) {
       throw const SecureStorageException(
         'Failed to clear authentication data.',

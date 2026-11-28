@@ -1,6 +1,7 @@
 import 'package:flutter/material.dart';
 import 'package:flutter/services.dart';
 
+import '../../../core/services/api_client.dart';
 import '../../../core/services/secure_storage_service.dart';
 import '../../artisan/services/artisan_demo_service.dart';
 import '../../auth/models/api_error.dart';
@@ -10,7 +11,9 @@ import '../../home/widgets/home_bottom_navigation_bar.dart';
 import '../../profile/services/account_service.dart';
 import '../../profile/widgets/notifications_sheet.dart';
 import '../models/community_post_model.dart';
+import '../services/community_api_service.dart';
 import '../services/community_demo_service.dart';
+import '../services/community_photo_picker.dart';
 import '../services/community_service.dart';
 import '../widgets/community_comments_sheet.dart';
 import '../widgets/community_notifications_sheet.dart';
@@ -26,6 +29,8 @@ class CommunityFeedScreen extends StatefulWidget {
   final AuthService? authService;
   final SecureStorageService? storageService;
   final CommunityService? communityService;
+  final CommunityApiService? apiService;
+  final CommunityPhotoPicker? photoPicker;
   final AccountService? accountService;
   final bool showBottomNav;
 
@@ -34,6 +39,8 @@ class CommunityFeedScreen extends StatefulWidget {
     this.authService,
     this.storageService,
     this.communityService,
+    this.apiService,
+    this.photoPicker,
     this.accountService,
     this.showBottomNav = true,
   });
@@ -64,7 +71,8 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
   void initState() {
     super.initState();
     _storageService = widget.storageService ?? SecureStorageService();
-    _service = widget.communityService ?? CommunityService();
+    _service = widget.communityService ??
+        CommunityService(apiClient: ApiClient(storageService: _storageService));
     _accountService = widget.accountService ?? AccountService(storageService: _storageService);
     _entranceController = AnimationController(
       duration: const Duration(milliseconds: 600),
@@ -279,9 +287,14 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
   }
 
   Future<void> _onOpenCreatePost() async {
+    String? token;
     if (!ArtisanDemoService.isDemoMode) {
-      final hasToken = await _storageService.hasToken();
-      if (!hasToken) {
+      try {
+        token = (await _storageService.getToken())?.trim();
+      } on SecureStorageException {
+        token = null;
+      }
+      if (token == null || token.isEmpty || token.startsWith('demo-')) {
         if (mounted) {
           ScaffoldMessenger.of(context).showSnackBar(
             const SnackBar(content: Text('Please sign in to publish a post.')),
@@ -296,8 +309,9 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
       isScrollControlled: true,
       backgroundColor: Colors.transparent,
       builder: (_) => CreateCommunityPostSheet(
-        communityService: _service,
-        currentUser: _currentUser,
+        authToken: token,
+        apiService: widget.apiService,
+        photoPicker: widget.photoPicker,
         onPostPublished: () {
           setState(() {
             _selectedTabIndex = 0;
@@ -667,7 +681,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
                                           });
                                         } on ApiError catch (e) {
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(this.context).showSnackBar(
                                             SnackBar(content: Text(e.message)),
                                           );
                                         }
@@ -701,7 +715,7 @@ class _CommunityFeedScreenState extends State<CommunityFeedScreen>
                                           });
                                         } on ApiError catch (e) {
                                           if (!mounted) return;
-                                          ScaffoldMessenger.of(context).showSnackBar(
+                                          ScaffoldMessenger.of(this.context).showSnackBar(
                                             SnackBar(content: Text(e.message)),
                                           );
                                         }

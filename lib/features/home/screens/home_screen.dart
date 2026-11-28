@@ -18,6 +18,7 @@ import '../widgets/home_category_showcase.dart';
 import '../widgets/home_featured_homestays.dart';
 import '../widgets/home_header.dart';
 import '../widgets/home_popular_destinations.dart';
+import '../widgets/home_recommended_for_you_card.dart';
 import '../widgets/home_search_bar.dart';
 
 /// CeylonGo Traveler Home Screen
@@ -453,6 +454,14 @@ class _HomeScreenState extends State<HomeScreen>
                                 isLoading: _isHomeDataLoading,
                               ),
                             ],
+
+                            const SizedBox(height: 14),
+                            HomeRecommendedForYouCard(
+                              onExploreTap: () => Navigator.pushNamed(
+                                context,
+                                '/recommendations',
+                              ),
+                            ),
                           ],
                         ),
                       ),

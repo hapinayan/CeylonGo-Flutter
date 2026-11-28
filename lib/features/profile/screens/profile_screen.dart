@@ -10,6 +10,10 @@ import '../../bookings/screens/my_bookings_screen.dart';
 import '../../bookings/services/booking_payment_service.dart';
 import '../../categories/services/discovery_service.dart';
 import '../../home/widgets/home_bottom_navigation_bar.dart';
+import '../models/traveler_profile_photo_models.dart';
+import '../services/traveler_profile_photo_picker.dart';
+import '../services/traveler_profile_photo_storage.dart';
+import '../widgets/traveler_photo_editor_sheet.dart';
 import '../services/account_service.dart';
 import '../widgets/notifications_sheet.dart';
 import 'account_subscreens.dart';
@@ -31,6 +35,8 @@ class ProfileScreen extends StatefulWidget {
   final UserModel? initialUser;
   final AuthService? authService;
   final SecureStorageService? storageService;
+  final TravelerProfilePhotoStore? photoStore;
+  final TravelerProfilePhotoPicker? photoPicker;
   final AccountService? accountService;
   final BookingPaymentService? bookingService;
   final DiscoveryService? discoveryService;
@@ -41,6 +47,8 @@ class ProfileScreen extends StatefulWidget {
     this.initialUser,
     this.authService,
     this.storageService,
+    this.photoStore,
+    this.photoPicker,
     this.accountService,
     this.bookingService,
     this.discoveryService,
@@ -55,12 +63,15 @@ class _ProfileScreenState extends State<ProfileScreen>
     with SingleTickerProviderStateMixin {
   late final AuthService _authService;
   late final SecureStorageService _storageService;
+  late final TravelerProfilePhotoStore _photoStore;
+  late final TravelerProfilePhotoPicker _photoPicker;
   late final AccountService _accountService;
   late final BookingPaymentService _bookingService;
   late final DiscoveryService _discoveryService;
   late final AnimationController _entranceController;
 
   UserModel? _user;
+  TravelerProfilePhotoData? _savedPhoto;
   bool _isLoading = true;
   bool _isLoggingOut = false;
   int _bookingsCount = 0;
@@ -79,6 +90,8 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.initState();
     _authService = widget.authService ?? AuthService();
     _storageService = widget.storageService ?? SecureStorageService();
+    _photoStore = widget.photoStore ?? FileTravelerProfilePhotoStore();
+    _photoPicker = widget.photoPicker ?? TravelerProfilePhotoPicker();
     _accountService = widget.accountService ?? AccountService(storageService: _storageService);
     _bookingService = widget.bookingService ?? BookingPaymentService();
     _discoveryService = widget.discoveryService ?? DiscoveryService();
@@ -107,6 +120,24 @@ class _ProfileScreenState extends State<ProfileScreen>
     super.dispose();
   }
 
+  String get _accountKey {
+    final user = _user;
+    if (user == null || user.role == 'provider') return '';
+    if (user.id.trim().isNotEmpty) return user.id.trim();
+    if (user.email.trim().isNotEmpty) return user.email.trim().toLowerCase();
+    return '';
+  }
+
+  Future<void> _loadAvatarForUser() async {
+    final key = _accountKey;
+    if (!mounted || key.isEmpty) return;
+    final loaded = await _photoStore.loadForAccount(key);
+    if (!mounted || key != _accountKey) return;
+    setState(() {
+      _savedPhoto = loaded;
+    });
+  }
+
   Future<void> _loadUser() async {
     if (widget.initialUser != null) {
       if (mounted) {
@@ -115,6 +146,7 @@ class _ProfileScreenState extends State<ProfileScreen>
           _isLoading = false;
         });
       }
+      await _loadAvatarForUser();
       if (!ArtisanDemoService.isDemoMode) {
         await _loadAccountStats();
       }
@@ -215,6 +247,8 @@ class _ProfileScreenState extends State<ProfileScreen>
           _isLoading = false;
         });
       }
+    } finally {
+      await _loadAvatarForUser();
     }
   }
 
@@ -299,7 +333,11 @@ class _ProfileScreenState extends State<ProfileScreen>
     ArtisanDemoService.isDemoMode = false;
 
     if (mounted) {
-      Navigator.pushNamedAndRemoveUntil(context, '/login', (route) => false);
+      Navigator.pushNamedAndRemoveUntil(
+        context,
+        '/role-selection',
+        (route) => false,
+      );
     }
   }
 
@@ -456,6 +494,35 @@ class _ProfileScreenState extends State<ProfileScreen>
             child: const Text('Open My Bookings'),
           ),
         ],
+      ),
+    );
+  }
+
+  void _onEditAvatar() {
+    final key = _accountKey;
+    if (key.isEmpty) return;
+    final name = (_user?.fullName.isNotEmpty ?? false)
+        ? _user!.fullName
+        : 'Kamal Perera';
+
+    showModalBottomSheet<void>(
+      context: context,
+      isScrollControlled: true,
+      shape: const RoundedRectangleBorder(
+        borderRadius: BorderRadius.vertical(top: Radius.circular(24)),
+      ),
+      builder: (_) => TravelerPhotoEditorSheet(
+        accountKey: key,
+        initials: _getInitials(name),
+        currentPhoto: _savedPhoto,
+        photoStore: _photoStore,
+        photoPicker: _photoPicker,
+        onPhotoChanged: (updated) {
+          if (!mounted || key != _accountKey) return;
+          setState(() {
+            _savedPhoto = updated;
+          });
+        },
       ),
     );
   }
@@ -903,18 +970,40 @@ class _ProfileScreenState extends State<ProfileScreen>
                     ),
                   ],
                 ),
-                child: Center(
-                  child: Text(
-                    _getInitials(name),
-                    style: const TextStyle(
-                      fontFamily: 'Inter',
-                      fontSize: 32,
-                      fontWeight: FontWeight.bold,
-                      color: Color(0xFF082B5C),
-                      letterSpacing: -0.5,
-                    ),
-                  ),
-                ),
+                child: _savedPhoto != null
+                    ? ClipOval(
+                        child: Image.memory(
+                          _savedPhoto!.bytes,
+                          key: const Key('profile_avatar_image'),
+                          width: 92,
+                          height: 92,
+                          fit: BoxFit.cover,
+                          errorBuilder: (_, _, _) => Center(
+                            child: Text(
+                              _getInitials(name),
+                              style: const TextStyle(
+                                fontFamily: 'Inter',
+                                fontSize: 32,
+                                fontWeight: FontWeight.bold,
+                                color: Color(0xFF082B5C),
+                                letterSpacing: -0.5,
+                              ),
+                            ),
+                          ),
+                        ),
+                      )
+                    : Center(
+                        child: Text(
+                          _getInitials(name),
+                          style: const TextStyle(
+                            fontFamily: 'Inter',
+                            fontSize: 32,
+                            fontWeight: FontWeight.bold,
+                            color: Color(0xFF082B5C),
+                            letterSpacing: -0.5,
+                          ),
+                        ),
+                      ),
               ),
               Positioned(
                 bottom: 0,
@@ -928,7 +1017,7 @@ class _ProfileScreenState extends State<ProfileScreen>
                     onTapDown: (_) => setState(() => _editAvatarScale = 0.90),
                     onTapUp: (_) => setState(() => _editAvatarScale = 1.0),
                     onTapCancel: () => setState(() => _editAvatarScale = 1.0),
-                    onTap: _onEditProfile,
+                    onTap: _onEditAvatar,
                     child: Container(
                       width: 28,
                       height: 28,

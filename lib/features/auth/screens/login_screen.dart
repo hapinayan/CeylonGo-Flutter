@@ -5,6 +5,7 @@ import '../../../core/services/secure_storage_service.dart';
 import '../../../core/theme/app_theme.dart';
 import '../../../core/utils/validators.dart';
 import '../../artisan/services/artisan_demo_service.dart';
+import '../../vendor/services/vendor_demo_service.dart';
 import '../models/api_error.dart';
 import '../models/user_model.dart';
 import '../services/auth_service.dart';
@@ -239,6 +240,9 @@ class _LoginScreenState extends State<LoginScreen> {
         role: 'tourist',
       );
 
+      VendorDemoService.instance.signOutVendor();
+      _storageService.clearVendorDemoSession().catchError((_) {});
+
       try {
         await _storageService.saveToken('demo-offline-jwt-token');
         await _storageService.saveUser(demoUser);
@@ -260,6 +264,32 @@ class _LoginScreenState extends State<LoginScreen> {
         password: inputPassword, // Never trim passwords
       );
 
+      // Reject non-traveler accounts from Traveler sign-in to prevent cross-role leakage.
+      final role = response.user.role.trim().toLowerCase();
+      if (role == 'provider' || role == 'vendor') {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage =
+                'This account is registered as a Vendor. Please use Vendor Sign In.';
+          });
+        }
+        return;
+      }
+      if (role != 'traveler' && role != 'tourist') {
+        if (mounted) {
+          setState(() {
+            _isLoading = false;
+            _errorMessage =
+                'Access restricted to traveler accounts. Please contact support.';
+          });
+        }
+        return;
+      }
+
+      VendorDemoService.instance.signOutVendor();
+      _storageService.clearVendorDemoSession().catchError((_) {});
+
       // Securely persist token and user profile
       try {
         await _storageService.saveToken(response.accessToken);
@@ -279,10 +309,7 @@ class _LoginScreenState extends State<LoginScreen> {
           _isLoading = false;
         });
 
-        final target = response.user.role == 'provider'
-            ? '/provider/dashboard'
-            : '/home';
-        await _showLoginSuccessPopupAndNavigate(targetRoute: target);
+        await _showLoginSuccessPopupAndNavigate();
       }
     } on ApiError catch (e) {
       if (mounted) {
@@ -717,7 +744,36 @@ class _LoginScreenState extends State<LoginScreen> {
                               ),
                             ],
                           ),
-                          const SizedBox(height: 16),
+                          const SizedBox(height: 10),
+                          Center(
+                            child: TextButton.icon(
+                              key: const Key('traveler_change_role_btn'),
+                              onPressed: _isLoading
+                                  ? null
+                                  : () {
+                                      Navigator.pushNamedAndRemoveUntil(
+                                        context,
+                                        '/role-selection',
+                                        (route) => false,
+                                      );
+                                    },
+                              icon: const Icon(
+                                Icons.swap_horiz_rounded,
+                                size: 18,
+                                color: AppTheme.primaryNavy,
+                              ),
+                              label: const Text(
+                                'Change Role',
+                                style: TextStyle(
+                                  fontFamily: 'Inter',
+                                  fontSize: 13.5,
+                                  fontWeight: FontWeight.w600,
+                                  color: AppTheme.primaryNavy,
+                                ),
+                              ),
+                            ),
+                          ),
+                          const SizedBox(height: 12),
 
                           // Service Provider Portal Link
                           Center(

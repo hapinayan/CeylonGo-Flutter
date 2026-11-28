@@ -103,6 +103,9 @@ class ApiConstants {
   static String get providerOtpVerifyEndpoint => '$apiV1/providers/otp/verify';
   static String get providerDraftEndpoint =>
       '$apiV1/providers/registration/draft';
+  static String get providerChangePasswordEndpoint =>
+      '$apiV1/providers/me/change-password';
+  static String get providerIdentityUploadEndpoint => providerIdentityEndpoint;
   static String get providerPersonalEndpoint =>
       '$apiV1/providers/registration/personal';
   static String get providerBusinessEndpoint =>
@@ -119,6 +122,37 @@ class ApiConstants {
   static String get providerRegisterEndpoint => '$apiV1/providers/register';
   static String get providerListingsEndpoint => '$apiV1/provider/listings';
   static String get providerBookingsEndpoint => '$apiV1/provider/bookings';
+  // Weather Endpoints (FastAPI /api/v1/weather)
+  static String get weatherLocationsEndpoint => '$apiV1/weather/locations';
+  static String get weatherCurrentEndpoint => '$apiV1/weather/current';
+  static String get weatherForecastEndpoint => '$apiV1/weather/forecast';
+
+  // Interactive Map Endpoints (FastAPI /api/v1/map)
+  static String get mapLocationsEndpoint => '$apiV1/map/locations';
+  static String get mapNearbyEndpoint => '$apiV1/map/nearby';
+  static String get mapSearchEndpoint => '$apiV1/map/search';
+  static String get mapCategoriesEndpoint => '$apiV1/map/categories';
+  static String get mapRouteEndpoint => '$apiV1/map/route';
+
+  // Travel Community Endpoints (FastAPI /api/v1/community)
+  static String communityPostEndpoint(int postId) =>
+      '$apiV1/community/posts/$postId';
+  static String communityPostMediaEndpoint(int postId) =>
+      '$apiV1/community/posts/$postId/media';
+  static String communityPostMediaItemEndpoint(int postId, int mediaId) =>
+      '$apiV1/community/posts/$postId/media/$mediaId';
+
+  // Provider Financial & Settlement Endpoints (Read-Only FastAPI contracts)
+  static String get providerEarningsSummaryEndpoint =>
+      '$apiV1/providers/me/earnings/summary';
+  static String get providerSettlementsEndpoint =>
+      '$apiV1/providers/me/settlements';
+  static String get paymentsProviderEarningsEndpoint =>
+      '$apiV1/payments/provider/earnings';
+  static String get paymentsProviderSettlementsEndpoint =>
+      '$apiV1/payments/provider/settlements';
+  static String get tourGuideProviderEarningsEndpoint =>
+      '$apiV1/provider/tour-guides/earnings';
 
   // Standard JSON Headers
   static const Map<String, String> defaultHeaders = {
